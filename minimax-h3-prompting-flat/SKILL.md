@@ -5,7 +5,7 @@ description: Write, review, and fix prompts for the MiniMax H3 video model (text
 
 # MiniMax H3 prompting
 
-H3 generates short video clips with native stereo audio from text plus optional image, video, and audio references. The whole method reduces to one idea: **give H3 less to guess.** A good prompt states what matters, what changes, and what stays the same. Longer prompts help only when they add control.
+H3 generates short video clips with native stereo audio from text plus optional image, video, and audio references. The whole method reduces to one idea: **give H3 less to guess.** A good prompt states what matters, what changes, and what stays the same. Longer prompts help only when they add control, and more specification is not more control: a constraint that implies a boundary can manufacture the very discontinuity you were trying to prevent.
 
 Later sections of this file hold the detailed material:
 
@@ -91,15 +91,23 @@ Rules that apply to every prompt:
 
 1. **Write in playback order.** Describe what the viewer sees and hears as it happens: first, second, last.
 2. **One shot, one job.** Each generation introduces a character, reveals a product, shows an interaction, transfers a motion, connects two scenes, or lands a hero shot. If the shot needs a long explanation, simplify the shot.
-3. **One camera idea per shot.** Use standard terms: push in, pull out, pan, tilt, truck, pedestal, arc, tracking, static.
+3. **One camera idea per shot.** Use standard terms: push in, pull out, pan, tilt, truck, pedestal, arc, tracking, static. A slow continuous move also hides continuity seams; a locked-off frame keeps the background pixel-identical and exposes every seam. Lock the camera only when the subject's motion is simple.
 4. **Separate constants from changes.** Not "keep the character consistent" but "Keep the same face, hair and outfit. Change only the pose and camera angle."
 5. **Lock identity before style.** Character → product → brand first; cinematic, luxury, neon, experimental after.
 6. **Turn emotion into visible behavior.** Not "A woman feels nervous before an important meeting" but "The woman checks her watch twice, taps her fingers against the folder, takes a short breath, and looks toward the closed meeting-room door."
 7. **Cut unnecessary physical actions.** Long chains of precise hand–object–face interaction increase failure risk. Start at the moment that carries the message.
 8. **State the ending.** Name the final pose, composition, or hold.
-9. **Keep shot count realistic** for the duration. Timings are direction, not frame-accurate commands; if the ending compresses, remove an earlier event.
+9. **Keep shot count realistic** for the duration. Timings are direction, not frame-accurate commands. In a single continuous take a per-beat timing does more harm than good: the marker reads as a boundary, the boundary implies the previous action stopped, and a stop renders as a jump cut.
 
-Use timelines (`0–3s`, `3–7s`, `7–11s`, `11–15s`) whenever a clip has several visual states: ads, UI animation, music videos, game sequences.
+Use timelines (`0–3s`, `3–7s`, `7–11s`, `11–15s`) when the clip is an edited piece with several visual states and events that must land at a moment: ads, UI animation, music videos, game sequences. Cuts are expected there, so markers cost nothing and buy placement.
+
+| Clip | Write |
+| --- | --- |
+| Edited piece; cuts expected; copy, UI, or beat sync must land on time | Timelines per beat |
+| One continuous take, especially from reference keyframes | Unmarked prose in playback order |
+| Either, and the ending must land | One relative duration at the end only |
+
+In a continuous take, let H3 interpolate. Each beat starts from where the previous one ended, joined by connective motion — *that hand continues upward*, *the raised hand then descends* — which leaves only one possible reading. Keep at most one time expression, a hold length for the ending: `for the last two seconds`. A hold duration is a length, not a boundary, so it locks the final frame without slicing the middle.
 
 ## Step 3: assign references
 
@@ -191,6 +199,7 @@ Incremental build order for a single shot: subject, scene, lighting, and style �
 | Product changes shape or color | Product reference | Remove the conflicting image; name the exact feature that must stay fixed |
 | Mechanism moves wrongly | Detail reference | Supply a photo of the real connection; request one physically plausible action |
 | Action breaks | Motion complexity | Remove secondary actions; start closer to the key moment |
+| Jump cuts inside a single take | Per-beat time markers | Remove the markers, write unmarked prose; keep only a final hold duration |
 | Camera unstable | Camera instruction | One movement per shot; remove conflicting terms |
 | Ending wrong or rushed | Final-frame plan | Remove an earlier event; no camera move during the final hold; consider a last frame |
 | Too much happens | Scope | Cut actions or divide into clips |
@@ -210,6 +219,7 @@ Incremental build order for a single shot: subject, scene, lighting, and style �
 - Every uploaded file has a stated role, and no two compete for the same role.
 - Fixed details and allowed changes are both named.
 - Actions appear in playback order and fit the duration.
+- In a single take, beats are unmarked prose; only the final hold carries a duration.
 - Each shot has one main camera idea.
 - Dialogue is short, quoted, and assigned to a named speaker.
 - Sound is tied to visible events.
@@ -391,6 +401,7 @@ Why it is shaped this way: the performer and studio are Subjects because their c
 | `fully_copy` used when only the voice quality is wanted | Use `reference` and describe timbre, pace, delivery |
 | A Subject defined with no retention rule | Add an entry stating where it appears, what stays, what may change |
 | A plot summary in place of a shot description | Describe visible actions, camera, sound, and the ending; replace "a dramatic reveal" with what is actually seen and heard |
+| Time markers inside one continuous take | Drop the markers in `detailed_description`; keep only a final hold. The format accepts timings; it does not require them |
 
 When asking an LLM to draft this format, supply the reference map, duration, required dialogue, and fixed traits, then check label consistency and conflicting instructions yourself.
 
@@ -740,9 +751,9 @@ A longer video is a sequence, not one oversized prompt.
 
 ## Example prompts
 
-Prompts quoted from the minimax-h3.com guides, grouped by mode. Adapt the subject, scene, references, and direction; keep the structure.
+Prompts quoted from the minimax-h3.com guides, plus one result from our own testing, grouped by mode. Adapt the subject, scene, references, and direction; keep the structure.
 
-**Tested** means the guide it comes from showed or described a generated result. **Untested** means it was offered there as a starting structure or illustration.
+**Tested** means the guide it comes from, or our own testing, showed or described a generated result. **Untested** means it was offered there as a starting structure or illustration.
 
 ### Contents
 
@@ -857,6 +868,8 @@ Use Images 1–4 as sequential keyframes, seen through a vintage binocular viewf
 ```
 Use the upper character sheet to define Aric Vale's face, dark tousled hair, stubble, athletic build, clothing, and gear. Maintain his identity and outfit throughout. Use the lower storyboard as visual guidance for the adventure sequence, from spotting the ruins and planning the route through climbing, exploring, claiming the artifact, and escaping. Keep the character, environment, and cinematic style consistent.
 ```
+
+**Continuous take from four keyframes** (tested). Four reference photos of one squatting pose in one room, fifteen seconds, no time markers in `detailed_description`, one slow arc. Per-beat markers produced jump cuts at every boundary; unmarked prose ran continuous.
 
 **Multi-model runway** (tested). Deliberately short because five reference images carry identity.
 
