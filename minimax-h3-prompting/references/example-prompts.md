@@ -1,8 +1,8 @@
 # Example prompts
 
-Prompts quoted from the minimax-h3.com guides, grouped by mode. Adapt the subject, scene, references, and direction; keep the structure.
+Prompts quoted from the minimax-h3.com guides, plus one result from our own testing, grouped by mode. Adapt the subject, scene, references, and direction; keep the structure.
 
-**Tested** means the source guide showed or described a generated result. **Untested** means the guide offered it as a starting structure or illustration.
+**Tested** means the guide it comes from, or our own testing, showed or described a generated result. **Untested** means it was offered there as a starting structure or illustration.
 
 ## Contents
 
@@ -118,13 +118,15 @@ Use Images 1–4 as sequential keyframes, seen through a vintage binocular viewf
 Use the upper character sheet to define Aric Vale's face, dark tousled hair, stubble, athletic build, clothing, and gear. Maintain his identity and outfit throughout. Use the lower storyboard as visual guidance for the adventure sequence, from spotting the ruins and planning the route through climbing, exploring, claiming the artifact, and escaping. Keep the character, environment, and cinematic style consistent.
 ```
 
+**Continuous take from four keyframes** (tested). Four reference photos of one squatting pose in one room, fifteen seconds, no time markers in `detailed_description`, one slow arc. Per-beat markers produced jump cuts at every boundary; unmarked prose ran continuous.
+
 **Multi-model runway** (tested). Deliberately short because five reference images carry identity.
 
 ```
 Create a branded fashion presentation. Have every person from the reference images walk together on the same runway as part of a fashion show. Preserve each person's appearance, realism, and identity.
 ```
 
-**Hand-driven panel effect** (tested). Scope of each reference restricted explicitly.
+**Hand-driven panel effect** (untested as written). It is the example prompt for the [five-step recipe](workflows.md#motion-transfer-and-video-to-video), which came out of a real multi-reference test. Scope of each reference restricted explicitly.
 
 ```
 @Image1 defines the subject, clothing, and background. @Video1 provides hand motion and timing only. @Image2 defines the content inside the rectangular panel. Attach the four panel corners to the thumbs and index fingers so it expands and rotates with the hands. Keep everything outside the panel realistic and unchanged. Use a locked camera and consistent lighting.
@@ -196,7 +198,7 @@ End with the model walking into the stage under a spotlight, followed by a black
 Overall cinematic aesthetic, smooth camera movement, and clean beat-synced editing.
 ```
 
-**TikTok beauty UGC** (tested). Timed lines of dialogue, hard physical steps removed on purpose. The source noted that the transition from partly blended to finished makeup was not fully continuous.
+**TikTok beauty UGC** (tested). Timed lines of dialogue, hard physical steps removed on purpose. Known limitation: the transition from partly blended to finished makeup was not fully continuous in the generated result.
 
 ```
 9:16, 15 seconds. Authentic North American TikTok beauty-commerce video. A female creator sits at an apartment vanity in soft afternoon side light with natural skin texture.

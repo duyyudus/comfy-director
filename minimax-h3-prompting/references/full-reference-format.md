@@ -1,6 +1,6 @@
 # The six-part full-reference format
 
-Use this structured format when several assets have different responsibilities in the same generation and the workflow exposes, accepts, or generates the full H3 reference syntax (API-style and ComfyUI workflows, prompt builders). Web generators often show simpler names such as `@image1`; follow whatever labels the tool displays. Simple single-image tasks do not need this format.
+Use this structured format when several assets have different responsibilities in the same generation and the workflow exposes, accepts, or generates the full H3 reference syntax, for example a prompt builder in a local or ComfyUI workflow. Web generators often show simpler names such as `@image1`; follow whatever labels the tool displays. Simple single-image tasks do not need this format.
 
 Typical triggers:
 
@@ -126,7 +126,7 @@ Syntax conventions seen in the example below:
 
 ## Worked example
 
-Character, motion, and voice. The source guide presents this as an illustration of structure, not a tested generation.
+Character, motion, and voice. This illustrates the structure; it is not a tested generation.
 
 ```
 ### subject_definitions:
@@ -170,5 +170,6 @@ Why it is shaped this way: the performer and studio are Subjects because their c
 | `fully_copy` used when only the voice quality is wanted | Use `reference` and describe timbre, pace, delivery |
 | A Subject defined with no retention rule | Add an entry stating where it appears, what stays, what may change |
 | A plot summary in place of a shot description | Describe visible actions, camera, sound, and the ending; replace "a dramatic reveal" with what is actually seen and heard |
+| Time markers inside one continuous take | Drop the markers in `detailed_description`; keep only a final hold. The format accepts timings; it does not require them |
 
 When asking an LLM to draft this format, supply the reference map, duration, required dialogue, and fixed traits, then check label consistency and conflicting instructions yourself.

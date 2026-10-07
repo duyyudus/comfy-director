@@ -11,7 +11,8 @@ Choose the workflow first, write the prompt second.
 | Product or app demo | First-frame UI reference + micro-actions |
 | Localized ad | Local hook and persona before any translation |
 | Fashion video | Character references + identity protection |
-| Game promo, UI animation, app prototype | Reference screens + timed state transitions + layout protection |
+| Game promo | Game references + gameplay logic |
+| UI animation, app prototype | Reference screens + timed state transitions + layout protection |
 | Music video | Singer references + song section as audio + one scene per musical moment |
 | Stylized or mixed-media video | Stable subject + explicit style transitions |
 | Motion recreation | Source video + replacement reference |
@@ -68,7 +69,7 @@ Product accuracy is part of quality. Before approving:
 | Claim | Does the spoken benefit match verified information? |
 | CTA | Is the offer actually valid? |
 
-Verify how the product is really operated before storyboarding. Two documented ads needed a correction pass because the first version showed wrong usage: an essential oil applied directly instead of added to a diffuser, and a coffee capsule inserted wrongly. The fix in both cases was to spell out the real steps, for example `Lift the silver handle → Insert the capsule into the upper slot → Close the handle → Place the cup under the outlet`.
+Verify how the product is really operated before storyboarding. Two real ad projects needed a correction pass because the first version showed wrong usage: an essential oil applied directly instead of added to a diffuser, and a coffee capsule inserted wrongly. The fix in both cases was to spell out the real steps, for example `Lift the silver handle → Insert the capsule into the upper slot → Close the handle → Place the cup under the outlet`.
 
 ## Minimalist product ads
 
@@ -116,7 +117,7 @@ Product image → Creator persona → Lifestyle scene → Product use → Natura
 ```
 
 - Keep the creator consistent across shots with dedicated creator references.
-- Split the sales message: voiceover carries experience and benefit, on-screen text carries offer and urgency. In the documented essential-oil ad the spoken ending became "A familiar scent makes anywhere feel like home." while the screen showed `BLACK FRIDAY · 15% OFF · SHOP NOW`.
+- Split the sales message: voiceover carries experience and benefit, on-screen text carries offer and urgency. In one essential-oil ad the spoken ending became "A familiar scent makes anywhere feel like home." while the screen showed `BLACK FRIDAY · 15% OFF · SHOP NOW`.
 - Match props to the intended aesthetic; a mismatched diffuser was replaced with a ceramic one via an extra reference.
 - Start close to the selling moment. If the message is the finish, skip opening, pumping, and first application.
 
@@ -160,7 +161,7 @@ Tap → Change → Pause → Tap → Confirm
 
 Localization changes the context, not just the words: `Language + Persona + Humor + Scenario + Product truth`.
 
-Ask first what situation will feel familiar to the audience, then decide `Hook → Persona → Humor → Language`. Do not translate an English script word for word. The documented Thai coffee ad was rebuilt around an office "Monday personality switch" (`Low energy → Work errors → Coffee discovered → Coffee prepared → Energy restored`) with game-style overlays (ERROR, ITEM FOUND, LOADING WORK MODE, LEVEL UP), Thai voiceover, and office ambience.
+Ask first what situation will feel familiar to the audience, then decide `Hook → Persona → Humor → Language`. Do not translate an English script word for word. One Thai coffee ad was rebuilt around an office "Monday personality switch" (`Low energy → Work errors → Coffee discovered → Coffee prepared → Energy restored`) with game-style overlays (ERROR, ITEM FOUND, LOADING WORK MODE, LEVEL UP), Thai voiceover, and office ambience.
 
 ## UI, web, and game interfaces
 
@@ -193,7 +194,7 @@ For gameplay, describe the camera as part of the game system: third-person follo
 Treat the song as a timeline, not one long prompt.
 
 ```
-Song → Section map → References → One H3 scene per moment → Select takes → Edit
+Song → Shot Plan → H3 Clips → Select Takes → Connect Scenes → Final Edit
 ```
 
 1. Create or prepare the track.
@@ -229,7 +230,7 @@ Performer → Camera → Interaction → Graphic language → Ending
 - High-speed scenes need stronger identity control, not less.
 - For social cuts: put the payoff first, use the chorus or drop, keep the action readable at a glance, and design the final pose to reconnect to the opening for loops.
 - For experimental work: name one dominant style, say how the world reacts to the music, and what stays recognizable. "Surreal" alone is too broad.
-- Use first and last frames to plan transitions between clips. If a scene fails, regenerate that scene.
+- Use first and last frames to plan transitions between clips. That mode cannot take an audio reference in the same request (see [Limits](../SKILL.md#limits)), so such a clip will not have the song section attached. If a scene fails, regenerate that scene.
 
 ## Stylized and mixed-media video
 
@@ -284,7 +285,7 @@ Preserve motion + Replace subject + Keep timing
 - To keep the original background, say the video is for motion only and the environment, composition, or background must remain unchanged.
 - Expect interpretation rather than exact reproduction, especially with complex interactions or large transformations.
 
-Hand-driven panel effect, a documented five-step recipe:
+Hand-driven panel effect, a five-step recipe:
 
 1. Record a clean five-second phone clip, static camera: hands closed → pull apart → rotate → hold.
 2. Generate each color or style variant separately; one generation, one visual task.
@@ -335,8 +336,8 @@ Starting state → visible physical change → evolving structure → final stat
 A longer video is a sequence, not one oversized prompt.
 
 - Each clip has one purpose, a defined start, a defined end, only the references it needs, and continuity with its neighbors.
-- Split by story blocks. The documented 30-second anime promo used two 15-second generations: world, entrance, and first clash; then escalation, energy burst, and final pose.
+- Split by story blocks. One 30-second anime promo used two 15-second generations: world, entrance, and first clash; then escalation, energy burst, and final pose.
 - Build anchors first: prepare style references and keyframes for the major moments (confrontation, entrance, clash, close-up, explosion, final pose), then generate the sections that connect them.
-- Give a running visual thread to long experimental pieces. The documented one-minute film used a sideways-running character linking street footage, silhouette masks, and graphic space, with three anchor images for opening, silhouette, and closing text.
+- Give a running visual thread to long experimental pieces. One one-minute film used a sideways-running character linking street footage, silhouette masks, and graphic space, with three anchor images for opening, silhouette, and closing text.
 - Rewrite risky or over-specific wording into plain visual language: original descriptions instead of IP-like names, and "fast horizontal tracking, beat-cut flashes, motion through graphic space" instead of "copy the camera movement".
 - After generation, the work shifts to transitions, pacing, identity, and continuity. Regenerate only the weak section.

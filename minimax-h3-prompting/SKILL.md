@@ -5,7 +5,7 @@ description: Write, review, and fix prompts for the MiniMax H3 video model (text
 
 # MiniMax H3 prompting
 
-H3 generates short video clips with native stereo audio from text plus optional image, video, and audio references. The whole method reduces to one idea: **give H3 less to guess.** A good prompt states what matters, what changes, and what stays the same. Longer prompts help only when they add control.
+H3 generates short video clips with native stereo audio from text plus optional image, video, and audio references. The whole method reduces to one idea: **give H3 less to guess.** A good prompt states what matters, what changes, and what stays the same. Longer prompts help only when they add control, and more specification is not more control: a constraint that implies a boundary can manufacture the very discontinuity you were trying to prevent.
 
 Detailed material lives in `references/`:
 
@@ -32,7 +32,8 @@ Mode constraints:
 
 - **First/last-frame and multimodal reference are separate modes.** A first or last frame cannot be combined with reference images, videos, or audio in one request.
 - In first/last-frame mode the output follows the input image's aspect ratio. Reference-to-video lets you choose the ratio.
-- The sources disagree on audio-only references: the main prompt guide says audio needs at least one image or video alongside it, while one FAQ says audio alone works. Pair audio with an image or video to be safe.
+- Whether audio can be the only reference is unclear: the published guidance contradicts itself. Pair audio with at least one image or video to be safe.
+- The minimum duration is stated as 4 s in some places and 5 s in others. Treat a 4 s clip as tool-dependent.
 - An audio reference guides vocal or sound qualities; it does not guarantee an exact voice copy.
 - Video-to-video interprets the source; it is not frame-by-frame tracking.
 
@@ -43,9 +44,10 @@ Mode constraints:
 | Create the whole scene from a description | Text-to-video |
 | Animate one static image | Image-to-video (first frame) |
 | Lock both the opening and the ending composition | First + last frame |
-| Preserve a character or product across shots | Multi-image reference |
-| Combine identity, location, motion, and sound | Reference-to-video (image + video + audio) |
-| Copy body movement or camera behavior | Video reference |
+| Preserve a character | Multi-image reference |
+| Combine several visual assets | Reference-to-video |
+| Combine identity, motion, and sound | Reference-to-video (image + video + audio) |
+| Copy body movement or follow camera movement | Video reference / video-to-video |
 | Replace a subject but keep the motion | Video-to-video |
 | Change one element of existing footage | Video edit with a narrow instruction |
 | Follow music, vocals, or rhythm | Audio reference |
@@ -89,15 +91,23 @@ Rules that apply to every prompt:
 
 1. **Write in playback order.** Describe what the viewer sees and hears as it happens: first, second, last.
 2. **One shot, one job.** Each generation introduces a character, reveals a product, shows an interaction, transfers a motion, connects two scenes, or lands a hero shot. If the shot needs a long explanation, simplify the shot.
-3. **One camera idea per shot.** Use standard terms: push in, pull out, pan, tilt, truck, pedestal, arc, tracking, static.
+3. **One camera idea per shot.** Use standard terms: push in, pull out, pan, tilt, truck, pedestal, arc, tracking, static. A slow continuous move also hides continuity seams; a locked-off frame keeps the background pixel-identical and exposes every seam. Lock the camera only when the subject's motion is simple.
 4. **Separate constants from changes.** Not "keep the character consistent" but "Keep the same face, hair and outfit. Change only the pose and camera angle."
 5. **Lock identity before style.** Character → product → brand first; cinematic, luxury, neon, experimental after.
-6. **Turn emotion into visible behavior.** Not "she feels nervous" but "she checks her watch twice, taps her fingers against the folder, takes a short breath, and looks toward the closed door."
-7. **Cut unnecessary physical actions.** Long chains of hand–object–face interaction are the highest failure risk. Start at the moment that carries the message.
+6. **Turn emotion into visible behavior.** Not "A woman feels nervous before an important meeting" but "The woman checks her watch twice, taps her fingers against the folder, takes a short breath, and looks toward the closed meeting-room door."
+7. **Cut unnecessary physical actions.** Long chains of precise hand–object–face interaction increase failure risk. Start at the moment that carries the message.
 8. **State the ending.** Name the final pose, composition, or hold.
-9. **Keep shot count realistic** for the duration. Timings are direction, not frame-accurate commands; if the ending compresses, remove an earlier event.
+9. **Keep shot count realistic** for the duration. Timings are direction, not frame-accurate commands. In a single continuous take a per-beat timing does more harm than good: the marker reads as a boundary, the boundary implies the previous action stopped, and a stop renders as a jump cut.
 
-Use timelines (`0–3s`, `3–7s`, `7–11s`, `11–15s`) whenever a clip has several visual states: ads, UI animation, music videos, game sequences.
+Use timelines (`0–3s`, `3–7s`, `7–11s`, `11–15s`) when the clip is an edited piece with several visual states and events that must land at a moment: ads, UI animation, music videos, game sequences. Cuts are expected there, so markers cost nothing and buy placement.
+
+| Clip | Write |
+| --- | --- |
+| Edited piece; cuts expected; copy, UI, or beat sync must land on time | Timelines per beat |
+| One continuous take, especially from reference keyframes | Unmarked prose in playback order |
+| Either, and the ending must land | One relative duration at the end only |
+
+In a continuous take, let H3 interpolate. Each beat starts from where the previous one ended, joined by connective motion — *that hand continues upward*, *the raised hand then descends* — which leaves only one possible reading. Keep at most one time expression, a hold length for the ending: `for the last two seconds`. A hold duration is a length, not a boundary, so it locks the final frame without slicing the middle.
 
 ## Step 3: assign references
 
@@ -127,7 +137,7 @@ Reference role + Preserve + Transfer + Change + Final scene
 
 Guidelines:
 
-- **Let references carry information.** Do not re-describe what a reference already shows; add only the details that need special protection. Five strong model photos plus a three-sentence prompt worked for a five-person runway.
+- **Let references carry information.** Do not re-describe what a reference already shows; add only the details that need special protection. The five-model runway test used five reference photos and a deliberately short three-sentence prompt.
 - **Restrict a reference's scope explicitly** when it could bleed: "@Video1 provides hand motion and timing only", "keep everything outside the panel unchanged".
 - **Check references against each other.** Two images that disagree about clothing, proportions, or environment for the same subject create drift. Remove one or state which feature comes from which file.
 - **Show details you do not want invented.** A character pack of front portrait, side view, full body, and accessory close-up beats repeated description.
@@ -153,7 +163,7 @@ To continue a clip with tight continuity, extract its final frame and use it as 
 - Place physical sounds next to the action that causes them: "The cup touches the saucer with a light click as the espresso machine releases a short burst of steam."
 - Describe music by mood, instrumentation, tempo, and timing. Say "no music" when you want none.
 - For non-English speech, write the line in the target language and name the language; directions can stay in English.
-- For exact subtitles or on-screen legal copy, add them in an editor afterward.
+- For subtitles that need exact wording and timing, add them in an editor afterward. Do the same for on-screen copy when exact lettering stays unreliable.
 
 Dialogue template:
 
@@ -189,6 +199,7 @@ Incremental build order for a single shot: subject, scene, lighting, and style �
 | Product changes shape or color | Product reference | Remove the conflicting image; name the exact feature that must stay fixed |
 | Mechanism moves wrongly | Detail reference | Supply a photo of the real connection; request one physically plausible action |
 | Action breaks | Motion complexity | Remove secondary actions; start closer to the key moment |
+| Jump cuts inside a single take | Per-beat time markers | Remove the markers, write unmarked prose; keep only a final hold duration |
 | Camera unstable | Camera instruction | One movement per shot; remove conflicting terms |
 | Ending wrong or rushed | Final-frame plan | Remove an earlier event; no camera move during the final hold; consider a last frame |
 | Too much happens | Scope | Cut actions or divide into clips |
@@ -208,6 +219,7 @@ Incremental build order for a single shot: subject, scene, lighting, and style �
 - Every uploaded file has a stated role, and no two compete for the same role.
 - Fixed details and allowed changes are both named.
 - Actions appear in playback order and fit the duration.
+- In a single take, beats are unmarked prose; only the final hold carries a duration.
 - Each shot has one main camera idea.
 - Dialogue is short, quoted, and assigned to a named speaker.
 - Sound is tied to visible events.
