@@ -1,0 +1,19 @@
+appId: com.comfytoolkit.app
+productName: Comfy Toolkit
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - node_modules/better-sqlite3/**
+win:
+  target: nsis
+nsis:
+  artifactName: comfy-toolkit-${version}-setup.${ext}
+mac:
+  target: dmg
+linux:
+  target: AppImage
+  category: Graphics
