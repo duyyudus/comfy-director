@@ -97,6 +97,27 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
     return () => clearTimeout(t)
   }, [analysis, overrides, mode, replaceId])
 
+  /**
+   * Saves every key the app resolved itself (repeated titles) as an explicit key, so renaming a
+   * label later only changes the text in the form, never the key that stored values use.
+   */
+  const pinKeys = (ov: Overrides): Overrides => {
+    if (!analysis || !preview) return ov
+    const inputs = { ...(ov.inputs ?? {}) }
+    for (const c of analysis.candidates) {
+      if (!cands[c.id]?.exposed || inputs[c.id]?.key) continue
+      const k = resolvedKey(c)
+      if (k && k !== c.key) inputs[c.id] = { ...inputs[c.id], key: k }
+    }
+    const expose = (ov.expose ?? []).map((e) => {
+      if (e.key) return e
+      const f = analysis.fields.find((x) => x.nodeClass === e.class && x.field === e.field && sameTitle(e, x))
+      const k = f && preview.inputs.find((i) => i.target.kind === 'field' && i.target.nodeId === f.nodeId && i.target.field === f.field)?.key
+      return k && f && k !== f.key ? { ...e, key: k } : e
+    })
+    return { ...ov, ...(Object.keys(inputs).length && { inputs }), ...(expose.length && { expose }) }
+  }
+
   const browse = async (): Promise<void> => {
     const f = await api.pickWorkflowFile()
     if (f) await open(f.fileName, f.text)
@@ -106,7 +127,7 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
     if (!analysis) return
     setBusy(true)
     try {
-      const w = await api.commitImport({ text: analysis.text, name, mode, replaceId: mode === 'replace' ? replaceId : null, overrides })
+      const w = await api.commitImport({ text: analysis.text, name, mode, replaceId: mode === 'replace' ? replaceId : null, overrides: pinKeys(overrides) })
       await loadWorkflows()
       toast(`Imported ${w.name} as version ${w.version}.`)
       if (onDone) onDone()
