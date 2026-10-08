@@ -1,0 +1,178 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Gallery.dc.html": {
+      "expand": "fill",
+      "h": 1160,
+      "is_interactive": true,
+      "title": "Gallery",
+      "w": 1440,
+      "x": 1520,
+      "y": 1990
+    },
+    "Import.dc.html": {
+      "expand": "fill",
+      "h": 1340,
+      "is_interactive": true,
+      "title": "Import workflow",
+      "w": 1440,
+      "x": 3040,
+      "y": 1990
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1160,
+      "is_interactive": true,
+      "title": "Shot view: ref2vid",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Queue.dc.html": {
+      "expand": "fill",
+      "h": 1265,
+      "is_interactive": true,
+      "title": "Queue drawer",
+      "w": 1440,
+      "x": 0,
+      "y": 3450
+    },
+    "Sequence.dc.html": {
+      "expand": "fill",
+      "h": 840,
+      "is_interactive": true,
+      "title": "Sequence view",
+      "w": 1440,
+      "x": 0,
+      "y": 1990
+    },
+    "Shot-fl2vid.dc.html": {
+      "expand": "fill",
+      "h": 1160,
+      "is_interactive": true,
+      "title": "Shot view: fl2vid",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "States-empty.dc.html": {
+      "expand": "fill",
+      "h": 2200,
+      "is_interactive": true,
+      "title": "Empty and first-launch states",
+      "w": 1440,
+      "x": 3040,
+      "y": 3450
+    },
+    "States-errors.dc.html": {
+      "expand": "fill",
+      "h": 1400,
+      "is_interactive": true,
+      "title": "Error and connection states",
+      "w": 1440,
+      "x": 1520,
+      "y": 3450
+    },
+    "Compare.dc.html": {
+      "expand": "fill",
+      "h": 1170,
+      "is_interactive": true,
+      "title": "Compare attempts",
+      "w": 1440,
+      "x": 0,
+      "y": 5770
+    },
+    "Library.dc.html": {
+      "expand": "fill",
+      "h": 1065,
+      "is_interactive": true,
+      "title": "Library: prompts",
+      "w": 1440,
+      "x": 1520,
+      "y": 5770
+    },
+    "Prompter.dc.html": {
+      "expand": "fill",
+      "h": 1810,
+      "is_interactive": true,
+      "title": "Library: prompters",
+      "w": 1440,
+      "x": 3040,
+      "y": 5770
+    },
+    "Batch.dc.html": {
+      "expand": "fill",
+      "h": 1870,
+      "is_interactive": true,
+      "title": "Shot view: prompt list mode",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "Settings.dc.html": {
+      "expand": "fill",
+      "h": 800,
+      "is_interactive": true,
+      "title": "Settings",
+      "w": 1440,
+      "x": 0,
+      "y": 7800
+    },
+    "Theme.dc.html": {
+      "expand": "fill",
+      "h": 1340,
+      "is_interactive": true,
+      "title": "Colours and theme",
+      "w": 1440,
+      "x": 1520,
+      "y": 7800
+    },
+    "Projects.dc.html": {
+      "expand": "fill",
+      "h": 1364,
+      "is_interactive": true,
+      "title": "Projects and workspace",
+      "w": 1440,
+      "x": 3040,
+      "y": 7800
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-07T16:15:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t1": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Comfy Toolkit: wireframes",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Shot-fl2vid.dc.html",
+    "Sequence.dc.html",
+    "Gallery.dc.html",
+    "Import.dc.html",
+    "Queue.dc.html",
+    "States-errors.dc.html",
+    "States-empty.dc.html",
+    "Compare.dc.html",
+    "Library.dc.html",
+    "Prompter.dc.html",
+    "Batch.dc.html",
+    "Settings.dc.html",
+    "Theme.dc.html",
+    "Projects.dc.html"
+  ],
+  "pages": [],
+  "title": "Comfy Toolkit Wireframes"
+}

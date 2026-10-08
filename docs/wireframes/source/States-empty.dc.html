@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Empty and first-launch states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="min-height: 2200px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px; padding: 32px 32px 40px; background: #F5F2EC; color: #26231F; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; line-height: 1.4">
+
+  <div style="display: flex; flex-direction: column; gap: 4px">
+    <div style="font-size: 20px; font-weight: 600">Empty and first-launch states</div>
+    <div style="font-size: 13px; color: #675F54">What each screen shows before there is anything to show. Each one points to the next step.</div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px">
+
+    <section aria-label="First launch, connect" style="flex: 1 1 560px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">1</span><span style="font-size: 16px; font-weight: 600">First launch: connect</span></div>
+      <div style="font-size: 13px; color: #675F54">Shown until a server is set. The same form is Server settings later.</div>
+
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px 16px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px">
+        <ol style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: 13px">
+          <li style="display: flex; align-items: center; gap: 8px; font-weight: 600"><span style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #2447C9; color: #FFFFFF; font-size: 12px">1</span>Connect</li>
+          <li style="display: flex; align-items: center; gap: 8px; color: #675F54"><span style="box-sizing: border-box; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #675F54; font-size: 12px">2</span>Import a workflow</li>
+          <li style="display: flex; align-items: center; gap: 8px; color: #675F54"><span style="box-sizing: border-box; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #675F54; font-size: 12px">3</span>First project</li>
+        </ol>
+        <div style="box-sizing: border-box; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+          <div style="font-size: 16px; font-weight: 600">Connect to ComfyUI</div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="srv-addr" style="font-size: 12px; font-weight: 500; color: #433E36">Server address</label>
+            <input id="srv-addr" type="text" value="http://192.168.1.20:8188" style="box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font-family: 'IBM Plex Mono', monospace; font-size: 13px">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="srv-token" style="font-size: 12px; font-weight: 500; color: #433E36">Access token <span style="font-weight: 400; color: #675F54">(optional, for a reverse proxy)</span></label>
+            <input id="srv-token" type="password" value="" style="box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit">
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px">
+            <button type="button" style="min-height: 44px; padding: 0 18px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Test connection</button>
+            <span style="display: flex; align-items: center; gap: 6px; font-size: 13px"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="#2447C9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Connected. 142 node types found.</span>
+          </div>
+          <div style="display: flex; justify-content: flex-end"><button type="button" style="min-height: 44px; padding: 0 24px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Continue</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="First launch, import a workflow" style="flex: 1 1 560px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">2</span><span style="font-size: 16px; font-weight: 600">First launch: import a workflow</span></div>
+      <div style="font-size: 13px; color: #675F54">Also what the app shows any time it has no workflows. It leads into the Import screen.</div>
+
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 24px 16px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px">
+        <ol style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; margin: 0; padding: 0; list-style: none; font-size: 13px">
+          <li style="display: flex; align-items: center; gap: 8px; color: #675F54"><span style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #E8E2D6; font-size: 12px"><svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="#433E36" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Connect</li>
+          <li style="display: flex; align-items: center; gap: 8px; font-weight: 600"><span style="width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #2447C9; color: #FFFFFF; font-size: 12px">2</span>Import a workflow</li>
+          <li style="display: flex; align-items: center; gap: 8px; color: #675F54"><span style="box-sizing: border-box; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid #675F54; font-size: 12px">3</span>First project</li>
+        </ol>
+        <div style="box-sizing: border-box; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+          <div style="font-size: 16px; font-weight: 600">Add your first workflow</div>
+          <div style="box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 16px; border: 1.5px dashed #675F54; border-radius: 8px; text-align: center"><span>Drop an API-format .json here</span><span style="font-size: 12px; color: #675F54">In ComfyUI, turn on Dev mode options, then use Save (API Format).</span></div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px">
+            <a href="Import.dc.html" style="display: flex; align-items: center; box-sizing: border-box; min-height: 44px; padding: 0 22px; border-radius: 6px; background: #2447C9; color: #FFFFFF; font-weight: 600">Browse for a file</a>
+            <span style="font-size: 13px; color: #675F54; text-decoration: underline">Skip for now</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="No shots yet" style="flex: 1 1 560px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">3</span><span style="font-size: 16px; font-weight: 600">No sequences or shots yet</span></div>
+      <div style="font-size: 13px; color: #675F54">The sidebar and the main area, right after setup.</div>
+
+      <div style="display: flex; flex-wrap: wrap; min-height: 300px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px; overflow: hidden">
+        <div style="flex: 0 0 200px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 16px 14px; background: #FFFDF9; border-right: 1px solid #DDD6CA">
+          <div style="padding: 0 6px 2px; font-size: 11px; letter-spacing: 0.08em; color: #675F54">PROJECT</div>
+          <div style="display: flex; justify-content: space-between; box-sizing: border-box; min-height: 36px; align-items: center; margin: 0 0 10px; padding: 0 10px; border: 1px solid #8A8273; border-radius: 6px; font-weight: 600; font-size: 13px"><span>Rooftop short</span><span aria-hidden="true">▾</span></div>
+          <div style="padding: 0 6px 4px; font-size: 11px; letter-spacing: 0.08em; color: #675F54">SEQUENCES</div>
+          <div style="padding: 0 6px; font-size: 13px; color: #675F54">No sequences yet</div>
+          <button type="button" style="align-self: flex-start; min-height: 36px; margin: 4px 0 10px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit; font-size: 13px">New sequence</button>
+          <div style="padding: 0 6px 4px; font-size: 11px; letter-spacing: 0.08em; color: #675F54">LOOSE SHOTS</div>
+          <div style="padding: 0 6px; font-size: 13px; color: #675F54">No loose shots</div>
+        </div>
+        <div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center">
+          <div style="font-size: 18px; font-weight: 600">Start your first shot</div>
+          <div style="max-width: 340px; font-size: 13px; color: #675F54">A shot is one moment of your video. Pick a workflow, fill in the inputs, and render attempts until one is right.</div>
+          <button type="button" style="min-height: 44px; padding: 0 24px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">New shot</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Shot with no attempts" style="flex: 1 1 560px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">4</span><span style="font-size: 16px; font-weight: 600">A new shot, no attempts</span></div>
+      <div style="font-size: 13px; color: #675F54">The Shot view with default values and an empty attempts panel.</div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 16px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px">
+        <div style="flex: 3 1 280px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 16px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="new-prompt" style="font-size: 12px; font-weight: 500; color: #433E36">Prompt</label>
+            <textarea id="new-prompt" placeholder="Describe the shot" style="box-sizing: border-box; width: 100%; min-height: 72px; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit; resize: vertical"></textarea>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 14px">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <label for="new-dur" style="font-size: 12px; font-weight: 500; color: #433E36">Duration (s)</label>
+              <input id="new-dur" type="number" value="15" style="box-sizing: border-box; width: 96px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit">
+            </div>
+            <label style="display: flex; align-items: center; gap: 10px; align-self: flex-end; min-height: 44px"><input type="checkbox" checked style="width: 20px; height: 20px; margin: 0; accent-color: #2447C9"><span style="font-weight: 600">Turbo</span></label>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between"><span style="font-size: 12px; font-weight: 500; color: #433E36">Reference images</span><span style="font-size: 12px; color: #675F54">0 of 9 slots</span></div>
+            <button type="button" aria-label="Add reference image" style="box-sizing: border-box; width: 96px; height: 128px; border: 1.5px dashed #675F54; border-radius: 6px; background: #FFFDF9; color: #433E36; font: inherit; font-size: 22px">+</button>
+          </div>
+          <div><button type="button" style="min-height: 44px; padding: 0 28px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Run 1 job</button></div>
+        </div>
+        <div style="flex: 2 1 220px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 260px; padding: 20px; border: 1.5px dashed #C4BBAB; border-radius: 8px; text-align: center">
+          <span style="font-weight: 600">No attempts yet</span>
+          <span style="font-size: 13px; color: #675F54">Fill in the inputs and press Run. Each attempt appears here.</span>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Empty sequence" style="flex: 1 1 560px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">5</span><span style="font-size: 16px; font-weight: 600">Empty sequence</span></div>
+      <div style="font-size: 13px; color: #675F54">The Sequence view for a sequence with no shots. Play is off until a shot has a keeper.</div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; padding: 16px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px">
+          <div style="flex: 1 1 200px"><div style="font-size: 12px; color: #675F54">Sequence · 0 shots</div><div style="font-size: 18px; font-weight: 600">Night market</div></div>
+          <button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Add shot</button>
+          <button type="button" disabled style="min-height: 44px; padding: 0 22px; border: 0; border-radius: 6px; background: #E8E2D6; color: #5A5448; font: inherit; font-weight: 600">Play keepers in order</button>
+        </div>
+        <div style="box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 180px; padding: 20px; border: 1.5px dashed #C4BBAB; border-radius: 8px; text-align: center">
+          <span style="font-weight: 600">No shots in Night market yet</span>
+          <button type="button" style="min-height: 44px; padding: 0 22px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Add the first shot</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Empty gallery" style="flex: 1 1 560px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">6</span><span style="font-size: 16px; font-weight: 600">Empty Gallery, and a search with no results</span></div>
+      <div style="font-size: 13px; color: #675F54">Filters stay visible so the cause is clear.</div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 16px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <div style="flex: 1 1 160px; min-height: 40px; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font-size: 13px; color: #675F54">Search prompts</div>
+          <div style="min-height: 40px; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font-size: 13px">Workflow: All</div>
+          <div style="min-height: 40px; box-sizing: border-box; display: flex; align-items: center; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font-size: 13px">Keepers only</div>
+        </div>
+        <div style="box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 120px; padding: 20px; border: 1.5px dashed #C4BBAB; border-radius: 8px; text-align: center">
+          <span style="font-weight: 600">Nothing rendered yet</span>
+          <span style="font-size: 13px; color: #675F54">Finished renders from every shot appear here.</span>
+        </div>
+        <div style="box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 120px; padding: 20px; border: 1.5px dashed #C4BBAB; border-radius: 8px; text-align: center">
+          <span style="font-weight: 600">No renders match "rain"</span>
+          <button type="button" style="min-height: 40px; padding: 0 14px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Clear filters</button>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Queue idle" style="flex: 1 1 100%; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">7</span><span style="font-size: 16px; font-weight: 600">Queue idle</span></div>
+      <div style="font-size: 13px; color: #675F54">The strip at the bottom of every screen, and the drawer when it is opened with nothing queued.</div>
+
+      <div style="display: flex; flex-direction: column; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px; overflow: hidden">
+        <div style="display: flex; flex-direction: column; background: #FFFDF9; border-bottom: 1px solid #C4BBAB">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 14px 24px; border-bottom: 1px solid #DDD6CA">
+            <span style="font-size: 16px; font-weight: 600">Queue</span>
+            <span style="flex: 1 1 200px; font-size: 13px; color: #675F54">Nothing running, nothing waiting.</span>
+            <button type="button" disabled style="min-height: 40px; padding: 0 14px; border: 1px solid #C4BBAB; border-radius: 6px; background: #E8E2D6; color: #5A5448; font: inherit">Cancel all waiting</button>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: center; min-height: 96px; padding: 16px 24px; font-size: 13px; color: #675F54">No jobs. Jobs appear here when you press Run on a shot.</div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFDF9">
+          <span style="font-weight: 600">Queue</span>
+          <span style="font-size: 13px; color: #675F54">Idle</span>
+          <div style="flex: 1 1 160px; height: 8px; border-radius: 4px; background: #E8E2D6"></div>
+          <button type="button" style="min-height: 40px; padding: 0 14px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Open queue</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Library: Prompters</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="min-height: 1770px; display: flex; flex-wrap: wrap; box-sizing: border-box; background: #F5F2EC; color: #26231F; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; line-height: 1.4">
+
+  <aside style="flex: 0 0 232px; box-sizing: border-box; background: #FFFDF9; border-right: 1px solid #DDD6CA; padding: 20px 14px; display: flex; flex-direction: column; gap: 22px">
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 0 6px">
+      <div style="font-size: 16px; font-weight: 600">Comfy Toolkit</div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #675F54"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2447C9"></span>server-01 · connected</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 0 6px"><span style="font-size: 11px; letter-spacing: 0.08em; color: #675F54">PROJECT</span><a href="Projects.dc.html" style="display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; min-height: 40px; padding: 0 10px; border: 1px solid #8A8273; border-radius: 6px; background: #FFFDF9; font-weight: 600"><span>Rooftop short</span><span aria-hidden="true">▾</span></a></div>
+    <nav aria-label="Sequences" style="display: flex; flex-direction: column; gap: 2px">
+      <div style="padding: 0 6px 6px; font-size: 11px; letter-spacing: 0.08em; color: #675F54; display: flex; align-items: center; justify-content: space-between">SEQUENCES<a href="Projects.dc.html" aria-label="New sequence" style="width: 28px; height: 28px; margin: -6px 0; display: flex; align-items: center; justify-content: center; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font-size: 16px; letter-spacing: 0">+</a></div>
+      <a href="Sequence.dc.html" style="display: block; padding: 8px 6px">Rooftop chase</a>
+      <div style="padding: 8px 6px">Night market</div>
+    </nav>
+    <nav aria-label="Main sections" style="display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #DDD6CA; padding-top: 14px">
+      <a href="Gallery.dc.html" style="display: block; padding: 8px 6px">Gallery</a>
+      <a href="Library.dc.html" style="display: block; padding: 8px 6px; background: #E7E9F7; border-radius: 6px; font-weight: 600">Library</a>
+      <a href="Settings.dc.html" style="display: block; padding: 8px 6px">Settings</a>
+    </nav>
+    <div role="group" aria-label="Theme" style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 0 6px"><span style="font-size: 11px; letter-spacing: 0.08em; color: #675F54">THEME</span><div style="display: inline-flex; border: 1px solid #C4BBAB; border-radius: 6px; overflow: hidden"><span style="flex: 1; text-align: center; padding: 6px 0; background: #26231F; color: #FFFFFF; font-size: 12px">Auto</span><span style="flex: 1; text-align: center; padding: 6px 0; background: #FFFDF9; font-size: 12px">Light</span><span style="flex: 1; text-align: center; padding: 6px 0; background: #FFFDF9; font-size: 12px">Dark</span></div></div>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 24px; background: #FFFDF9; border-bottom: 1px solid #DDD6CA">
+      <div style="flex: 1 1 280px; min-width: 0">
+        <div style="font-size: 12px; color: #675F54">Library</div>
+        <div style="font-size: 20px; font-weight: 600">Prompters</div>
+      </div>
+    </header>
+
+    <div role="tablist" style="display: flex; gap: 4px; padding: 0 24px; background: #FFFDF9; border-bottom: 1px solid #DDD6CA">
+      <a href="Library.dc.html" role="tab" style="display: flex; align-items: center; min-height: 44px; padding: 0 16px; color: #433E36">Prompts</a>
+      <div role="tab" aria-selected="true" style="display: flex; align-items: center; min-height: 44px; padding: 0 16px; border-bottom: 3px solid #2447C9; font-weight: 600">Prompters</div>
+    </div>
+
+    <div style="flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 20px; padding: 24px">
+
+      <section aria-label="Prompter list" style="flex: 1 1 260px; max-width: 320px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px">
+        <button type="button" style="min-height: 44px; padding: 0 16px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">New prompter</button>
+        <sc-for list="{{prompters}}" as="p" hint-placeholder-count="4">
+          <div style="{{p.style}}">
+            <span style="font-weight: 600">{{p.name}}</span>
+            <span style="padding: 1px 8px; border: 1px solid #C4BBAB; border-radius: 999px; font-size: 12px">{{p.kind}}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section aria-label="Prompter editor" style="flex: 3 1 560px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+          <label style="flex: 1 1 240px; display: flex; flex-direction: column; gap: 6px; font-weight: 500">Name
+            <input type="text" value="Cinematic rooftop" style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; font-weight: 400">
+          </label>
+          <div role="group" aria-label="Type" style="display: inline-flex; border: 1px solid #C4BBAB; border-radius: 6px; overflow: hidden">
+            <button type="button" style="border: 0; padding: 0 16px; min-height: 44px; background: #26231F; color: #FFFFFF; font: inherit">Template</button>
+            <button type="button" style="border: 0; padding: 0 16px; min-height: 44px; background: #FFFDF9; font: inherit">LLM</button>
+            <button type="button" style="border: 0; padding: 0 16px; min-height: 44px; background: #FFFDF9; font: inherit">Script</button>
+          </div>
+        </div>
+
+        <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Template
+          <textarea rows="3" style="box-sizing: border-box; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 400; resize: vertical">{subject} stands at the {location}, {wardrobe}, {lighting}. {camera}.</textarea>
+          <span style="font-size: 12px; font-weight: 400; color: #675F54">Anything in { } becomes a slot below.</span>
+        </label>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span style="font-weight: 500">Slots</span>
+          <div style="overflow-x: auto">
+            <div style="min-width: 640px; display: flex; flex-direction: column; gap: 8px">
+              <div style="display: grid; grid-template-columns: 110px 190px minmax(0, 1fr) 60px; gap: 12px; font-size: 11px; letter-spacing: 0.06em; color: #675F54"><span>SLOT</span><span>HOW TO PICK</span><span>VALUES (ONE PER LINE)</span><span>COUNT</span></div>
+              <sc-for list="{{slots}}" as="s" hint-placeholder-count="5">
+                <div style="display: grid; grid-template-columns: 110px 190px minmax(0, 1fr) 60px; gap: 12px; align-items: start; padding-top: 8px; border-top: 1px solid #E8E2D6">
+                  <span style="padding-top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 13px">{{s.name}}</span>
+                  <select style="box-sizing: border-box; min-height: 44px; padding: 0 10px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit"><option>{{s.mode}}</option><option>Pick at random</option><option>Go in order</option><option>Always the same</option></select>
+                  <div style="box-sizing: border-box; padding: 8px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font-size: 13px; white-space: pre-line">{{s.values}}</div>
+                  <span style="padding-top: 10px; color: #675F54">{{s.count}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Prompts to make
+            <input type="number" value="6" style="box-sizing: border-box; width: 110px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; font-weight: 400">
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Randomness seed
+            <input type="text" value="48213" style="box-sizing: border-box; width: 140px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-weight: 400">
+          </label>
+          <button type="button" style="min-height: 44px; padding: 0 14px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">New seed</button>
+          <label style="display: flex; align-items: center; gap: 8px; min-height: 44px"><input type="checkbox" checked style="width: 18px; height: 18px; margin: 0; accent-color: #2447C9">Avoid repeats</label>
+        </div>
+        <div style="font-size: 12px; color: #675F54">Same seed gives the same list every time, so a batch can be rebuilt exactly.</div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <span style="font-weight: 600">Preview</span>
+            <button type="button" style="min-height: 40px; padding: 0 14px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Generate preview</button>
+            <span style="font-size: 12px; color: #675F54">Showing 4 of 6</span>
+          </div>
+          <sc-for list="{{samples}}" as="t" hint-placeholder-count="4">
+            <div style="display: flex; gap: 10px; font-size: 13px"><span style="color: #675F54; font-family: 'IBM Plex Mono', monospace">{{t.n}}</span><span>{{t.text}}</span></div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px">
+          <button type="button" style="min-height: 44px; padding: 0 22px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Save prompter</button>
+          <button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Duplicate</button>
+          <button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #B4400F; border-radius: 6px; background: #FFFDF9; color: #B4400F; font: inherit">Delete</button>
+        </div>
+      </section>
+    </div>
+
+    <div style="padding: 0 24px 28px; display: flex; flex-direction: column; gap: 16px">
+      <div style="font-size: 12px; letter-spacing: 0.08em; color: #675F54">THE OTHER TWO TYPES (SAME PAGE, EDITOR CHANGES WITH THE TYPE BUTTON)</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+        <section aria-label="LLM prompter" style="flex: 1 1 380px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><span style="font-size: 16px; font-weight: 600">Expand idea</span><span style="padding: 1px 8px; border: 1px solid #C4BBAB; border-radius: 999px; font-size: 12px">LLM</span></div>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Instruction
+            <textarea rows="3" style="box-sizing: border-box; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; font-weight: 400; resize: vertical">Write one vivid video prompt for the idea below. Keep camera and lighting concrete. Under 80 words.</textarea>
+          </label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Input
+            <select style="box-sizing: border-box; min-height: 44px; padding: 0 10px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit"><option>One idea per line (pasted when you run it)</option><option>Current shot prompt</option></select>
+          </label>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <label style="flex: 2 1 220px; display: flex; flex-direction: column; gap: 6px; font-weight: 500">Endpoint
+              <input type="text" value="http://localhost:11434/v1" style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 400">
+            </label>
+            <label style="flex: 1 1 110px; display: flex; flex-direction: column; gap: 6px; font-weight: 500">Temperature
+              <input type="text" value="0.8" style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; font-weight: 400">
+            </label>
+          </div>
+          <div style="padding: 10px 12px; background: #E7E9F7; border-radius: 6px; font-size: 13px">Your ideas are sent to this endpoint. It is not the ComfyUI server.</div>
+          <div><button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Test with one idea</button></div>
+        </section>
+
+        <section aria-label="Script prompter" style="flex: 1 1 380px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px"><span style="font-size: 16px; font-weight: 600">Neon wildcard script</span><span style="padding: 1px 8px; border: 1px solid #C4BBAB; border-radius: 999px; font-size: 12px">Script</span></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <label style="flex: 2 1 220px; display: flex; flex-direction: column; gap: 6px; font-weight: 500">Script file
+              <input type="text" value="~/prompters/neon.py" style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 400">
+            </label>
+            <label style="flex: 1 1 130px; display: flex; flex-direction: column; gap: 6px; font-weight: 500">Run with
+              <select style="box-sizing: border-box; min-height: 44px; padding: 0 10px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit"><option>Python</option><option>Node</option></select>
+            </label>
+          </div>
+          <div style="padding: 10px 12px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 6px; font-size: 13px">The script gets a JSON object on stdin (count, seed, current prompt) and prints a JSON list of prompts on stdout.</div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div><button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Test run</button></div>
+            <div style="padding: 10px 12px; background: #26231F; color: #EFEAE0; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: pre-line">["Neon sign flickers over a wet street, slow push in", "Neon reflections slide across a taxi roof, handheld", "A figure walks under pink neon, wide, rain"]</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1810}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = 'display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;box-sizing:border-box;padding:12px 14px;border-radius:8px;';
+    const prompters = [
+      { name: 'Cinematic rooftop', kind: 'Template', sel: true },
+      { name: 'Expand idea', kind: 'LLM', sel: false },
+      { name: 'Wardrobe cycle', kind: 'Template', sel: false },
+      { name: 'Neon wildcard script', kind: 'Script', sel: false }
+    ].map((p) => ({ ...p, style: base + (p.sel ? 'background:#E7E9F7;border:1px solid #2447C9' : 'background:#FFFDF9;border:1px solid #DDD6CA') }));
+    const slots = [
+      { name: '{subject}', mode: 'Pick at random', values: 'a courier\na woman in a red coat\nan old man', count: '3' },
+      { name: '{location}', mode: 'Go in order', values: 'roof edge\nwater tower\nstairwell door', count: '3' },
+      { name: '{wardrobe}', mode: 'Pick at random', values: 'black jacket\nyellow raincoat', count: '2' },
+      { name: '{lighting}', mode: 'Always the same', values: 'cold blue dusk light', count: '1' },
+      { name: '{camera}', mode: 'Pick at random', values: 'Slow push in\nHandheld, close\nLow angle, wide', count: '3' }
+    ];
+    const samples = [
+      { n: '1', text: 'A courier stands at the roof edge, black jacket, cold blue dusk light. Slow push in.' },
+      { n: '2', text: 'An old man stands at the water tower, yellow raincoat, cold blue dusk light. Low angle, wide.' },
+      { n: '3', text: 'A woman in a red coat stands at the stairwell door, black jacket, cold blue dusk light. Handheld, close.' },
+      { n: '4', text: 'A courier stands at the roof edge, yellow raincoat, cold blue dusk light. Handheld, close.' }
+    ];
+    return { prompters, slots, samples };
+  }
+}
+</script>
+</body>
+</html>

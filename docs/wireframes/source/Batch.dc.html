@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shot view: prompt list mode</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="min-height: 1830px; display: flex; flex-wrap: wrap; box-sizing: border-box; background: #F5F2EC; color: #26231F; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; line-height: 1.4">
+
+  <aside style="flex: 0 0 232px; box-sizing: border-box; background: #FFFDF9; border-right: 1px solid #DDD6CA; padding: 20px 14px; display: flex; flex-direction: column; gap: 22px">
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 0 6px">
+      <div style="font-size: 16px; font-weight: 600">Comfy Toolkit</div>
+      <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #675F54"><span style="width: 8px; height: 8px; border-radius: 50%; background: #2447C9"></span>server-01 · connected</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding: 0 6px"><span style="font-size: 11px; letter-spacing: 0.08em; color: #675F54">PROJECT</span><a href="Projects.dc.html" style="display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; min-height: 40px; padding: 0 10px; border: 1px solid #8A8273; border-radius: 6px; background: #FFFDF9; font-weight: 600"><span>Rooftop short</span><span aria-hidden="true">▾</span></a></div>
+
+    <nav aria-label="Sequences and shots" style="display: flex; flex-direction: column; gap: 2px">
+      <div style="padding: 0 6px 6px; font-size: 11px; letter-spacing: 0.08em; color: #675F54; display: flex; align-items: center; justify-content: space-between">SEQUENCES<a href="Projects.dc.html" aria-label="New sequence" style="width: 28px; height: 28px; margin: -6px 0; display: flex; align-items: center; justify-content: center; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font-size: 16px; letter-spacing: 0">+</a></div>
+      <a href="Sequence.dc.html" style="display: block; padding: 8px 6px; font-weight: 600">Rooftop chase</a>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 22px; color: #433E36"><span style="width: 9px; height: 9px; border-radius: 50%; background: #2447C9"></span>01 Alley entrance</div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 22px; color: #433E36"><span style="width: 9px; height: 9px; border-radius: 50%; background: #2447C9"></span>02 Window jump</div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 22px; background: #E7E9F7; border-radius: 6px; font-weight: 500"><span style="width: 9px; height: 9px; border-radius: 50%; background: #2447C9"></span>03 Roof edge</div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 22px; color: #433E36"><span style="box-sizing: border-box; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #675F54"></span>04 Landing</div>
+      <div style="padding: 8px 6px">Night market</div>
+      <div style="padding: 14px 6px 6px; font-size: 11px; letter-spacing: 0.08em; color: #675F54; display: flex; align-items: center; justify-content: space-between">LOOSE SHOTS<a href="Projects.dc.html" aria-label="New loose shot" style="width: 28px; height: 28px; margin: -6px 0; display: flex; align-items: center; justify-content: center; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font-size: 16px; letter-spacing: 0">+</a></div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 22px; color: #433E36"><span style="box-sizing: border-box; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #675F54"></span>Rain loop test</div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 7px 6px 7px 22px; color: #433E36"><span style="width: 9px; height: 9px; border-radius: 50%; background: #2447C9"></span>Face closeups</div>
+      <div style="display: flex; align-items: center; gap: 6px; padding: 12px 6px 0; font-size: 12px; color: #675F54"><span style="width: 9px; height: 9px; border-radius: 50%; background: #2447C9"></span>keeper set<span style="box-sizing: border-box; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #675F54; margin-left: 8px"></span>none yet</div>
+    </nav>
+
+    <nav aria-label="Main sections" style="display: flex; flex-direction: column; gap: 2px; border-top: 1px solid #DDD6CA; padding-top: 14px">
+      <a href="Gallery.dc.html" style="display: block; padding: 8px 6px">Gallery</a>
+      <a href="Library.dc.html" style="display: block; padding: 8px 6px">Library</a>
+      <a href="Settings.dc.html" style="display: block; padding: 8px 6px">Settings</a>
+    </nav>
+    <div role="group" aria-label="Theme" style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 0 6px"><span style="font-size: 11px; letter-spacing: 0.08em; color: #675F54">THEME</span><div style="display: inline-flex; border: 1px solid #C4BBAB; border-radius: 6px; overflow: hidden"><span style="flex: 1; text-align: center; padding: 6px 0; background: #26231F; color: #FFFFFF; font-size: 12px">Auto</span><span style="flex: 1; text-align: center; padding: 6px 0; background: #FFFDF9; font-size: 12px">Light</span><span style="flex: 1; text-align: center; padding: 6px 0; background: #FFFDF9; font-size: 12px">Dark</span></div></div>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 24px; background: #FFFDF9; border-bottom: 1px solid #DDD6CA">
+      <div style="flex: 1 1 280px; min-width: 0">
+        <div style="font-size: 12px; color: #675F54">Rooftop chase / Shot 03 · keeper #5 · 6 attempts</div>
+        <div style="font-size: 20px; font-weight: 600">Roof edge</div>
+      </div>
+      <button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Duplicate shot</button>
+      <button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Move to sequence</button>
+    </header>
+
+    <nav aria-label="Workflow" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; padding: 12px 24px 0; background: #FFFDF9; border-bottom: 1px solid #DDD6CA">
+      <span style="padding: 10px 18px; border: 1px solid #DDD6CA; border-bottom: 1px solid #FFFDF9; margin-bottom: -1px; background: #FFFDF9; border-radius: 6px 6px 0 0; font-weight: 600">ref2vid</span>
+      <a href="Shot-fl2vid.dc.html" style="padding: 10px 18px; color: #433E36">fl2vid</a>
+      <a href="Import.dc.html" style="padding: 10px 18px; color: #675F54">+ Import workflow</a>
+      <span style="margin-left: auto; padding-bottom: 10px; font-size: 12px; color: #675F54">Shared values carry over when you switch</span>
+    </nav>
+
+    <div style="flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; padding: 24px">
+
+      <section aria-label="Shot inputs" style="flex: 3 1 480px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <span style="font-size: 12px; font-weight: 500; color: #433E36">Prompt</span>
+            <div style="display: inline-flex; border: 1px solid #C4BBAB; border-radius: 6px; overflow: hidden"><a href="Main.dc.html" style="display: flex; align-items: center; padding: 4px 10px; background: #FFFDF9; color: #26231F; font-size: 12px">single</a><span style="padding: 4px 10px; background: #26231F; color: #FFFFFF; font-size: 12px">list</span></div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 12px 14px; background: #F5F2EC; border: 1px solid #DDD6CA; border-radius: 8px">
+            <label style="flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500">Prompter
+              <select style="box-sizing: border-box; min-height: 44px; padding: 0 10px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit; font-weight: 400"><option>Cinematic rooftop</option><option>Expand idea</option></select>
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500">How many
+              <input type="number" value="6" style="box-sizing: border-box; width: 80px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; font-weight: 400">
+            </label>
+            <button type="button" style="min-height: 44px; padding: 0 16px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Generate</button>
+            <div style="display: inline-flex; border: 1px solid #C4BBAB; border-radius: 6px; overflow: hidden"><span style="padding: 0 12px; min-height: 44px; display: flex; align-items: center; background: #26231F; color: #FFFFFF; font-size: 13px">Replace list</span><span style="padding: 0 12px; min-height: 44px; display: flex; align-items: center; background: #FFFDF9; font-size: 13px">Add to list</span></div>
+            <a href="Prompter.dc.html" style="display: flex; align-items: center; min-height: 44px; text-decoration: underline">Edit prompter</a>
+          </div>
+          <div style="font-size: 13px; color: #675F54">6 prompts. Generated prompts are plain text you can edit. Nothing re-rolls unless you press Generate.</div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><div style="display: flex; justify-content: space-between; font-size: 12px; color: #675F54"><span>Prompt 1</span><span style="text-decoration: underline">Remove</span></div><textarea rows="2" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; resize: vertical">A courier stands at the roof edge, black jacket, cold blue dusk light. Slow push in.</textarea></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><div style="display: flex; justify-content: space-between; font-size: 12px; color: #675F54"><span>Prompt 2</span><span style="text-decoration: underline">Remove</span></div><textarea rows="2" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; resize: vertical">An old man stands at the water tower, yellow raincoat, cold blue dusk light. Low angle, wide.</textarea></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><div style="display: flex; justify-content: space-between; font-size: 12px; color: #675F54"><span>Prompt 3</span><span style="text-decoration: underline">Remove</span></div><textarea rows="2" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; resize: vertical">A woman in a red coat stands at the stairwell door, black jacket, cold blue dusk light. Handheld, close.</textarea></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><div style="display: flex; justify-content: space-between; font-size: 12px; color: #675F54"><span>Prompt 4</span><span style="text-decoration: underline">Remove</span></div><textarea rows="2" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; resize: vertical">A courier stands at the roof edge, yellow raincoat, cold blue dusk light. Handheld, close.</textarea></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><div style="display: flex; justify-content: space-between; font-size: 12px; color: #675F54"><span>Prompt 5</span><span style="text-decoration: underline">Remove</span></div><textarea rows="2" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; resize: vertical">An old man stands at the stairwell door, black jacket, cold blue dusk light. Slow push in.</textarea></div>
+          <div style="display: flex; flex-direction: column; gap: 4px"><div style="display: flex; justify-content: space-between; font-size: 12px; color: #675F54"><span>Prompt 6</span><span style="text-decoration: underline">Remove</span></div><textarea rows="2" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #C4BBAB; border-radius: 6px; font: inherit; resize: vertical">A woman in a red coat stands at the water tower, yellow raincoat, cold blue dusk light. Low angle, wide.</textarea></div>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px">
+            <button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Add prompt</button>
+            <button type="button" style="min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Paste lines</button>
+            <a href="Library.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit">Pick from Library</a>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px 20px">
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="dur" style="font-size: 12px; font-weight: 500; color: #433E36">Duration (s)</label>
+            <input id="dur" type="number" value="15" style="box-sizing: border-box; width: 96px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="aspect" style="font-size: 12px; font-weight: 500; color: #433E36">Aspect ratio</label>
+            <select id="aspect" style="box-sizing: border-box; width: 230px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit"><option>2:3 (Portrait Photo)</option><option>16:9 (Widescreen)</option><option>1:1 (Square)</option></select>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <label for="mp" style="font-size: 12px; font-weight: 500; color: #433E36">Megapixels</label>
+            <input id="mp" type="number" value="0.4" step="0.1" style="box-sizing: border-box; width: 96px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit">
+          </div>
+          <label style="display: flex; align-items: center; gap: 10px; min-height: 44px"><input type="checkbox" checked style="width: 20px; height: 20px; margin: 0; accent-color: #2447C9"><span><span style="font-weight: 600">Turbo</span> <span style="color: #675F54">Lightning LoRA, fewer steps</span></span></label>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <span style="font-size: 12px; font-weight: 500; color: #433E36">Seed</span>
+            
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+            <div style="display: inline-flex; border: 1px solid #C4BBAB; border-radius: 6px; overflow: hidden"><button type="button" style="border: 0; padding: 0 16px; min-height: 44px; background: #26231F; color: #FFFFFF; font: inherit">Random</button><button type="button" style="border: 0; padding: 0 16px; min-height: 44px; background: #FFFDF9; color: #26231F; font: inherit">Fixed</button></div>
+            <input type="text" readonly aria-label="Last seed used" value="440524234949240" style="box-sizing: border-box; width: 200px; min-height: 44px; padding: 0 12px; border: 1px solid #DDD6CA; border-radius: 6px; background: #F5F2EC; color: #675F54; font-family: 'IBM Plex Mono', monospace; font-size: 13px">
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px; font-size: 11px; letter-spacing: 0.08em; color: #675F54"><span>REF2VID ONLY</span><span style="flex: 1; height: 1px; background: #DDD6CA"></span></div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <span style="font-size: 12px; font-weight: 500; color: #433E36">Reference images</span>
+            <span style="font-size: 12px; color: #675F54">6 of 9 slots</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <sc-for list="{{refs}}" as="ref" hint-placeholder-count="6">
+              <div style="position: relative; box-sizing: border-box; flex: 0 0 96px; height: 128px; display: flex; align-items: flex-end; padding: 6px; border: 1px solid #C4BBAB; border-radius: 6px; background: repeating-linear-gradient(45deg, #EFEAE0, #EFEAE0 8px, #E8E2D6 8px, #E8E2D6 16px); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #433E36">{{ref.label}}<button type="button" aria-label="Remove {{ref.label}}" style="position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; padding: 0; border: 1px solid #C4BBAB; border-radius: 50%; background: #FFFDF9; color: #26231F; font: inherit; line-height: 1">×</button></div>
+            </sc-for>
+            <button type="button" aria-label="Add reference image" style="box-sizing: border-box; flex: 0 0 96px; height: 128px; border: 1.5px dashed #675F54; border-radius: 6px; background: #FFFDF9; color: #433E36; font: inherit; font-size: 22px">+</button>
+          </div>
+          <div style="font-size: 12px; color: #675F54">Drag to reorder. Unused slots are removed from the workflow before sending.</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; border-top: 1px solid #DDD6CA; padding-top: 16px">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #433E36">Runs per prompt <input type="number" value="2" min="1" style="box-sizing: border-box; width: 72px; min-height: 44px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit"></label>
+          <button type="button" style="min-height: 44px; padding: 0 28px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Run 12 jobs</button>
+          <span style="font-size: 13px; color: #675F54">6 prompts × 2 runs = 12 jobs. Each becomes an attempt, run in queue order.</span>
+        </div>
+      </section>
+
+      <section aria-label="Attempts" style="flex: 2 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+          <div style="font-size: 16px; font-weight: 600">Attempts <span style="font-weight: 400; color: #675F54">6</span></div>
+          <a href="Compare.dc.html" style="display: flex; align-items: center; box-sizing: border-box; min-height: 40px; padding: 0 14px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9">Compare selected</a>
+        </div>
+
+        <sc-for list="{{attempts}}" as="a" hint-placeholder-count="4">
+          <div style="{{a.cardStyle}}">
+            <sc-if value="{{a.running}}" hint-placeholder-val="{{ false }}">
+              <div style="flex: 0 0 84px; height: 126px; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: #E8E2D6; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #433E36">{{a.progress}}</div>
+            </sc-if>
+            <sc-if value="{{a.done}}" hint-placeholder-val="{{ true }}">
+              <div style="flex: 0 0 84px; height: 126px; display: flex; align-items: center; justify-content: center; border-radius: 4px; background: repeating-linear-gradient(45deg, #EFEAE0, #EFEAE0 8px, #E8E2D6 8px, #E8E2D6 16px)"><span style="width: 0; height: 0; border-left: 14px solid #675F54; border-top: 9px solid transparent; border-bottom: 9px solid transparent"></span></div>
+            </sc-if>
+            <div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+              <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+                <input type="checkbox" aria-label="Select {{a.id}} to compare" style="width: 16px; height: 16px; margin: 0; accent-color: #2447C9">
+                <span style="font-weight: 600">{{a.id}}</span>
+                <span style="padding: 1px 8px; border: 1px solid #C4BBAB; border-radius: 999px; font-family: 'IBM Plex Mono', monospace; font-size: 12px">{{a.workflow}}</span>
+                <sc-if value="{{a.keeper}}" hint-placeholder-val="{{ false }}">
+                  <span style="padding: 2px 8px; border-radius: 999px; background: #2447C9; color: #FFFFFF; font-size: 11px; font-weight: 600; letter-spacing: 0.04em">KEEPER</span>
+                </sc-if>
+              </div>
+              <div style="font-size: 12px; color: #675F54">{{a.meta}}</div>
+              <sc-if value="{{a.running}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 8px">
+                  <div style="height: 8px; border-radius: 4px; background: #E8E2D6"><div style="width: 62%; height: 100%; border-radius: 4px; background: #2447C9"></div></div>
+                  <button type="button" style="align-self: flex-start; min-height: 36px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit; font-size: 13px">Cancel</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{a.done}}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                  <button type="button" style="min-height: 36px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit; font-size: 13px">Load settings</button>
+                  <button type="button" style="min-height: 36px; padding: 0 12px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9; font: inherit; font-size: 13px">Set keeper</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+
+        <div style="padding: 4px 2px; font-size: 13px; color: #675F54">Show 2 older attempts</div>
+      </section>
+    </div>
+
+    <footer style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 24px; background: #FFFDF9; border-top: 1px solid #DDD6CA">
+      <span style="font-weight: 600">Queue</span>
+      <span style="font-size: 13px; color: #675F54">Running: #6 Roof edge · 62%</span>
+      <div style="flex: 1 1 160px; height: 8px; border-radius: 4px; background: #E8E2D6"><div style="width: 62%; height: 100%; border-radius: 4px; background: #2447C9"></div></div>
+      <span style="font-size: 13px; color: #675F54">3 waiting</span>
+      <a href="Queue.dc.html" style="display: flex; align-items: center; box-sizing: border-box; min-height: 40px; padding: 0 14px; border: 1px solid #C4BBAB; border-radius: 6px; background: #FFFDF9">Open queue</a>
+    </footer>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1870}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const base = 'display:flex;gap:14px;padding:12px;border-radius:8px;box-sizing:border-box;background:#FFFDF9;';
+    const attempts = [
+      { id: '#6', workflow: 'ref2vid', meta: 'turbo · 15 s · seed …4924 · rendering', running: true, done: false, keeper: false, progress: '62%' },
+      { id: '#5', workflow: 'ref2vid', meta: 'turbo · 15 s · seed …1187 · 2 min ago', running: false, done: true, keeper: true, progress: '' },
+      { id: '#4', workflow: 'fl2vid', meta: 'turbo · 15 s · seed …7702 · 9 min ago', running: false, done: true, keeper: false, progress: '' },
+      { id: '#3', workflow: 'ref2vid', meta: 'full · 15 s · seed …5530 · 21 min ago', running: false, done: true, keeper: false, progress: '' }
+    ].map((a) => ({
+      ...a,
+      cardStyle: base + (a.keeper ? 'border:1px solid #2447C9;box-shadow:0 0 0 1px #2447C9' : 'border:1px solid #DDD6CA')
+    }));
+    const refs = [1, 2, 3, 4, 5, 6].map((n) => ({ label: 'ref ' + n }));
+    return { attempts, refs };
+  }
+}
+</script>
+</body>
+</html>

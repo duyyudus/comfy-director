@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Projects and workspace</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:inherit;text-decoration:none}
+</style>
+</helmet>
+<div style="min-height: 760px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; padding: 24px; background: #F5F2EC; color: #26231F; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 14px; line-height: 1.4">
+  <div style="max-width: 920px"><div style="font-size: 20px; font-weight: 600">Projects and workspace</div><div style="font-size: 13px; color: #675F54">A project groups related sequences and loose shots. Reached from the Project switcher at the top of the sidebar.</div></div>
+  <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+    <section style="flex: 1 1 360px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">1</span><span style="font-size: 16px; font-weight: 600">Project switcher</span></div>
+      <div style="font-size: 13px; color: #675F54">Opens from the sidebar.</div>
+      <div style="display: flex; flex-direction: column; gap: 4px; max-width: 300px">
+        <span style="padding: 0 6px; font-size: 11px; letter-spacing: 0.08em; color: #675F54">PROJECT</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; min-height: 40px; padding: 0 10px; border: 2px solid #2447C9; border-radius: 6px; background: #FFFDF9; font-weight: 600"><span>Rooftop short</span><span aria-hidden="true">▴</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; padding: 6px; border: 1px solid #8A8273; border-radius: 8px; background: #FFFDF9">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 0 10px; background: #E7E9F7; border-radius: 6px"><span style="font-weight: 600">✓ Rooftop short</span><span style="font-size: 12px; color: #675F54">12 shots</span></div><div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 0 10px; background: #FFFDF9; border-radius: 6px"><span style="font-weight: 400">Client teaser</span><span style="font-size: 12px; color: #675F54">5 shots</span></div><div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 0 10px; background: #FFFDF9; border-radius: 6px"><span style="font-weight: 400">Rain tests</span><span style="font-size: 12px; color: #675F54">3 shots</span></div>
+          <div style="height: 1px; margin: 4px 0; background: #DDD6CA"></div>
+          <div style="min-height: 40px; display: flex; align-items: center; padding: 0 10px">New project…</div>
+          <div style="min-height: 40px; display: flex; align-items: center; padding: 0 10px">Rename project</div>
+          <div style="min-height: 40px; display: flex; align-items: center; padding: 0 10px">Open project folder</div>
+          <div style="min-height: 40px; display: flex; align-items: center; padding: 0 10px">Remove from list</div>
+        </div>
+      </div>
+      <div style="font-size: 13px; color: #675F54">Switching project changes the sequences, loose shots, Gallery and Compare to that project. Prompts, prompters and workflows are shared by all projects. The queue shows jobs from every project.</div>
+    </section>
+    <section style="flex: 1 1 360px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">2</span><span style="font-size: 16px; font-weight: 600">New project</span></div>
+      <div style="font-size: 13px; color: #675F54">Create project dialog.</div>
+      <div style="display: flex; flex-direction: column; gap: 14px; max-width: 440px">
+        <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Project name<input type="text" value="Rooftop short" style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #8A8273; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit; font-weight: 400"></label>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Folder<input type="text" readonly value="~/Comfy Toolkit/projects/Rooftop short" style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #8A8273; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit; border-color: #DDD6CA; background: #F5F2EC; color: #675F54; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 400"></label>
+        <div style="font-size: 13px; color: #675F54">A project keeps its sequences, loose shots, renders and input images in one folder. Renaming the project renames the folder.</div>
+        <div><button type="button" style="min-height: 44px; padding: 0 24px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Create project</button></div>
+      </div>
+      <div style="font-size: 13px; color: #675F54">Also the third step of first launch ("First project"). After it, the screen shows "Start your first shot".</div>
+    </section>
+    <section style="flex: 1 1 420px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">3</span><span style="font-size: 16px; font-weight: 600">Folder layout</span></div>
+      <div style="font-size: 13px; color: #675F54">What is on disk.</div>
+      <pre style="margin: 0; padding: 14px 16px; background: #26231F; color: #EDE8DF; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.6; overflow-x: auto">~/Comfy Toolkit/                 workspace (Settings)
+  workflows/                     app-wide
+    minimax_h3_r2v/
+      workflow.json
+      overrides.json
+    minimax_h3_fl2v/
+  app.db                         app-wide data
+  projects/
+    Rooftop short/               one folder per project
+      project.db                 sequences, shots, attempts
+      inputs/                    copies of chosen images
+      outputs/
+        Rooftop chase/
+          03 Roof edge/
+            attempt-6-ref2vid.mp4
+        _loose/
+        _keepers/
+    Client teaser/</pre>
+      <div style="font-size: 13px; color: #675F54">File paths inside a project are stored relative to the project folder, so a project can be renamed, moved or archived as a whole.</div>
+    </section>
+    <section style="flex: 1 1 360px; min-width: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #FFFDF9; border: 1px solid #DDD6CA; border-radius: 8px">
+      <div style="display: flex; align-items: center; gap: 10px"><span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #26231F; color: #FFFFFF; font-size: 13px; font-weight: 600">4</span><span style="font-size: 16px; font-weight: 600">New shot</span></div>
+      <div style="font-size: 13px; color: #675F54">From the + next to LOOSE SHOTS, or "Add shot" in a Sequence view (then "Where" is preset). Opens the new shot in the Shot view.</div>
+      <div style="display: flex; flex-direction: column; gap: 14px; max-width: 440px">
+        <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Shot name<input type="text" value="Untitled shot" style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #8A8273; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit"></label>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-weight: 500">Where
+          <label style="display: flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 400"><input type="radio" name="where" checked> Loose shot <span style="color: #675F54">(belongs to no sequence)</span></label>
+          <label style="display: flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 400"><input type="radio" name="where"> In a sequence <span style="padding: 10px 12px; border: 1px solid #8A8273; border-radius: 6px">Rooftop chase ▾</span></label>
+        </div>
+        <div style="font-size: 13px; color: #675F54">A shot added to a sequence goes at the end. Use "Move to sequence" in the Shot view to change it later.</div>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-weight: 500">Workflow<select style="box-sizing: border-box; min-height: 44px; padding: 0 12px; border: 1px solid #8A8273; border-radius: 6px; background: #FFFDF9; color: #26231F; font: inherit"><option>ref2vid (last used)</option><option>fl2vid</option></select></label>
+        <div><button type="button" style="min-height: 44px; padding: 0 24px; border: 0; border-radius: 6px; background: #2447C9; color: #FFFFFF; font: inherit; font-weight: 600">Create shot</button></div>
+      </div>
+      <div style="font-size: 13px; color: #675F54">New sequence (the + next to SEQUENCES): a name field and Create; opens an empty Sequence view with "Add shot".</div>
+    </section>
+  </div>
+  <a href="Main.dc.html" style="align-self: flex-start; display: flex; align-items: center; min-height: 44px; padding: 0 18px; border: 1px solid #8A8273; border-radius: 6px; background: #FFFDF9">Back to shot</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>
