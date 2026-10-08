@@ -272,7 +272,7 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
                             </div>
                           )}
                         </td>
-                        <td className="py-2.5 pr-3"><Chip className="font-sans">{c.type.replace('-', ' ')}</Chip></td>
+                        <td className="py-2.5 pr-3"><Chip className="font-sans whitespace-nowrap">{c.type.replace('-', ' ')}</Chip></td>
                         <td className="py-2.5 pr-3 font-mono text-xs text-text2">{c.source}</td>
                         <td className="py-2.5 font-mono text-xs">{fmtDefault(c.default, c.type, c.constraints.maxCount)}</td>
                       </tr>
@@ -297,7 +297,7 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
                             </div>
                           )}
                         </td>
-                        <td className="py-2.5 pr-3"><Chip className="font-sans">{f.type}</Chip></td>
+                        <td className="py-2.5 pr-3"><Chip className="font-sans whitespace-nowrap">{f.type}</Chip></td>
                         <td className="py-2.5 pr-3 font-mono text-xs text-text2">{f.title} · {f.nodeClass}.{f.field} <span className="text-muted">(override)</span></td>
                         <td className="py-2.5 font-mono text-xs">{fmtDefault(f.value, f.type)}</td>
                       </tr>
@@ -316,7 +316,7 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
               {visibleFields.map((f) => (
                 <div key={`${f.nodeId}.${f.field}`} className="flex items-center gap-4 border-b border-border py-2.5 text-[13px]">
                   <span className="w-36 shrink-0">{f.label}</span>
-                  <span className="w-20 shrink-0"><Chip className="font-sans">{f.type}</Chip></span>
+                  <span className="w-20 shrink-0"><Chip className="font-sans whitespace-nowrap">{f.type}</Chip></span>
                   <span className="min-w-0 flex-1 truncate font-mono text-xs text-text2" title={f.source}>{f.source}</span>
                   <Button size="sm" onClick={() => setExposes([...exposes, { class: f.nodeClass, title: f.title, field: f.field, label: f.label }])}>Expose</Button>
                 </div>
