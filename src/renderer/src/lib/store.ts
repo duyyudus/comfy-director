@@ -11,7 +11,7 @@ export type Route =
   | { name: 'gallery' }
   | { name: 'library'; tab: 'prompts' | 'prompters' }
   | { name: 'settings' }
-  | { name: 'import'; back: Route; replaceId?: string | null }
+  | { name: 'import'; back: Route; replaceId?: string | null; editId?: string }
   | { name: 'compare'; shotId: number; attemptIds: number[] }
 
 export type GlobalDialog =

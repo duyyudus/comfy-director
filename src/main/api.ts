@@ -183,6 +183,27 @@ export function createApi(ctx: Context): ToolkitApi {
     async getWorkflowOverrides(id) {
       return ws().loadWorkflow(id)?.overrides ?? {}
     },
+    async getWorkflowFile(id) {
+      const w = ws().loadWorkflow(id)
+      return w ? { fileName: `workflows/${id}/workflow.json`, text: w.text } : null
+    },
+    async updateWorkflow(id, name, overrides) {
+      ws().updateWorkflow(id, name, overrides)
+      ctx.emit({ type: 'workflows-changed' })
+      return ws().info(ws().loadWorkflow(id)!, oi())
+    },
+    async workflowShotCount(id) {
+      let shots = 0
+      for (const p of ws().projectPaths()) shots += ws().project(p).shotsUsingWorkflow(id)
+      return shots
+    },
+    async deleteWorkflow(id) {
+      if (!ws().app.workflow(id)) return
+      const dir = ws().workflowDir(id)
+      if (existsSync(dir)) await shell.trashItem(dir)
+      ws().removeWorkflow(id)
+      ctx.emit({ type: 'workflows-changed' })
+    },
 
     /* ------------------------------------------------------- projects */
     async listProjects() {

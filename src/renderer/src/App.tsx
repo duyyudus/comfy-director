@@ -66,7 +66,7 @@ function View(): ReactNode {
     case 'settings':
       return <SettingsView />
     case 'import':
-      return <ImportView back={route.back} replaceId={route.replaceId} />
+      return <ImportView key={route.editId ?? ''} back={route.back} replaceId={route.replaceId} editId={route.editId} />
     case 'compare':
       return <CompareView shotId={route.shotId} attemptIds={route.attemptIds} />
     default:

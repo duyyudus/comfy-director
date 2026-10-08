@@ -78,8 +78,12 @@ export class AppDb {
       .prepare('INSERT OR REPLACE INTO workflow_versions(workflow_id,version,hash,imported_at) VALUES(?,?,?,?)')
       .run(row.id, row.version, row.hash, row.imported_at)
   }
+  /** Version history is kept, so an id that is imported again continues its numbering. */
   deleteWorkflow(id: string): void {
     this.db.prepare('DELETE FROM workflows WHERE id=?').run(id)
+  }
+  nextWorkflowVersion(id: string): number {
+    return (this.db.prepare('SELECT COALESCE(MAX(version),0)+1 AS v FROM workflow_versions WHERE workflow_id=?').get(id) as { v: number }).v
   }
 
   // projects
@@ -451,6 +455,9 @@ export class ProjectDb {
         WHERE a.status IN ('done','cached') ORDER BY a.id DESC`)
       .all() as (AttemptRow & { shot_name: string; shot_position: number | null; seq_id: number | null; keeper: number | null })[]
     return rows.map((r) => ({ ...attemptFromRow(r), shotName: r.shot_name, shotPosition: r.shot_position, sequenceId: r.seq_id, keeper: r.keeper }))
+  }
+  shotsUsingWorkflow(id: string): number {
+    return (this.db.prepare('SELECT COUNT(*) AS n FROM shots WHERE workflow_id=?').get(id) as { n: number }).n
   }
   shotsUsingKey(key: string): number {
     const rows = this.db.prepare('SELECT values_json FROM shots').all() as { values_json: string }[]

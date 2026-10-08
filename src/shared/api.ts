@@ -27,6 +27,10 @@ export interface ToolkitApi {
   previewImport(text: string, overrides: Overrides, replaceId: string | null): Promise<ImportPreview>
   commitImport(commit: ImportCommit): Promise<WorkflowInfo>
   getWorkflowOverrides(id: string): Promise<Overrides>
+  getWorkflowFile(id: string): Promise<{ fileName: string; text: string } | null>
+  updateWorkflow(id: string, name: string, overrides: Overrides): Promise<WorkflowInfo>
+  workflowShotCount(id: string): Promise<number>
+  deleteWorkflow(id: string): Promise<void>
 
   // projects
   listProjects(): Promise<ProjectInfo[]>
@@ -102,6 +106,7 @@ export const API_METHODS: ApiMethod[] = [
   'getSettings', 'setTheme', 'saveServer', 'testConnection', 'getServerStatus', 'retryConnection', 'chooseWorkspace',
   'openWorkspaceFolder', 'finishSetup', 'syncedWarning',
   'listWorkflows', 'pickWorkflowFile', 'analyzeWorkflow', 'previewImport', 'commitImport', 'getWorkflowOverrides',
+  'getWorkflowFile', 'updateWorkflow', 'workflowShotCount', 'deleteWorkflow',
   'listProjects', 'createProject', 'openProject', 'openExistingProject', 'renameProject', 'removeProject', 'revealProject',
   'projectFolderPreview', 'getProjectTree',
   'createSequence', 'renameSequence', 'deleteSequence', 'reorderShots', 'createShot', 'getShot', 'updateShot',

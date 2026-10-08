@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { TestResult } from '@shared/types'
-import { useStore } from '../lib/store'
+import type { TestResult, WorkflowInfo } from '@shared/types'
+import { useStore, type Route } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
+import { plural } from '../lib/format'
 import { Button, Card, Input, Label } from '../components/ui'
 
 /** Server address + token + Test connection. Same form as the first-launch connect step. */
@@ -49,11 +50,24 @@ export function ServerForm({ onSaved, saveLabel = 'Save' }: { onSaved?: () => vo
 }
 
 export function SettingsView(): ReactNode {
-  const { settings, setSettings, server, loadProjects, openProject, toast } = useStore()
+  const { settings, setSettings, server, workflows, go, loadWorkflows, loadProjects, openProject, toast } = useStore()
   const [warning, setWarning] = useState<string | null>(null)
   useEffect(() => {
     if (settings) void api.syncedWarning(settings.workspacePath).then(setWarning)
   }, [settings])
+  const back: Route = { name: 'settings' }
+  const deleteWorkflow = async (w: WorkflowInfo): Promise<void> => {
+    try {
+      const shots = await api.workflowShotCount(w.id)
+      const used = shots ? ` ${plural(shots, 'shot')} use${shots === 1 ? 's' : ''} it and will fall back to another workflow, keeping the values.` : ''
+      if (!confirm(`Delete "${w.name}"?${used} Past attempts and rendered files are kept. Its folder is moved to the system trash.`)) return
+      await api.deleteWorkflow(w.id)
+      await loadWorkflows()
+      toast(`Deleted ${w.name}.`)
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    }
+  }
   return (
     <div className="flex min-h-full flex-col">
       <div className="border-b border-border bg-panel px-6 pt-4 pb-4">
@@ -68,6 +82,26 @@ export function SettingsView(): ReactNode {
             The token is kept in the system keychain, never in the workspace.
           </div>
           <ServerForm onSaved={() => toast('Server saved. Connecting…')} />
+        </Card>
+        <Card className="p-5">
+          <div className="mb-1 flex items-center">
+            <div className="flex-1 text-[17px] font-semibold">Workflows</div>
+            <Button size="sm" onClick={() => go({ name: 'import', back })}>Import workflow</Button>
+          </div>
+          <div className="mb-2 text-[13px] text-text2">
+            Edit a workflow to rename it or change which inputs it exposes. To update its graph, import the new export and choose Replace.
+          </div>
+          {workflows.length === 0 && <div className="py-2 text-[13px] text-muted">No workflows imported yet.</div>}
+          {workflows.map((w) => (
+            <div key={w.id} className="flex items-center gap-3 border-t border-border py-2.5">
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold">{w.name}</div>
+                <div className="truncate font-mono text-xs text-text2">{w.id} · version {w.version} · {plural(w.inputs.length, 'input')}</div>
+              </div>
+              <Button size="sm" onClick={() => go({ name: 'import', back, editId: w.id })}>Edit</Button>
+              <Button size="sm" variant="danger" onClick={() => void deleteWorkflow(w)}>Delete</Button>
+            </div>
+          ))}
         </Card>
         <Card className="p-5">
           <div className="mb-1 text-[17px] font-semibold">Workspace folder</div>

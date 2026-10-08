@@ -302,6 +302,11 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
         </button>
         <span className="flex-1" />
         {workflows.length > 1 && <span className="pb-2.5 text-[13px] text-text2">Shared values carry over when you switch</span>}
+        {activeWf && (
+          <button className="pb-2.5 pl-3 text-[13px] text-accent-text hover:underline" onClick={() => go({ name: 'import', back: { name: 'shot', shotId }, editId: activeWf.id })}>
+            Edit workflow
+          </button>
+        )}
       </div>
 
       {!activeWf ? (

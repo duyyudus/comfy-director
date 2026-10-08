@@ -107,7 +107,7 @@ export class Workspace {
       } catch {
         continue
       }
-      this.app.upsertWorkflow({ id, name: id, version: 1, hash: sha256(text), imported_at: new Date().toISOString() })
+      this.app.upsertWorkflow({ id, name: id, version: this.app.nextWorkflowVersion(id), hash: sha256(text), imported_at: new Date().toISOString() })
     }
   }
 
@@ -145,7 +145,7 @@ export class Workspace {
     if (fmt.format !== 'api') throw new Error(fmt.message)
     const name = c.name.trim() || 'workflow'
     let id: string
-    let version = 1
+    let version: number
     if (c.mode === 'replace' && c.replaceId && this.app.workflow(c.replaceId)) {
       id = c.replaceId
       const prev = this.app.workflow(id)!
@@ -161,16 +161,36 @@ export class Workspace {
       const base = workflowIdFromName(name)
       id = base
       for (let n = 2; this.app.workflow(id) || existsSync(this.workflowDir(id)); n++) id = `${base}_${n}`
+      version = this.app.nextWorkflowVersion(id)
     }
     const dir = this.workflowDir(id)
     mkdirSync(dir, { recursive: true })
     writeFileSync(join(dir, 'workflow.json'), c.text)
-    const hasOverrides = (c.overrides.expose?.length ?? 0) > 0 || Object.keys(c.overrides.inputs ?? {}).length > 0
-    if (hasOverrides) writeFileSync(join(dir, 'overrides.json'), JSON.stringify(c.overrides, null, 2) + '\n')
-    else if (existsSync(join(dir, 'overrides.json'))) writeFileSync(join(dir, 'overrides.json'), '{}\n')
+    this.writeOverrides(id, c.overrides)
     this.app.upsertWorkflow({ id, name, version, hash: sha256(c.text), imported_at: new Date().toISOString() })
     this.app.setMeta('last_workflow', id)
     return id
+  }
+
+  private writeOverrides(id: string, overrides: Overrides): void {
+    const file = join(this.workflowDir(id), 'overrides.json')
+    const hasOverrides = (overrides.expose?.length ?? 0) > 0 || Object.keys(overrides.inputs ?? {}).length > 0
+    if (hasOverrides) writeFileSync(file, JSON.stringify(overrides, null, 2) + '\n')
+    else if (existsSync(file)) writeFileSync(file, '{}\n')
+  }
+
+  /** Renames a workflow and changes its exposed inputs. The graph is untouched, so the version stays. */
+  updateWorkflow(id: string, name: string, overrides: Overrides): void {
+    const row = this.app.workflow(id)
+    if (!row) throw new Error('This workflow no longer exists.')
+    this.writeOverrides(id, overrides)
+    this.app.upsertWorkflow({ ...row, name: name.trim() || row.name })
+  }
+
+  /** Forgets a workflow. The caller removes its folder first, or it would be indexed again. */
+  removeWorkflow(id: string): void {
+    this.app.deleteWorkflow(id)
+    if (this.app.getMeta('last_workflow') === id) this.app.setMeta('last_workflow', null)
   }
 
   /* ------------------------------------------------------------- projects */

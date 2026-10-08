@@ -14,12 +14,15 @@ interface CandState {
   key: string
 }
 
-export function ImportView({ back, replaceId: initialReplace, embedded, onDone }: {
+/** Imports a workflow file. With `editId` it edits that workflow's name and inputs instead, keeping its file. */
+export function ImportView({ back, replaceId: replaceProp, editId, embedded, onDone }: {
   back: Route | null
   replaceId?: string | null
+  editId?: string
   embedded?: boolean
   onDone?: () => void
 }): ReactNode {
+  const initialReplace = editId ?? replaceProp
   const { workflows, server, go, toast, loadWorkflows } = useStore()
   const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null)
   const [name, setName] = useState('')
@@ -45,6 +48,15 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
     const existing = replacing ? await api.getWorkflowOverrides(target!) : {}
     initState(a, existing)
   }
+
+  useEffect(() => {
+    if (!editId) return
+    void api.getWorkflowFile(editId).then((f) => {
+      if (f) return open(f.fileName, f.text)
+      toast('The workflow file is missing or unreadable.', 'error')
+    }).catch((e) => toast(errorMessage(e), 'error'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId])
 
   const initState = (a: ImportAnalysis, ov: Overrides): void => {
     setBaseOverrides(ov)
@@ -127,9 +139,11 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
     if (!analysis) return
     setBusy(true)
     try {
-      const w = await api.commitImport({ text: analysis.text, name, mode, replaceId: mode === 'replace' ? replaceId : null, overrides: pinKeys(overrides) })
+      const w = editId
+        ? await api.updateWorkflow(editId, name, pinKeys(overrides))
+        : await api.commitImport({ text: analysis.text, name, mode, replaceId: mode === 'replace' ? replaceId : null, overrides: pinKeys(overrides) })
       await loadWorkflows()
-      toast(`Imported ${w.name} as version ${w.version}.`)
+      toast(editId ? `Saved ${w.name}.` : `Imported ${w.name} as version ${w.version}.`)
       if (onDone) onDone()
       else if (back) go(back)
       else go({ name: 'home' })
@@ -160,7 +174,7 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
         <div className="flex items-start border-b border-border bg-panel px-6 pt-4 pb-4">
           <div className="flex-1">
             <div className="text-xs text-muted">Workflows</div>
-            <div className="text-[22px] font-semibold">Import workflow</div>
+            <div className="text-[22px] font-semibold">{editId ? 'Edit workflow' : 'Import workflow'}</div>
           </div>
           {back && <Button onClick={() => go(back)}>Back</Button>}
         </div>
@@ -168,8 +182,9 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
       <div className={cn('flex flex-1 items-start gap-6', !embedded && 'p-6')}>
         <div className="flex min-w-0 flex-[1.3] flex-col gap-6">
           <Card className="p-5">
-            <Step n={1}>Choose the exported file</Step>
-            <div
+            <Step n={1}>{editId ? 'Name the workflow' : 'Choose the exported file'}</Step>
+            {editId && !analysis && <div className="text-[13px] text-text2">Loading…</div>}
+            {!editId && <div
               onDragOver={(e) => (e.preventDefault(), setDragOver(true))}
               onDragLeave={() => setDragOver(false)}
               onDrop={async (e) => {
@@ -187,9 +202,9 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
               <div className="mt-1.5 text-[13px] text-text2">
                 In ComfyUI, turn on Dev mode options, then use Save (API Format). Files saved from the normal Save button can't be run.
               </div>
-            </div>
+            </div>}
             {analysis && (
-              <div className={cn('mt-4 flex flex-wrap items-center gap-3 rounded-md px-3 py-2.5', analysis.ok ? 'bg-stripe' : 'bg-dtint')}>
+              <div className={cn('flex flex-wrap items-center gap-3 rounded-md px-3 py-2.5', !editId && 'mt-4',analysis.ok ? 'bg-stripe' : 'bg-dtint')}>
                 <span className="font-mono text-[13px]">{analysis.fileName}</span>
                 {analysis.nodeCount > 0 ? (
                   <>
@@ -206,7 +221,7 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
                   <Label>Workflow name</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
-                <div>
+                {!editId && <div>
                   <Label>What to do with it</Label>
                   <div className="flex flex-col gap-2">
                     <label className={cn('flex items-center gap-2.5', !workflows.length && 'opacity-50')}>
@@ -223,7 +238,7 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
                       Save as a separate workflow
                     </label>
                   </div>
-                </div>
+                </div>}
               </div>
             )}
           </Card>
@@ -363,7 +378,9 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
               {mode === 'replace' && preview?.diff ? (
                 <>
                   <div className="mb-3 font-mono text-xs text-text2">
-                    {replaceId} · version {preview.previousVersion} to {preview.nextVersion} · hash {preview.hash}
+                    {editId
+                      ? `${replaceId} · version ${preview.previousVersion} · same file, inputs only`
+                      : `${replaceId} · version ${preview.previousVersion} to ${preview.nextVersion} · hash ${preview.hash}`}
                   </div>
                   <div className="flex flex-col gap-3 text-[13px]">
                     {preview.diff.added.map((i) => (
@@ -398,10 +415,12 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
 
       {analysis && analysis.nodeCount > 0 && (
         <div className={cn('flex items-center gap-3', embedded ? 'mt-6' : 'px-6 pb-6')}>
-          <span className="flex-1 text-[13px] text-text2">Past attempts keep the exact version they ran with.</span>
+          <span className="flex-1 text-[13px] text-text2">
+            {editId ? 'The workflow file is not changed, so the version stays the same.' : 'Past attempts keep the exact version they ran with.'}
+          </span>
           {!embedded && <Button onClick={() => (back ? go(back) : go({ name: 'home' }))}>Cancel</Button>}
           <Button variant="primary" size="lg" disabled={!canImport} onClick={() => void commit()}>
-            {mode === 'replace' ? `Import as version ${preview?.nextVersion ?? ''}` : 'Import workflow'}
+            {editId ? 'Save changes' : mode === 'replace' ?`Import as version ${preview?.nextVersion ?? ''}` : 'Import workflow'}
           </Button>
         </div>
       )}
