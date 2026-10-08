@@ -21,10 +21,23 @@ export function shotOutputDir(shot: { name: string; position: number | null }, s
   return `outputs/${safeName(sequenceName)}/${safeName(`${pad2(shot.position)} ${shot.name}`)}`
 }
 
-export function attemptFileName(attemptNum: number, workflowName: string, ext: string, index = 0): string {
+/** `attemptId` is the project-wide attempt id: shots can share a folder (same name), so the per-shot number is not enough. */
+export function attemptFileName(attemptId: number, workflowName: string, ext: string, index = 0): string {
   const e = ext.replace(/^\./, '').toLowerCase() || 'bin'
   const suffix = index > 0 ? `-${index + 1}` : ''
-  return `attempt-${attemptNum}-${safeName(workflowName, 40)}${suffix}.${e}`
+  return `attempt-${attemptId}-${safeName(workflowName, 40)}${suffix}.${e}`
+}
+
+/** `name` if it is free, otherwise `stem (2).ext`, `stem (3).ext`... so an existing file is never overwritten. */
+export function freeFileName(name: string, taken: (name: string) => boolean): string {
+  if (!taken(name)) return name
+  const dot = name.lastIndexOf('.')
+  const stem = dot > 0 ? name.slice(0, dot) : name
+  const ext = dot > 0 ? name.slice(dot) : ''
+  for (let n = 2; ; n++) {
+    const candidate = `${stem} (${n})${ext}`
+    if (!taken(candidate)) return candidate
+  }
 }
 
 export function keeperExportPath(sequenceName: string, position: number, shotName: string, ext: string): string {

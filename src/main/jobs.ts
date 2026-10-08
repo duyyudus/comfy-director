@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Workspace } from './workspace'
 import type { ServerManager } from './server'
@@ -11,7 +11,7 @@ import { buildSchema } from '@core/workflow/schema'
 import { validateValues } from '@core/workflow/validate'
 import type { SchemaInput, WorkflowSchema } from '@core/workflow/types'
 import { planRun } from '@core/planner'
-import { attemptFileName, extOf, mediaKind, shotOutputDir } from '@core/output/naming'
+import { attemptFileName, extOf, freeFileName, mediaKind, shotOutputDir } from '@core/output/naming'
 import type {
   AppEvent, Attempt, AttemptError, FinishedJob, OutputFile, QueueJob, QueueSnapshot, ReconcileSummary, RunRequest, RunResult
 } from '@shared/types'
@@ -53,7 +53,9 @@ export class JobManager {
   private queueTimer: NodeJS.Timeout | null = null
   private pollTimer: NodeJS.Timeout | null = null
   private emitTimer: NodeJS.Timeout | null = null
+  private reconcileTimer: NodeJS.Timeout | null = null
   private finalizing = new Set<string>()
+  private downloadTries = new Map<string, number>()
   /** Kept until the renderer collects it: reconcile can finish before the window listens. */
   private lastSummary: ReconcileSummary | null = null
 
@@ -134,7 +136,7 @@ export class JobManager {
 
   /* ------------------------------------------------------------------- run */
 
-  async run(projectPath: string, shotId: number, req: RunRequest): Promise<RunResult> {
+  async run(projectPath: string, shotId: number, req: RunRequest, reuploaded = false): Promise<RunResult> {
     const client = this.server.client
     if (!client || !this.server.connected) return { ok: false, message: "Can't reach the server. Nothing was queued." }
     const ws = this.ws()
@@ -168,8 +170,12 @@ export class JobManager {
     // Upload input files not yet on this server. One failure stops the run.
     const server = this.server.url_
     const failures: RunResult['uploadFailures'] = []
+    const remembered: string[] = []
     for (const file of fileValues(schema, req.values)) {
-      if (pdb.uploadedName(file, server)) continue
+      if (pdb.uploadedName(file, server)) {
+        remembered.push(file)
+        continue
+      }
       try {
         const data = readFileSync(join(projectPath, 'inputs', file))
         const res = await client.uploadImage(file, data, MIME[extOf(file)] ?? 'application/octet-stream')
@@ -184,7 +190,7 @@ export class JobManager {
     const jobs = planRun({ prompts, runs: req.runs, seedMode: req.seedMode, fixedSeed: req.seedValue })
     const runId = randomUUID()
     const created: Attempt[] = []
-    const submitted: string[] = []
+    const submitted = new Map<string, Attempt>()
     const firstNum = (pdb.db.prepare('SELECT next_attempt_num AS n FROM shots WHERE id=?').get(shotId) as { n: number }).n
     try {
       for (const job of jobs) {
@@ -212,25 +218,37 @@ export class JobManager {
         })
         created.push(attempt)
         const res = await client.queuePrompt(final)
-        submitted.push(res.prompt_id)
+        submitted.set(res.prompt_id, attempt)
         this.register(res.prompt_id, this.jobInfo(projectPath, pdb, attempt, req.seedMode))
         pdb.updateAttempt(attempt.id, { status: 'queued', promptId: res.prompt_id })
       }
     } catch (e) {
-      // Roll back: nothing half-queued is left behind.
-      await this.rollback(submitted)
-      for (const a of created) pdb.deleteAttempt(a.id)
-      pdb.db.prepare('UPDATE shots SET next_attempt_num=? WHERE id=?').run(firstNum, shotId)
+      // Roll back: nothing half-queued is left behind, unless the server would not take a job back.
+      const left = await this.rollback([...submitted.keys()])
+      const kept = [...submitted].filter(([pid]) => left.has(pid)).map(([, a]) => a)
+      for (const a of created) if (!kept.includes(a)) pdb.deleteAttempt(a.id)
+      const nextNum = kept.length ? Math.max(...kept.map((a) => a.num)) + 1 : firstNum
+      pdb.db.prepare('UPDATE shots SET next_attempt_num=? WHERE id=?').run(nextNum, shotId)
+      if (kept.length) this.emit({ type: 'project-changed', projectPath })
+      const outcome = kept.length
+        ? `${kept.length} job${kept.length === 1 ? '' : 's'} already queued could not be removed and will still run.`
+        : 'Nothing was queued.'
       if (e instanceof ComfyError && e.body && typeof e.body === 'object' && 'node_errors' in (e.body as object)) {
         const { fieldErrors: fe, general } = mapRejection(schema, e.body as PromptRejection)
+        // The server may have lost a file this app remembers uploading: upload again and try once more.
+        const onFile = schema.inputs.some((i) => i.key in fe && (i.type === 'file' || i.type === 'file-group'))
+        if (onFile && remembered.length && !reuploaded && !kept.length) {
+          for (const file of remembered) pdb.forgetUpload(file, server)
+          return this.run(projectPath, shotId, req, true)
+        }
         const n = Object.keys(fe).length + (general.length ? 1 : 0)
         return {
           ok: false,
           fieldErrors: fe,
-          message: `The server rejected the job${general.length ? `: ${general.join(' ')}` : '.'} ${n} problem${n === 1 ? '' : 's'} remain. Nothing was queued.`
+          message: `The server rejected the job${general.length ? `: ${general.join(' ')}` : '.'} ${n} problem${n === 1 ? '' : 's'} remain. ${outcome}`
         }
       }
-      return { ok: false, message: `${(e as Error).message} Nothing was queued.` }
+      return { ok: false, message: `${(e as Error).message} ${outcome}` }
     }
 
     pdb.updateShot(shotId, { lastSeed: jobs[jobs.length - 1].seed })
@@ -239,18 +257,25 @@ export class JobManager {
     return { ok: true, attempts: created.map((a) => pdb.attempt(a.id)!) }
   }
 
-  private async rollback(promptIds: string[]): Promise<void> {
-    const client = this.server.client
-    if (!client || !promptIds.length) return
+  /** Takes back jobs of a Run that failed part-way. Returns the ids that are still on the server. */
+  private async rollback(promptIds: string[]): Promise<Set<string>> {
+    const left = new Set<string>()
+    if (!promptIds.length) return left
     try {
+      const client = this.server.client
+      if (!client) throw new Error('offline')
       const q = await client.getQueue()
       const running = q.queue_running.map((e) => e[1]).filter((id) => promptIds.includes(id))
       await client.deleteQueued(promptIds.filter((id) => !running.includes(id)))
       for (const id of running) await client.interrupt(id)
+      const waiting = new Set((await client.getQueue()).queue_pending.map((e) => e[1]))
+      for (const id of promptIds) if (waiting.has(id)) left.add(id)
     } catch {
-      /* best effort */
+      // Unknown: keep tracking them. The queue poll settles any that did go away.
+      for (const id of promptIds) left.add(id)
     }
-    for (const id of promptIds) this.active.delete(id)
+    for (const id of promptIds) if (!left.has(id)) this.active.delete(id)
+    return left
   }
 
   /** Re-runs an attempt's workflow and values. `newSeed` picks a random seed, otherwise the same seed is kept. */
@@ -406,6 +431,7 @@ export class JobManager {
     this.finished = this.finished.slice(0, 50)
     this.active.delete(pid)
     this.live.delete(pid)
+    this.downloadTries.delete(pid)
     this.finalCache.delete(job.attemptId)
     this.emit({ type: 'project-changed', projectPath: job.projectPath })
     this.refreshQueueSoon(50)
@@ -443,10 +469,14 @@ export class JobManager {
       const dir = shotOutputDir(shot, seq?.name ?? null)
       mkdirSync(join(job.projectPath, dir), { recursive: true })
       const files = historyFiles(h).sort((a, b) => rank(a.filename) - rank(b.filename))
+      // Fetch everything before writing, so a retry after a failed download leaves no partial set behind.
+      const blobs: Buffer[] = []
+      for (const f of files) blobs.push(Buffer.from(await client.view(f)))
       const outputs: OutputFile[] = []
       for (const [i, f] of files.entries()) {
-        const data = Buffer.from(await client.view(f))
-        const rel = `${dir}/${attemptFileName(attempt.num, attempt.workflowName, extOf(f.filename) || 'bin', i)}`
+        const data = blobs[i]
+        const name = freeFileName(attemptFileName(attempt.id, attempt.workflowName, extOf(f.filename) || 'bin', i), (n) => existsSync(join(job.projectPath, dir, n)))
+        const rel = `${dir}/${name}`
         writeFileSync(join(job.projectPath, rel), data)
         outputs.push({ path: rel, kind: mediaKind(f.filename), filename: f.filename })
       }
@@ -465,6 +495,13 @@ export class JobManager {
           : 'finished, no output files'
       return this.done(pid, job, status, note)
     } catch (e) {
+      // The result is still on the server: a request that failed is tried again before giving up.
+      const tries = (this.downloadTries.get(pid) ?? 0) + 1
+      if (e instanceof ComfyError && tries < 3) {
+        this.downloadTries.set(pid, tries)
+        this.reconcileSoon()
+        return null
+      }
       this.fail(pid, job, { message: `Finished on the server, but the download failed: ${(e as Error).message}` }, 'failed')
       return this.finished[0]
     } finally {
@@ -513,7 +550,12 @@ export class JobManager {
     const job = this.active.get(pid)
     const client = this.server.client
     if (!job || !client) return
-    const h = await client.getHistory(pid).catch(() => null)
+    let h: HistoryEntry | null
+    try {
+      h = await client.getHistory(pid)
+    } catch {
+      return // not an answer: the next queue poll asks again
+    }
     if (!this.active.has(pid)) return
     if (h) await this.settleFromHistory(pid, job, h)
     else {
@@ -644,8 +686,16 @@ export class JobManager {
   }
 
   async cancelAttempt(projectPath: string, attemptId: number): Promise<void> {
-    const a = this.ws().project(projectPath).attempt(attemptId)
+    const pdb = this.ws().project(projectPath)
+    const a = pdb.attempt(attemptId)
     if (!a?.promptId) return
+    // Sent to a server this app is no longer connected to: it cannot be reached, so only stop tracking it.
+    const sentTo = pdb.serverOf(a.id)
+    if (sentTo && sentTo !== this.server.url_ && (a.status === 'queued' || a.status === 'running')) {
+      const job = this.active.get(a.promptId) ?? this.jobInfo(projectPath, pdb, a, null)
+      this.fail(a.promptId, job, { message: `Sent to ${sentTo}, which is no longer the server in Settings. The app stopped tracking it; it was not cancelled there.` }, 'cancelled')
+      return
+    }
     if (a.status === 'running') await this.interrupt(a.promptId)
     else if (a.status === 'queued') {
       const client = this.server.client
@@ -656,6 +706,15 @@ export class JobManager {
   }
 
   /* ------------------------------------------------------------ reconcile */
+
+  /** Runs reconcile again shortly. If the server is gone by then, the next connect does it. */
+  private reconcileSoon(): void {
+    if (this.reconcileTimer) return
+    this.reconcileTimer = setTimeout(() => {
+      this.reconcileTimer = null
+      if (this.server.connected) void this.reconcile()
+    }, 5000)
+  }
 
   /** On launch and reconnect: compare our active attempts with the server's queue and history. */
   async reconcile(): Promise<void> {
@@ -672,6 +731,7 @@ export class JobManager {
     const pending = new Set(q.queue_pending.map((e) => e[1]))
     const summary: ReconcileSummary = { finished: [], failed: [], stillWaiting: 0 }
     const server = this.server.url_
+    let unanswered = false
     for (const [pid, job] of [...this.active]) {
       const pdb = this.ws().project(job.projectPath)
       const a = pdb.attempt(job.attemptId)
@@ -679,7 +739,7 @@ export class JobManager {
         this.active.delete(pid)
         continue
       }
-      const sentTo = (pdb.db.prepare('SELECT server_url FROM attempts WHERE id=?').get(a.id) as { server_url: string | null }).server_url
+      const sentTo = pdb.serverOf(a.id)
       if (sentTo && sentTo !== server) continue
       if (pending.has(pid)) {
         summary.stillWaiting++
@@ -691,7 +751,14 @@ export class JobManager {
         continue
       }
       if (this.finalizing.has(pid)) continue
-      const h = await client.getHistory(pid).catch(() => null)
+      let h: HistoryEntry | null
+      try {
+        h = await client.getHistory(pid)
+      } catch {
+        // A failed request says nothing about the job: leave it as it is and ask again.
+        unanswered = true
+        continue
+      }
       let f: FinishedJob | null
       if (h) f = await this.settleFromHistory(pid, job, h)
       else {
@@ -701,6 +768,7 @@ export class JobManager {
       if (f) (f.status === 'failed' || f.status === 'cancelled' ? summary.failed : summary.finished).push(f)
     }
     this.emitQueue()
+    if (unanswered) this.reconcileSoon()
     if (summary.finished.length || summary.failed.length) {
       this.lastSummary = summary
       this.emit({ type: 'reconciled', summary })

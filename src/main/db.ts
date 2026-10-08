@@ -484,7 +484,10 @@ export class ProjectDb {
   markUploaded(name: string, server: string, serverName: string): void {
     this.db.prepare('INSERT OR REPLACE INTO uploads(name,server,server_name) VALUES(?,?,?)').run(name, server, serverName)
   }
-  forgetUploads(server: string): void {
-    this.db.prepare('DELETE FROM uploads WHERE server=?').run(server)
+  forgetUpload(name: string, server: string): void {
+    this.db.prepare('DELETE FROM uploads WHERE name=? AND server=?').run(name, server)
+  }
+  serverOf(attemptId: number): string | null {
+    return (this.db.prepare('SELECT server_url FROM attempts WHERE id=?').get(attemptId) as { server_url: string | null } | undefined)?.server_url ?? null
   }
 }

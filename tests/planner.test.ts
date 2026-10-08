@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { planRun } from '../src/core/planner'
 import { renderTemplate, templateSlots } from '../src/core/prompter/template'
-import { attemptFileName, safeName, shotOutputDir } from '../src/core/output/naming'
+import { attemptFileName, freeFileName, safeName, shotOutputDir } from '../src/core/output/naming'
 import { parseScriptOutput } from '../src/core/prompter/script'
 
 describe('planner', () => {
@@ -49,5 +49,11 @@ describe('naming', () => {
     expect(shotOutputDir({ name: 'Roof edge', position: 3 }, 'Rooftop chase')).toBe('outputs/Rooftop chase/03 Roof edge')
     expect(shotOutputDir({ name: 'Rain', position: null }, null)).toBe('outputs/_loose/Rain')
     expect(attemptFileName(6, 'ref2vid', 'MP4')).toBe('attempt-6-ref2vid.mp4')
+  })
+
+  it('never reuses a file name that is taken', () => {
+    const taken = new Set(['attempt-6-ref2vid.mp4', 'attempt-6-ref2vid (2).mp4'])
+    expect(freeFileName('attempt-7-ref2vid.mp4', (n) => taken.has(n))).toBe('attempt-7-ref2vid.mp4')
+    expect(freeFileName('attempt-6-ref2vid.mp4', (n) => taken.has(n))).toBe('attempt-6-ref2vid (3).mp4')
   })
 })

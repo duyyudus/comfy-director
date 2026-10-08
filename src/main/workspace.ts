@@ -70,7 +70,12 @@ export class Workspace {
     } catch {
       return null
     }
-    const fmt = detectFormat(JSON.parse(text))
+    let fmt: ReturnType<typeof detectFormat>
+    try {
+      fmt = detectFormat(JSON.parse(text))
+    } catch {
+      return null // not valid JSON (hand-edited): skip it, like an unreadable file
+    }
     if (fmt.format !== 'api') return null
     let overrides: Overrides = {}
     try {
