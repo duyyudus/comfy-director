@@ -1,7 +1,7 @@
 import type { ApiWorkflow, InputType, Overrides, SchemaInput, WorkflowSchema } from './types'
 import { discover, fieldCandidate, type Discovery } from './discover'
-import { keyFromTitle, normalize } from './keys'
-import { consumersOf, isLink, titleOf } from './graph'
+import { normalize } from './keys'
+import { isLink, titleOf } from './graph'
 import type { ObjectInfo } from './objectInfo'
 
 const TYPE_RANK: Record<InputType, number> = { text: 0, number: 1, select: 1, toggle: 2, file: 3, 'file-group': 4 }
@@ -97,7 +97,7 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
     return a.rank - b.rank || a.order - b.order
   })
 
-  resolveDuplicateKeys(wf, inputs)
+  resolveDuplicateKeys(inputs)
   const counts = new Map<string, number>()
   for (const i of inputs) counts.set(i.key, (counts.get(i.key) ?? 0) + 1)
   const duplicateKeys = [...counts].filter(([, n]) => n > 1).map(([k]) => k)
@@ -113,32 +113,28 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
 
 /**
  * Several nodes with the same title (e.g. two "Int" nodes) derive the same key. Instead of asking
- * for a rename, give each derived key a unique one: the renamed label if the user renamed it,
- * otherwise where the node feeds ("steps on_false"), otherwise a number. Keys set explicitly in
- * the overrides are left alone and still reported as duplicates.
+ * for a rename, give each a unique key: the renamed label if the user renamed it, otherwise the
+ * key numbered in workflow order (`int`, `int#2`, `int#3`). Keys set explicitly in the overrides
+ * are left alone and still reported as duplicates.
  */
-function resolveDuplicateKeys(wf: ApiWorkflow, inputs: (SchemaInput & { explicitKey: boolean; customLabel: boolean })[]): void {
+function resolveDuplicateKeys(inputs: (SchemaInput & { explicitKey: boolean; customLabel: boolean })[]): void {
   const count = (k: string): number => inputs.filter((i) => i.key === k).length
-  const dupes = [...new Set(inputs.map((i) => i.key))].filter((k) => count(k) > 1)
-  for (const key of dupes) {
-    const group = inputs.filter((i) => i.key === key && !i.explicitKey)
-    // Keep the plain key for one input only when every other one gets a better name.
-    for (const i of group) {
-      let next: string | null = null
-      if (i.customLabel) next = normalize(i.label)
-      else if (i.target.kind === 'field') {
-        const c = consumersOf(wf, i.target.nodeId)[0]
-        if (c) next = normalize(`${keyFromTitle(titleOf(wf[c.nodeId]))} ${c.input}`)
-      }
-      if (next && next !== key) i.key = next
-    }
-    // Anything still colliding gets a number.
-    const seen = new Map<string, number>()
+  for (const key of [...new Set(inputs.map((i) => i.key))].filter((k) => count(k) > 1)) {
     for (const i of inputs) {
-      if (i.explicitKey) continue
-      const n = (seen.get(i.key) ?? 0) + 1
-      seen.set(i.key, n)
-      if (n > 1) i.key = `${i.key} ${n}`
+      if (i.key === key && !i.explicitKey && i.customLabel && normalize(i.label) !== key) i.key = normalize(i.label)
     }
+  }
+  const taken = new Set(inputs.map((i) => i.key))
+  const seen = new Map<string, number>()
+  for (const i of inputs) {
+    if (i.explicitKey) continue
+    const n = (seen.get(i.key) ?? 0) + 1
+    seen.set(i.key, n)
+    if (n === 1) continue
+    let m = n
+    while (taken.has(`${i.key}#${m}`)) m++
+    const base = i.key
+    i.key = `${base}#${m}`
+    taken.add(i.key)
   }
 }

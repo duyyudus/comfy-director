@@ -60,7 +60,7 @@ describe('schema', () => {
     const both = { inputs: { int: { hidden: false }, 'int#2': { hidden: false } } }
     const s = buildSchema(t2v(), both, objectInfo)
     expect(s.duplicateKeys).toEqual([])
-    expect(s.inputs.map((i) => i.key)).toEqual(expect.arrayContaining(['steps on_false', 'steps on_true']))
+    expect(s.inputs.map((i) => i.key)).toEqual(expect.arrayContaining(['int', 'int#2']))
     // A renamed label becomes the key.
     const named = buildSchema(t2v(), { inputs: { int: { hidden: false, label: 'full-steps' }, 'int#2': { hidden: false, label: 'turbo-steps' } } }, objectInfo)
     expect(named.inputs.map((i) => i.key)).toEqual(expect.arrayContaining(['full-steps', 'turbo-steps']))
