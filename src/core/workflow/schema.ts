@@ -1,7 +1,7 @@
 import type { ApiWorkflow, InputType, Overrides, SchemaInput, WorkflowSchema } from './types'
 import { discover, fieldCandidate, type Discovery } from './discover'
-import { normalize } from './keys'
-import { isLink, titleOf } from './graph'
+import { keyFromTitle, normalize } from './keys'
+import { consumersOf, isLink, titleOf } from './graph'
 import type { ObjectInfo } from './objectInfo'
 
 const TYPE_RANK: Record<InputType, number> = { text: 0, number: 1, select: 1, toggle: 2, file: 3, 'file-group': 4 }
@@ -16,7 +16,7 @@ export interface SchemaResult extends WorkflowSchema {
 export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undefined, oi?: ObjectInfo | null): SchemaResult {
   const discovery = discover(wf, oi)
   const warnings: string[] = []
-  const inputs: (SchemaInput & { rank: number })[] = []
+  const inputs: (SchemaInput & { rank: number; explicitKey: boolean; customLabel: boolean })[] = []
   let idx = 0
 
   for (const c of discovery.candidates) {
@@ -41,15 +41,20 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
       target: c.target,
       source: c.source,
       order: ov?.order ?? 1000 + idx,
-      rank: TYPE_RANK[c.type]
+      rank: TYPE_RANK[c.type],
+      explicitKey: !!ov?.key?.trim(),
+      customLabel: !!ov?.label?.trim() && ov.label.trim() !== c.label
     })
   }
 
   for (const e of overrides?.expose ?? []) {
     idx++
+    const already = (id: string): boolean =>
+      inputs.some((i) => i.target.kind === 'field' && i.target.nodeId === id && i.target.field === e.field)
     const nodeId = Object.keys(wf).find(
       (id) => wf[id].class_type === e.class && (!e.title || normalize(titleOf(wf[id])) === normalize(e.title))
     )
+    if (nodeId && already(nodeId)) continue
     if (!nodeId) {
       warnings.push(`Exposed field ${e.class}.${e.field} not found in the workflow.`)
       continue
@@ -75,7 +80,9 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
       target: { kind: 'field', nodeId, field: e.field },
       source: f.source,
       order: e.order ?? 1000 + idx,
-      rank: TYPE_RANK[f.type]
+      rank: TYPE_RANK[f.type],
+      explicitKey: !!e.key?.trim(),
+      customLabel: !!e.label?.trim() && e.label.trim() !== f.label
     })
   }
 
@@ -90,15 +97,48 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
     return a.rank - b.rank || a.order - b.order
   })
 
+  resolveDuplicateKeys(wf, inputs)
   const counts = new Map<string, number>()
   for (const i of inputs) counts.set(i.key, (counts.get(i.key) ?? 0) + 1)
   const duplicateKeys = [...counts].filter(([, n]) => n > 1).map(([k]) => k)
 
   return {
-    inputs: inputs.map(({ rank: _rank, ...rest }, i) => ({ ...rest, order: i })),
+    inputs: inputs.map(({ rank: _rank, explicitKey: _e, customLabel: _c, ...rest }, i) => ({ ...rest, order: i })),
     seedTargets: discovery.seedTargets,
     duplicateKeys,
     discovery,
     warnings
+  }
+}
+
+/**
+ * Several nodes with the same title (e.g. two "Int" nodes) derive the same key. Instead of asking
+ * for a rename, give each derived key a unique one: the renamed label if the user renamed it,
+ * otherwise where the node feeds ("steps on_false"), otherwise a number. Keys set explicitly in
+ * the overrides are left alone and still reported as duplicates.
+ */
+function resolveDuplicateKeys(wf: ApiWorkflow, inputs: (SchemaInput & { explicitKey: boolean; customLabel: boolean })[]): void {
+  const count = (k: string): number => inputs.filter((i) => i.key === k).length
+  const dupes = [...new Set(inputs.map((i) => i.key))].filter((k) => count(k) > 1)
+  for (const key of dupes) {
+    const group = inputs.filter((i) => i.key === key && !i.explicitKey)
+    // Keep the plain key for one input only when every other one gets a better name.
+    for (const i of group) {
+      let next: string | null = null
+      if (i.customLabel) next = normalize(i.label)
+      else if (i.target.kind === 'field') {
+        const c = consumersOf(wf, i.target.nodeId)[0]
+        if (c) next = normalize(`${keyFromTitle(titleOf(wf[c.nodeId]))} ${c.input}`)
+      }
+      if (next && next !== key) i.key = next
+    }
+    // Anything still colliding gets a number.
+    const seen = new Map<string, number>()
+    for (const i of inputs) {
+      if (i.explicitKey) continue
+      const n = (seen.get(i.key) ?? 0) + 1
+      seen.set(i.key, n)
+      if (n > 1) i.key = `${i.key} ${n}`
+    }
   }
 }

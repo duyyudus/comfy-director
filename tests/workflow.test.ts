@@ -43,14 +43,31 @@ describe('schema', () => {
     expect(suggested).toEqual(['aspect_ratio', 'megapixels'])
   })
 
-  it('discovers fl2v optional frames and exposes prompt via overrides', () => {
-    const s = buildSchema(fl2v(), { expose: [{ class: 'MiniMaxH3ImageToVideo', field: 'prompt' }] }, objectInfo)
+  it('discovers fl2v optional frames and the prompt typed on the node', () => {
+    const s = buildSchema(fl2v(), null, objectInfo)
     const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
     expect(Object.keys(byKey).sort()).toEqual(['duration', 'enable lightning lora', 'first_frame', 'last_frame', 'prompt'])
     expect(byKey.first_frame.constraints.required).toBe(false)
     expect(byKey.prompt.type).toBe('text')
     expect(s.duplicateKeys).toEqual([])
     expect(s.discovery.candidates.map((c) => c.id)).toContain('int#2')
+    // An older overrides file that exposes the same prompt field does not add it twice.
+    const again = buildSchema(fl2v(), { expose: [{ class: 'MiniMaxH3ImageToVideo', field: 'prompt' }] }, objectInfo)
+    expect(again.inputs.filter((i) => i.key === 'prompt')).toHaveLength(1)
+  })
+
+  it('gives same-titled inputs unique keys instead of blocking', () => {
+    const both = { inputs: { int: { hidden: false }, 'int#2': { hidden: false } } }
+    const s = buildSchema(t2v(), both, objectInfo)
+    expect(s.duplicateKeys).toEqual([])
+    expect(s.inputs.map((i) => i.key)).toEqual(expect.arrayContaining(['steps on_false', 'steps on_true']))
+    // A renamed label becomes the key.
+    const named = buildSchema(t2v(), { inputs: { int: { hidden: false, label: 'full-steps' }, 'int#2': { hidden: false, label: 'turbo-steps' } } }, objectInfo)
+    expect(named.inputs.map((i) => i.key)).toEqual(expect.arrayContaining(['full-steps', 'turbo-steps']))
+    expect(named.inputs.find((i) => i.key === 'prompt')?.type).toBe('text')
+    // Keys set explicitly are respected, and still reported if they clash.
+    const clash = buildSchema(t2v(), { inputs: { int: { hidden: false, key: 'x' }, 'int#2': { hidden: false, key: 'x' } } }, objectInfo)
+    expect(clash.duplicateKeys).toEqual(['x'])
   })
 
   it('empty frames turn fl2v into t2v', () => {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { ExposeEntry, InputOverride, Overrides } from '@core/workflow/types'
-import type { FieldCandidate } from '@core/workflow/discover'
+import type { Candidate, FieldCandidate } from '@core/workflow/discover'
 import type { ImportAnalysis, ImportPreview } from '@shared/types'
 import { useStore, type Route } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
@@ -120,6 +120,14 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
   }
 
   const dupKeys = new Set(preview?.duplicateKeys ?? [])
+  // The key an input really gets (repeated titles are given unique keys automatically).
+  const resolvedKey = (c: Candidate): string | undefined => {
+    const t = c.target
+    return preview?.inputs.find((i) =>
+      t.kind === 'file-group' ? i.target.kind === 'file-group' && i.target.consumerId === t.consumerId && i.target.prefix === t.prefix
+      : (i.target.kind === 'field' || i.target.kind === 'file') && i.target.nodeId === t.nodeId
+    )?.key
+  }
   const visibleFields = (analysis?.fields ?? []).filter((f) => (showAll || f.suggested) && !exposes.some((e) => e.class === f.nodeClass && e.field === f.field && sameTitle(e, f)))
   const exposedFields = (analysis?.fields ?? []).filter((f) => exposes.some((e) => e.class === f.nodeClass && e.field === f.field && sameTitle(e, f)))
   const check = analysis?.check
@@ -233,6 +241,9 @@ export function ImportView({ back, replaceId: initialReplace, embedded, onDone }
                         </td>
                         <td className="py-2.5 pr-3">
                           <Input className="h-9" value={s.label} onChange={(e) => setCands({ ...cands, [c.id]: { ...s, label: e.target.value } })} />
+                          {!dup && s.key === c.key && s.exposed && resolvedKey(c) && resolvedKey(c) !== c.key && (
+                            <div className="mt-1 text-xs text-muted">key <span className="font-mono">{resolvedKey(c)}</span></div>
+                          )}
                           {(dup || s.key !== c.key) && (
                             <div className="mt-1 flex items-center gap-2">
                               <span className="text-xs text-muted">key</span>

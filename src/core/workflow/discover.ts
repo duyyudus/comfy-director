@@ -54,6 +54,9 @@ const SUGGESTED_FIELDS = new Set([
   'steps', 'cfg', 'length', 'duration', 'num_frames', 'batch_size'
 ])
 
+/** Literal string fields discovered as inputs (exposed by default). */
+const PROMPT_FIELDS = new Set(['prompt'])
+
 const SWITCH_BRANCH_INPUTS = new Set(['on_true', 'on_false'])
 
 export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
@@ -131,7 +134,24 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
         seedTargets.push({ nodeId, field })
         continue
       }
-      fields.push(fieldCandidate(wf, nodeId, field, oi))
+      const f = fieldCandidate(wf, nodeId, field, oi)
+      if (PROMPT_FIELDS.has(field) && f.type === 'text') {
+        // A prompt typed directly on a regular node (fl2vid, t2v) is as much an input as a prompt node.
+        candidates.push({
+          id: field,
+          key: field,
+          type: 'text',
+          label: f.label,
+          source: `${title} · ${node.class_type}.${field}`,
+          default: value,
+          defaultExposed: true,
+          target: { kind: 'field', nodeId, field },
+          constraints: { ...f.constraints, multiline: true },
+          nodeClass: node.class_type
+        })
+        continue
+      }
+      fields.push(f)
     }
   }
 

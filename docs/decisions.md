@@ -43,3 +43,8 @@ Short record of choices the PRD leaves open, and of places where the build diffe
 - **Workspace via env.** `COMFY_TOOLKIT_WORKSPACE` and `COMFY_TOOLKIT_USER_DATA` override the workspace and app data folders (used for testing).
 - **Not built (PRD "Not designed yet"):** presets, loading skeletons, keyboard shortcuts.
 - **To verify on the real server** (PRD smoke test): `POST /queue` delete support (the app reports when a waiting job is not removed), targeted `POST /interrupt {prompt_id}`, where `SaveVideo` outputs appear in `/history` (the app takes every `{filename, subfolder, type: output}` entry under any key), WebSocket through the reverse proxy (the token is sent as `Authorization: Bearer`), and `MiniMaxH3ImageToVideo` with first frame only / no frames.
+
+## 2026-10-08 (review feedback)
+
+- **Prompt on a regular node is discovered.** A literal text `prompt` field on a regular node (fl2vid, t2v: `MiniMaxH3ImageToVideo.prompt`) is now an auto-discovered input, ticked by default, instead of needing an Expose override. This replaces the PRD's "must be exposed through the overrides layer"; the code is right. Older overrides that expose the same field are not added twice.
+- **Repeated titles no longer block an import.** When exposed inputs derive the same key (two nodes titled `Int`), each gets a unique key automatically: the label if the user renamed it (`full-steps`), otherwise the consumer's key plus the input it feeds (`steps on_false`, `steps on_true`), otherwise a number. Only keys typed explicitly can still clash, and those are still flagged. This replaces the PRD's "the Import screen flags it and asks for a rename"; the code is right.
