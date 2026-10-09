@@ -6,6 +6,7 @@ import { ServerManager } from './server'
 import { JobManager } from './jobs'
 import { createApi } from './api'
 import { handleMedia, registerMediaScheme } from './media'
+import { loadWindowState, saveWindowState } from './windowState'
 import type { AppEvent } from '@shared/types'
 import type { ApiMethod, ToolkitApi } from '@shared/api'
 
@@ -22,11 +23,15 @@ function emit(e: AppEvent): void {
 }
 
 function createWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 940,
-    minWidth: 1024,
-    minHeight: 680,
+  const min = { width: 1024, height: 680 }
+  const state = loadWindowState({ width: 1440, height: 940 }, min)
+  const win = (mainWindow = new BrowserWindow({
+    width: state.width,
+    height: state.height,
+    x: state.x,
+    y: state.y,
+    minWidth: min.width,
+    minHeight: min.height,
     title: 'Comfy Toolkit',
     show: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1C1A17' : '#F5F2EC',
@@ -36,8 +41,10 @@ function createWindow(): void {
       sandbox: false,
       contextIsolation: true
     }
-  })
+  }))
+  if (state.maximized) win.maximize()
   mainWindow.on('ready-to-show', () => mainWindow?.show())
+  mainWindow.on('close', () => saveWindowState(win))
   mainWindow.on('closed', () => (mainWindow = null))
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) void shell.openExternal(url)

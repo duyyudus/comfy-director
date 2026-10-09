@@ -222,6 +222,7 @@ Comfy Toolkit/                     workspace
   - `settings.json`: server address, workspace path, theme, text size, current project, and the ComfyUI `clientId`. The client id is generated once and kept, so progress events for jobs queued before a restart still reach the app.
   - `token.bin`: the access token, encrypted with Electron `safeStorage` (Keychain on macOS, DPAPI on Windows, libsecret/kwallet on Linux). If no OS encryption is available it is stored as plain bytes there. Sharing a workspace never shares the token.
   - The cached `object_info`.
+  - `window.json`: the window's size, position and maximized state, saved when the window closes and restored on the next launch. A saved position that is no longer on any connected display is dropped and the window is centred at its saved size. The first launch opens at 1440 x 940.
 - The app writes a `.gitignore` into a new workspace that excludes `app.db` and `projects/`, so `workflows/` can be versioned on its own.
 - **Do not place the workspace in a synced folder** (Dropbox, iCloud, OneDrive): SQLite files can be corrupted. Settings shows a warning.
 - **Hand-edited workflows.** If `workflow.json` changes on disk without an import, the next read records it as a new version (new hash). Folders found in `workflows/` but missing from `app.db` (for example after a git clone) are indexed automatically. A `workflow.json` that is not valid JSON is skipped in the workflow list.
