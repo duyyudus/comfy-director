@@ -10,7 +10,7 @@ Comfy Director: an Electron desktop client that runs ComfyUI API-format workflow
 
 ```bash
 npm install           # also rebuilds better-sqlite3 for Electron
-npm run dev           # app with hot reload
+npm run dev           # app with hot reload; a main or preload change restarts the app
 npm run typecheck     # tsc for node (main/preload/core) and web (renderer) projects
 npm test              # vitest: core unit tests + client integration test (spawns the fake server)
 npm run fake-server   # fake ComfyUI on http://127.0.0.1:8188 (PORT, FAKE_TOKEN, STEP_MS)

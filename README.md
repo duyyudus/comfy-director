@@ -6,7 +6,7 @@ A desktop client for a ComfyUI server. Design workflows in the ComfyUI graph, ex
 
 ```bash
 npm install          # also rebuilds better-sqlite3 for Electron
-npm run dev          # app with hot reload
+npm run dev          # app with hot reload; a main or preload change restarts the app
 npm run build && npm start
 npm run dist         # installer via electron-builder (release/)
 ```
