@@ -3,7 +3,7 @@ import type {
   InputFile, LibraryPrompt, ProjectInfo, ProjectTree, PrompterRecord, PromptSkill, QueueSnapshot, ReconcileSummary, ResetScope, RunRequest, RunResult,
   Sequence, ServerStatus, Shot, ShotChat, ShotDetail, TestResult, ThemeMode, ThumbnailJob, WorkflowInfo
 } from './types'
-import type { Overrides } from '../core/workflow/types'
+import type { FileMedia, Overrides } from '../core/workflow/types'
 import type { PrompterConfig } from '../core/prompter/types'
 
 /** Everything the renderer can ask the main process. Each method maps to one IPC call. */
@@ -61,8 +61,9 @@ export interface ToolkitApi {
   exportKeepers(projectPath: string, sequenceId: number): Promise<{ count: number; folder: string }>
 
   // inputs
-  pickImages(projectPath: string, multiple: boolean): Promise<InputFile[]>
-  addInputFromPath(projectPath: string, filePath: string): Promise<InputFile>
+  /** Opens a file dialog for one kind of input file (images unless `media` says otherwise) and copies the choice into the project. */
+  pickInputs(projectPath: string, multiple: boolean, media?: FileMedia): Promise<InputFile[]>
+  addInputFromPath(projectPath: string, filePath: string, media?: FileMedia): Promise<InputFile>
 
   // attempts & runs
   run(projectPath: string, shotId: number, req: RunRequest): Promise<RunResult>
@@ -131,7 +132,7 @@ export const API_METHODS: ApiMethod[] = [
   'projectFolderPreview', 'getProjectTree',
   'createSequence', 'renameSequence', 'deleteSequence', 'reorderShots', 'createShot', 'getShot', 'updateShot',
   'duplicateShot', 'moveShot', 'deleteShot', 'getSequenceShots', 'exportKeepers',
-  'pickImages', 'addInputFromPath',
+  'pickInputs', 'addInputFromPath',
   'run', 'retryAttempt', 'setKeeper', 'deleteAttempt', 'getAttempts', 'cancelAttempt', 'revealFile', 'saveThumbnail',
   'pendingThumbnails',
   'getQueue', 'cancelJobs', 'cancelOtherClientJob', 'interrupt', 'cancelAllWaiting', 'takeReconcileSummary',

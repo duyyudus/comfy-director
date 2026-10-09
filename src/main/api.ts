@@ -21,6 +21,7 @@ import { createPrompter, LlmPrompter } from '@core/prompter'
 import type { ChatPart, ChatTurn, LlmConfig } from '@core/prompter'
 import { randomSeed } from '@core/planner'
 import { titleOf } from '@core/workflow/graph'
+import type { FileMedia } from '@core/workflow/types'
 
 export interface Context {
   ws: () => Workspace
@@ -32,6 +33,12 @@ export interface Context {
 }
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp']
+/** What each kind of file input accepts. Video and audio are limited to what the app can also play back. */
+const INPUT_FILES: Record<FileMedia, { extensions: string[]; filter: string; one: string; many: string; error: string }> = {
+  image: { extensions: IMAGE_EXT, filter: 'Images', one: 'Choose an image', many: 'Choose images', error: 'Only PNG, JPG, WEBP and BMP images can be used.' },
+  video: { extensions: ['mp4', 'mov', 'webm'], filter: 'Videos', one: 'Choose a video', many: 'Choose videos', error: 'Only MP4, MOV and WEBM videos can be used.' },
+  audio: { extensions: ['wav', 'mp3', 'flac', 'ogg', 'm4a'], filter: 'Audio', one: 'Choose an audio file', many: 'Choose audio files', error: 'Only WAV, MP3, FLAC, OGG and M4A audio can be used.' }
+}
 const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 /** Longest side of an image sent to an LLM. Larger ones are scaled down to keep the request small. */
 const CHAT_IMAGE_MAX = 1568
@@ -439,17 +446,19 @@ export function createApi(ctx: Context): ToolkitApi {
     },
 
     /* --------------------------------------------------------- inputs */
-    async pickImages(projectPath, multiple) {
+    async pickInputs(projectPath, multiple, media = 'image') {
+      const kind = INPUT_FILES[media]
       const r = await dialog.showOpenDialog(win()!, {
-        title: multiple ? 'Choose images' : 'Choose an image',
+        title: multiple ? kind.many : kind.one,
         properties: multiple ? ['openFile', 'multiSelections'] : ['openFile'],
-        filters: [{ name: 'Images', extensions: IMAGE_EXT }]
+        filters: [{ name: kind.filter, extensions: kind.extensions }]
       })
       if (r.canceled) return []
       return r.filePaths.map((p) => copyInput(projectPath, p))
     },
-    async addInputFromPath(projectPath, filePath) {
-      if (!IMAGE_EXT.includes(extOf(filePath))) throw new Error('Only PNG, JPG, WEBP and BMP images can be used.')
+    async addInputFromPath(projectPath, filePath, media = 'image') {
+      const kind = INPUT_FILES[media]
+      if (!kind.extensions.includes(extOf(filePath))) throw new Error(kind.error)
       return copyInput(projectPath, filePath)
     },
 

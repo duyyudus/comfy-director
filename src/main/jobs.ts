@@ -42,7 +42,11 @@ interface LiveState {
   startedAt: string | null
 }
 
-const MIME: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', bmp: 'image/bmp' }
+const MIME: Record<string, string> = {
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', bmp: 'image/bmp',
+  mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm',
+  wav: 'audio/wav', mp3: 'audio/mpeg', flac: 'audio/flac', ogg: 'audio/ogg', m4a: 'audio/mp4'
+}
 
 export class JobManager {
   private active = new Map<string, ActiveJob>()
@@ -191,7 +195,7 @@ export class JobManager {
         break
       }
     }
-    if (failures.length) return { ok: false, uploadFailures: failures, message: 'An image failed to upload. Nothing was queued.' }
+    if (failures.length) return { ok: false, uploadFailures: failures, message: 'A file failed to upload. Nothing was queued.' }
 
     const jobs = planRun({ prompts, runs: req.runs, seedMode: req.seedMode, fixedSeed: req.seedValue })
     const runId = randomUUID()
@@ -816,8 +820,8 @@ export function mapRejection(schema: WorkflowSchema, body: PromptRejection): { f
       const input = schema.inputs.find((i) => {
         const t = i.target
         if (t.kind === 'field') return t.nodeId === nodeId && (!inputName || inputName === t.field)
-        if (t.kind === 'file') return t.nodeId === nodeId || (t.consumerId === nodeId && inputName === t.consumerInput)
-        return t.consumerId === nodeId || t.slots.some((s) => s.nodeId === nodeId)
+        if (t.kind === 'file') return t.nodeId === nodeId || t.via === nodeId || (t.consumerId === nodeId && inputName === t.consumerInput)
+        return t.consumerId === nodeId || t.slots.some((s) => s.nodeId === nodeId || s.via === nodeId)
       })
       if (input) fieldErrors[input.key] = text
       else general.push(`${ne.class_type}: ${text}.`)

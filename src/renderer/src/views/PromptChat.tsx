@@ -231,7 +231,7 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
           }}
         />
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Button size="sm" onClick={async () => attach(await api.pickImages(projectPath, true))}>Add images</Button>
+          <Button size="sm" onClick={async () => attach(await api.pickInputs(projectPath, true))}>Add images</Button>
           <Button size="sm" disabled={!shotImages.length} title="Attach the images in the shot's form, in the workflow's order" onClick={() => attach(shotImages)}>
             Shot's images{shotImages.length ? ` (${shotImages.length})` : ''}
           </Button>

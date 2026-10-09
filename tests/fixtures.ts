@@ -21,6 +21,11 @@ export const objectInfo: ObjectInfo = {
       required: {
         prompt: ['STRING', { multiline: true }],
         ref_images: ['COMFY_AUTOGROW_V3', { template: { input: { required: { ref_image: ['IMAGE'] } }, prefix: 'ref_image_', min: 1, max: 9 } }]
+      },
+      optional: {
+        ref_videos: ['COMFY_AUTOGROW_V3', { template: { input: { optional: { ref_video: ['IMAGE'] } }, prefix: 'ref_video_', min: 0, max: 3 } }],
+        ref_video_audios: ['COMFY_AUTOGROW_V3', { template: { input: { optional: { ref_video_audio: ['AUDIO'] } }, prefix: 'ref_video_audio_', min: 0, max: 3 } }],
+        ref_audios: ['COMFY_AUTOGROW_V3', { template: { input: { optional: { ref_audio: ['AUDIO'] } }, prefix: 'ref_audio_', min: 0, max: 3 } }]
       }
     }
   },

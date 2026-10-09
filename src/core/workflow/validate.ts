@@ -1,4 +1,15 @@
-import type { SchemaInput, Values } from './types'
+import type { FileMedia, SchemaInput, Values } from './types'
+
+const NOUNS: Record<FileMedia, [string, string]> = {
+  image: ['image', 'images'],
+  video: ['video', 'videos'],
+  audio: ['audio file', 'audio files']
+}
+
+/** What a file input holds, for messages: "image", "videos", "audio file". */
+export function fileNoun(input: SchemaInput | undefined, count = 1): string {
+  return NOUNS[input?.constraints.media ?? 'image'][count === 1 ? 0 : 1]
+}
 
 /** Field-level problems keyed by input key. Empty object means the values can be sent. */
 export function validateValues(inputs: SchemaInput[], values: Values): Record<string, string> {
@@ -21,14 +32,14 @@ export function validateValues(inputs: SchemaInput[], values: Values): Record<st
         }
         break
       case 'file':
-        if (c.required && !(typeof v === 'string' && v)) errors[i.key] = 'This image is required.'
+        if (c.required && !(typeof v === 'string' && v)) errors[i.key] = `This ${fileNoun(i)} is required.`
         break
       case 'file-group': {
         const n = Array.isArray(v) ? v.filter(Boolean).length : 0
         if (c.minCount !== undefined && n < c.minCount) {
-          errors[i.key] = `Add at least ${c.minCount} image${c.minCount === 1 ? '' : 's'}.`
+          errors[i.key] = `Add at least ${c.minCount} ${fileNoun(i, c.minCount)}.`
         } else if (c.maxCount !== undefined && n > c.maxCount) {
-          errors[i.key] = `At most ${c.maxCount} images. Remove ${n - c.maxCount}.`
+          errors[i.key] = `At most ${c.maxCount} ${fileNoun(i, c.maxCount)}. Remove ${n - c.maxCount}.`
         }
         break
       }

@@ -66,6 +66,11 @@ Object.assign(objectInfo, {
         prompt: ['STRING', { multiline: true }], width: ['INT', {}], height: ['INT', {}], length: ['INT', {}],
         ref_image_size: [['match', 'fit'], {}], clip: ['CLIP'], vae: ['VAE'], audio_vae: ['VAE'],
         ref_images: ['COMFY_AUTOGROW_V3', { template: { input: { required: { ref_image: ['IMAGE'] } }, prefix: 'ref_image_', min: 1, max: 9 } }]
+      },
+      optional: {
+        ref_videos: ['COMFY_AUTOGROW_V3', { template: { input: { optional: { ref_video: ['IMAGE'] } }, prefix: 'ref_video_', min: 0, max: 3 } }],
+        ref_video_audios: ['COMFY_AUTOGROW_V3', { template: { input: { optional: { ref_video_audio: ['AUDIO'] } }, prefix: 'ref_video_audio_', min: 0, max: 3 } }],
+        ref_audios: ['COMFY_AUTOGROW_V3', { template: { input: { optional: { ref_audio: ['AUDIO'] } }, prefix: 'ref_audio_', min: 0, max: 3 } }]
       }
     }
   },
@@ -82,8 +87,12 @@ Object.assign(objectInfo, {
   PrimitiveInt: { input: { required: { value: ['INT', { min: -1e9, max: 1e9 }] } } },
   PrimitiveBoolean: { input: { required: { value: ['BOOLEAN', {}] } } },
   PrimitiveStringMultiline: { input: { required: { value: ['STRING', { multiline: true }] } } },
-  LoadImage: { input: { required: { image: [['example.png'], { image_upload: true }] } } }
+  LoadImage: { input: { required: { image: [['example.png'], { image_upload: true }] } } },
+  LoadVideo: { input: { required: { file: [['example.mp4'], { video_upload: true }] } } },
+  LoadAudio: { input: { required: { audio: [['example.wav'], { audio_upload: true }] } } },
+  GetVideoComponents: { input: { required: { video: ['VIDEO'] } } }
 })
+const FILE_FIELDS = { LoadImage: 'image', LoadVideo: 'file', LoadAudio: 'audio' }
 
 /* -------------------------------------------------------------- test media */
 const variants = []
@@ -217,8 +226,9 @@ function validate(prompt) {
       errors[nid] = { errors: [{ type: 'missing_node_type', message: `Node type ${node.class_type} not found`, details: '', extra_info: {} }], class_type: node.class_type }
       continue
     }
-    if (node.class_type === 'LoadImage' && !existsSync(join(inputDir, String(node.inputs.image)))) {
-      errors[nid] = { errors: [{ type: 'value_not_in_list', message: 'Value not in list', details: `image: '${node.inputs.image}' not in list`, extra_info: { input_name: 'image' } }], class_type: 'LoadImage' }
+    const fileField = FILE_FIELDS[node.class_type]
+    if (fileField && !existsSync(join(inputDir, String(node.inputs[fileField])))) {
+      errors[nid] = { errors: [{ type: 'value_not_in_list', message: 'Value not in list', details: `${fileField}: '${node.inputs[fileField]}' not in list`, extra_info: { input_name: fileField } }], class_type: node.class_type }
     }
     for (const v of Object.values(node.inputs)) {
       if (Array.isArray(v) && !prompt[v[0]]) {

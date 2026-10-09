@@ -1,9 +1,9 @@
-import type { ApiWorkflow, InputConstraints, InputTarget, InputType, SeedTarget } from './types'
-import { consumersOf, isLink, titleOf, trailingNumber } from './graph'
+import type { ApiWorkflow, FileMedia, InputConstraints, InputTarget, InputType, Link, SeedTarget } from './types'
+import { consumersOf, isLink, titleOf, trailingNumber, type Consumer } from './graph'
 import { humanize, keyFromTitle, SEED_FIELDS, titleInner } from './keys'
 import { groupBounds, inputSpec, type InputSpec, type ObjectInfo } from './objectInfo'
 
-/** An input found automatically (primitive node, LoadImage, LoadImage group). */
+/** An input found automatically (primitive node, file loader, group of file loaders). */
 export interface Candidate {
   /** Stable id used by overrides: the derived key, or `key#2`, `key#3` for repeats. */
   id: string
@@ -47,7 +47,15 @@ const PRIMITIVES: Record<string, { type: InputType; integer?: boolean; multiline
   PrimitiveBoolean: { type: 'toggle' }
 }
 
-const FILE_LOADERS = new Set(['LoadImage'])
+/** Nodes that load an uploaded file, with the field holding its name. */
+const FILE_LOADERS: Record<string, { field: string; media: FileMedia }> = {
+  LoadImage: { field: 'image', media: 'image' },
+  LoadVideo: { field: 'file', media: 'video' },
+  LoadAudio: { field: 'audio', media: 'audio' }
+}
+
+/** Nodes that only split a loaded file into its parts. The input is named after what they feed. */
+const UNPACKERS = new Set(['GetVideoComponents'])
 
 const SUGGESTED_FIELDS = new Set([
   'prompt', 'text', 'negative', 'negative_prompt', 'aspect_ratio', 'megapixels', 'width', 'height',
@@ -68,7 +76,7 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
   const candidates: Candidate[] = []
   const fields: FieldCandidate[] = []
   const seedTargets: SeedTarget[] = []
-  const groups = new Map<string, { consumerId: string; prefix: string; slots: { nodeId: string; input: string }[] }>()
+  const groups = new Map<string, { consumerId: string; prefix: string; slots: (FileSink & { nodeId: string })[] }>()
 
   for (const [nodeId, node] of Object.entries(wf)) {
     const title = titleOf(node)
@@ -103,15 +111,17 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
       continue
     }
 
-    if (FILE_LOADERS.has(node.class_type)) {
-      const consumer = consumersOf(wf, nodeId)[0]
-      if (!consumer) continue
+    const loader = FILE_LOADERS[node.class_type]
+    if (loader) {
+      const sink = fileSink(wf, nodeId)
+      if (!sink) continue
+      const consumer = sink.consumer
       const dot = consumer.input.indexOf('.')
       if (dot > 0) {
         const prefix = consumer.input.slice(0, dot)
         const gid = `${consumer.nodeId}\u0000${prefix}`
         const g = groups.get(gid) ?? { consumerId: consumer.nodeId, prefix, slots: [] }
-        g.slots.push({ nodeId, input: consumer.input })
+        g.slots.push({ nodeId, ...sink })
         groups.set(gid, g)
         continue
       }
@@ -125,9 +135,13 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
         source: `${title} into ${consumer.input} on ${titleOf(consumerNode)}`,
         default: null,
         defaultExposed: true,
-        target: { kind: 'file', nodeId, field: 'image', consumerId: consumer.nodeId, consumerInput: consumer.input },
+        target: {
+          kind: 'file', nodeId, field: loader.field, consumerId: consumer.nodeId, consumerInput: consumer.input,
+          ...(sink.via && { via: sink.via }),
+          ...(sink.also.length && { also: sink.also })
+        },
         // Unknown (no server info): treated as optional, the server reports it if not.
-        constraints: { required: spec ? !spec.optional : false },
+        constraints: { required: spec ? !spec.optional : false, media: loader.media },
         nodeClass: node.class_type
       })
       continue
@@ -176,27 +190,39 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
   }
 
   for (const g of groups.values()) {
-    g.slots.sort((a, b) => trailingNumber(a.input) - trailingNumber(b.input))
+    g.slots.sort((a, b) => trailingNumber(a.consumer.input) - trailingNumber(b.consumer.input))
     const consumerNode = wf[g.consumerId]
     const spec = inputSpec(oi, consumerNode.class_type, g.prefix)
     const bounds = groupBounds(spec)
-    const slotName = g.slots[0].input.slice(g.prefix.length + 1)
-    const base = slotName.replace(/\d+$/, '')
+    const first = g.slots[0]
+    const firstNode = wf[first.nodeId]
+    const loader = FILE_LOADERS[firstNode.class_type]
+    const slotBase = (input: string): string => input.slice(input.indexOf('.') + 1).replace(/\d+$/, '')
+    // A video's audio track fills a slot group of its own, index for index.
+    const also = first.also
+      .filter((a) => a.input.includes('.'))
+      .map((a) => ({ prefix: a.input.slice(0, a.input.indexOf('.')), base: slotBase(a.input), output: a.output }))
     candidates.push({
       id: g.prefix,
       key: g.prefix,
       type: 'file-group',
       label: humanize(g.prefix),
-      source: `${g.slots.length} × Load Image into ${g.prefix}.* on ${titleOf(consumerNode)}`,
+      source: `${g.slots.length} × ${titleOf(firstNode)} into ${g.prefix}.* on ${titleOf(consumerNode)}`,
       default: [],
       defaultExposed: true,
-      target: { kind: 'file-group', consumerId: g.consumerId, prefix: g.prefix, base, slots: g.slots },
+      target: {
+        kind: 'file-group', consumerId: g.consumerId, prefix: g.prefix, base: slotBase(first.consumer.input),
+        field: loader.field, output: first.output,
+        slots: g.slots.map((s) => ({ nodeId: s.nodeId, input: s.consumer.input, ...(s.via && { via: s.via }) })),
+        ...(also.length && { also })
+      },
       constraints: {
         required: spec ? !spec.optional : false,
         minCount: bounds.min ?? (spec && !spec.optional ? 1 : 0),
-        maxCount: bounds.max ?? g.slots.length
+        maxCount: bounds.max ?? g.slots.length,
+        media: loader.media
       },
-      nodeClass: 'LoadImage'
+      nodeClass: firstNode.class_type
     })
   }
 
@@ -209,6 +235,31 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
   }
 
   return { candidates, fields, seedTargets }
+}
+
+interface FileSink {
+  /** The unpack node between the loader and the consumer, if any. */
+  via?: string
+  consumer: Consumer
+  output: number
+  /** Other inputs of the same consumer node fed by this file. */
+  also: { input: string; output: number }[]
+}
+
+/** Where a loader's file ends up: its first consumer, looking through an unpack node. */
+function fileSink(wf: ApiWorkflow, nodeId: string): FileSink | null {
+  const direct = consumersOf(wf, nodeId)
+  if (!direct.length) return null
+  const via = UNPACKERS.has(wf[direct[0].nodeId].class_type) ? direct[0].nodeId : undefined
+  const links = (via ? consumersOf(wf, via) : direct).map((c) => ({ ...c, output: (wf[c.nodeId].inputs[c.input] as Link)[1] }))
+  const main = links[0]
+  if (!main) return null
+  return {
+    via,
+    consumer: { nodeId: main.nodeId, input: main.input },
+    output: main.output,
+    also: links.slice(1).filter((c) => c.nodeId === main.nodeId).map((c) => ({ input: c.input, output: c.output }))
+  }
 }
 
 export function fieldCandidate(wf: ApiWorkflow, nodeId: string, field: string, oi?: ObjectInfo | null): FieldCandidate {

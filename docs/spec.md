@@ -85,7 +85,7 @@ Reference workflows used for design (all MiniMax H3):
 
 | File | What it is | Notes |
 |---|---|---|
-| `video_minimax_h3_r2v.json` | Reference-to-video (ref2vid), 6 ref images | Flat node ids. Prompt comes from an `Input Text (Prompt)` node. |
+| `video_minimax_h3_r2v.json` | Reference-to-video (ref2vid): 4 ref images, 1 ref video, 1 ref audio | Flat node ids. Prompt comes from an `Input Text (Prompt)` node. The video goes through a `Get Video Components` node, which feeds both `ref_videos.ref_video_0` (frames) and `ref_video_audios.ref_video_audio_0` (its audio track). |
 | `video_minimax_h3_i2v_continuation.json` | First and last frame to video (fl2vid) | Node ids carry a subgraph prefix (`105:...`). Prompt is typed directly on the `MiniMaxH3ImageToVideo` node. Two `LoadImage` nodes, both titled "Load Image". |
 | `video_minimax_h3_t2v.json` | Text to video (t2v) | Identical to fl2vid except: no `LoadImage` nodes, no `first_frame` / `last_frame` links, different default values, and subgraph prefix `140:`. |
 
@@ -107,8 +107,9 @@ What these three files teach (each rule is written into the sections below):
 
 1. **Auto-discovery on import.** Scan the API JSON for obvious input nodes:
    - `PrimitiveStringMultiline`, `PrimitiveInt`, `PrimitiveFloat`, `PrimitiveBoolean` become text, number and toggle controls. Label from `_meta.title`, default from the current value.
-   - `LoadImage` becomes a file input.
-   - Several `LoadImage` nodes feeding one dotted input group on a single node (e.g. `ref_images.ref_image_0..N`) become one **file-group** control with add/remove.
+   - `LoadImage`, `LoadVideo` and `LoadAudio` become file inputs for an image, a video and an audio file.
+   - Several loader nodes feeding one dotted input group on a single node (e.g. `ref_images.ref_image_0..N`) become one **file-group** control with add/remove.
+   - A loader whose consumer is a `GetVideoComponents` node is looked at through that node: the input is what the unpack node feeds. Its other links into the same consumer node (the video's audio track) belong to the same input, so one video file fills both.
    - A literal text `prompt` field on a regular node (`MiniMaxH3ImageToVideo.prompt` in fl2vid and t2v) becomes a text input.
    - The `aspect_ratio` and `megapixels` fields of a `ResolutionSelector` node become a dropdown and a number input, so every workflow sized by that node offers the same two controls and their values carry over between workflows.
    - Literal `seed` / `noise_seed` integer fields are found and always driven by the shot's Seed control (see Seed). They are not listed as inputs.
@@ -144,24 +145,26 @@ Values are matched across workflows and across re-imports by key, so keys must c
 
 - **Primitive input nodes:** the text inside the parentheses of the title if there is one, otherwise the whole title, lowercased and trimmed. `Float (Duration)` and `Float (duration)` both give `duration`. `Input Text (Prompt)` gives `prompt`. `Boolean (Enable Lightning LoRA)` gives `enable lightning lora`.
 - **Fields on regular nodes (discovered, or exposed through overrides):** the field name, for example `prompt`, `aspect_ratio`, `megapixels`, `cfg`. The same field on the same node class in two workflows gives the same key, so a typed-in prompt on `MiniMaxH3ImageToVideo` shares its value with the `Input Text (Prompt)` node in ref2vid.
-- **File inputs:** the name of the consumer input they feed (`first_frame`, `last_frame`), because `LoadImage` nodes are normally left as "Load Image". A file group uses the group prefix (`ref_images`), not the slot names.
+- **File inputs:** the name of the consumer input they feed (`first_frame`, `last_frame`), because `LoadImage` nodes are normally left as "Load Image". A file group uses the group prefix (`ref_images`, `ref_videos`, `ref_audios`), not the slot names.
 - **Repeated keys:** when two inputs in one workflow derive the same key (two nodes titled `Int`), each gets a unique key automatically: the label if the user renamed it (`full-steps`), otherwise the key numbered in workflow order (`int`, `int#2`, `int#3`). On import, keys resolved this way are written to `overrides.json` as an explicit `"key"`, so renaming a label later only changes the text in the form and the key that shots store values under stays fixed.
 - An override can always set an explicit key. Two explicitly typed keys that clash are flagged on the Import screen.
 
 ### Optional file inputs (first and last frame, text-to-video)
 
-- On import, `GET /object_info` tells which inputs of the consumer node are optional. A `LoadImage` feeding an **optional** input is an optional file input. One feeding a required input is required. Without server info the input is treated as optional, and the server reports it at Run if it is not.
+- On import, `GET /object_info` tells which inputs of the consumer node are optional. A loader (`LoadImage`, `LoadVideo`, `LoadAudio`) feeding an **optional** input is an optional file input. One feeding a required input is required. Without server info the input is treated as optional, and the server reports it at Run if it is not.
 - **File inputs start empty**, not with the filename baked into the export (that file lives only on the server).
-- **Empty optional input:** before sending, the app deletes that `LoadImage` node and the link on the consumer node. The result is a valid workflow that simply has no image there. This is the same mechanism as unused ref image slots.
+- **Empty optional input:** before sending, the app deletes that loader node, its unpack node if it has one, and the links on the consumer node. The result is a valid workflow that simply has no file there. This is the same mechanism as unused ref slots.
 - **Required input empty:** Run is blocked with a message on that field.
 - In `MiniMaxH3ImageToVideo`, `first_frame` and `last_frame` are optional. With both empty the result matches `video_minimax_h3_t2v.json` (checked by comparing the two files). With only a first frame it is image-to-video. Both cases were run on the real server (2026-10-08).
 - Because of this, importing only the fl2vid file covers t2v, i2v and fl2v. Importing the t2v file as well is optional: it is the same graph with different defaults (16:9, 1 megapixel, 5 s, turbo off), so it would only add a tab.
 
-### Variable-count inputs (ref images)
+### Variable-count inputs (ref images, videos and audio)
 
 - Ref slots are not a list. Each is a separate key on the consumer node (`ref_images.ref_image_N`) linking to its own `LoadImage` node.
 - To use fewer images: keep only the first N slots, delete the other keys and their unused `LoadImage` nodes, and set each remaining loader's filename to the uploaded file.
 - To use more: the app clones the first `LoadImage` node under the next free integer id and adds the next slot key.
+- Reference videos (`ref_videos.ref_video_N`) and reference audio (`ref_audios.ref_audio_N`) are groups of the same kind, loaded by `LoadVideo` and `LoadAudio`. Each video slot is a `LoadVideo` plus its own `Get Video Components` node, and also fills the matching `ref_video_audios.ref_video_audio_N` slot from that node's audio output. Adding a video clones both nodes; removing one deletes both nodes and both slot keys. `ref_video_audios` is therefore not an input of its own.
+- With no video or audio added, those nodes and slots are all removed, so the workflow runs on images alone.
 - Slot indices stay contiguous (0, 1, 2, ...).
 - Slot order is defined by the links on the consumer node, not by node ID order.
 - Min and max counts come from `GET /object_info` (a numeric `min` / `max` in the input's options, or the length of a `names` list). Without it, the minimum is 1 if the input is required and the maximum is the number of slots in the export. `minCount` / `maxCount` in the overrides replace them.
@@ -246,7 +249,7 @@ Both are SQLite in WAL mode, defined in `src/main/db.ts`.
 
 ### Input files
 
-- When the user picks an image for a file input, the app **copies it into the project's `inputs/`** as `<first 20 hex of sha256>.<ext>` (original name kept in the database for display). The project therefore does not depend on the original file staying where it was.
+- When the user picks a file for a file input (PNG, JPG, WEBP or BMP image; MP4, MOV or WEBM video; WAV, MP3, FLAC, OGG or M4A audio), the app **copies it into the project's `inputs/`** as `<first 20 hex of sha256>.<ext>` (original name kept in the database for display). The project therefore does not depend on the original file staying where it was.
 - On Run, the file is uploaded to the server under its hash name (`overwrite=true`), so two different pictures never collide. Uploads are remembered per server in `project.db`, so the same picture is uploaded once per server.
 - If the server rejects a Run on a file input whose upload the app had skipped as remembered, the app forgets those uploads, uploads again and posts the Run a second time. A second rejection is shown as usual. This covers a server whose input folder was emptied.
 
@@ -311,10 +314,10 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   | number | Number field (with min/max/step from the schema or overrides) |
   | toggle | Checkbox with label and short help text |
   | select | Dropdown; options from `GET /object_info` |
-  | file | One image slot with Replace. An optional file input can be empty and shows "Add" and, when filled, "Remove"; a hint says what an empty slot means (for example "Leave both frames empty for text-to-video") |
-  | file group | Slots as thumbnails with remove (x), add (+), drag to reorder, and a "n of max slots" count |
+  | file | One slot with Replace, showing the image, the video (plays muted while hovered) or a play button for audio. An optional file input can be empty and shows "Add" and, when filled, "Remove"; a hint says what an empty slot means (for example "Leave both frames empty for text-to-video") |
+  | file group | Slots as thumbnails with remove (x), add (+), drag to reorder, and a "n of max slots" count. Slots are numbered "ref N" for images, "video N" and "audio N", the way a prompt refers to them |
 
-  The reference images control enforces the minimum and maximum slot counts from the schema. Unused slots are removed from the workflow before sending (see Variable-count inputs).
+  A file group control enforces the minimum and maximum slot counts from the schema. Unused slots are removed from the workflow before sending (see Variable-count inputs).
 - **Prompt: "single" / "list" toggle.** Only the prompt can be switched to list mode (see Prompt list mode below). Every other input stays a single value. To try another duration, aspect ratio, turbo setting, workflow or set of reference images, change it and press Run again: the queue holds the jobs, and Compare shows what differs. There is no separate batch screen and no lists for numbers or choices. A **Save to Library** link on the prompt box stores the prompt in the Library.
 - **Seed:** a segmented control **Random / Fixed**. Hidden for workflows without a seed field.
   - Random: a new seed per job, generated by the app.
@@ -394,7 +397,7 @@ Purpose: work out one shot's prompt with an LLM, back and forth: describe the sh
 - **Prompter:** a dropdown of the Library's LLM prompters, each shown with its skill's workflow type. The default is the prompter whose skill type equals the active workflow's id or starts it (`minimax_h3` for `minimax_h3_r2v`; `-` and `_` count as the same), else the one used last, else the first. With no LLM prompter the panel links to the Library. The prompter can be changed mid-conversation.
 - **Composer:** a text box (Enter sends, Shift+Enter is a new line) and:
   - **Add images** (file dialog) and dropping image files on the composer. Images are copied into the project's `inputs/` like any input image.
-  - **Shot's images (n):** attaches the images in the shot's form, in the workflow's order (file inputs and reference slots).
+  - **Shot's images (n):** attaches the images in the shot's form, in the workflow's order (file inputs and reference slots). Videos and audio files in the form are left out.
   - **Quote prompt:** pastes the shot's current prompt into the message as a fenced block.
   - Attached images show as thumbnails labelled **Image N**. N counts across the whole chat, and the LLM is told the same numbers.
 - **What is sent:** every Send posts the whole conversation to `POST {endpoint}/chat/completions`. The system message is the prompter's skill file in full (read from disk each time), then its instruction, then a fixed rule: put each proposed prompt in its own fenced code block and keep explanations outside it. Images go as `image_url` data URLs before the message's text, each preceded by its "Image N" label; PNG and JPEG larger than 1568 px on the long side are scaled down to that as JPEG. The model must accept images for attachments to work. Nothing is sent to the ComfyUI server.
@@ -520,7 +523,7 @@ Error and connection states (wireframe 07):
 
 1. **Server offline or token refused:** a banner on every screen ("Can't reach server-01. Retrying in 8 s. Your inputs and history are kept.") with **Retry now** and **Server settings**. Inputs, history and finished renders stay usable. Only Run is off. The sidebar shows "offline". A refused token says to check it in Server settings.
 2. **Back online, jobs updated:** on launch and on reconnect the app compares its running attempts with the server's queue and history (see Job tracking). A banner summarises ("While the app was closed, 1 attempt finished and 1 failed. 4 jobs are still waiting.") with the affected attempts and **Open shot** or **Details**. **Dismiss** closes it.
-3. **Upload failed:** input files upload when Run is pressed. One failing file stops the whole run, so nothing half-queued is left behind. The failing slot is marked, with **Retry upload** and **Remove image**.
+3. **Upload failed:** input files upload when Run is pressed. One failing file stops the whole run, so nothing half-queued is left behind. The failing slot is marked, with **Retry upload** and **Remove image** (or video, or audio file).
 4. **Rejected when pressing Run:** the app validates first (minimum and maximum values, option still offered by the server, slot count within the workflow's maximum). If the server still rejects a job, its message appears on the field it came from (matched through the node id and input name in the server's error); anything that cannot be matched is listed in the message line. A line states how many problems remain.
    - Run validates, uploads, then posts the jobs. If any `POST /prompt` fails, the jobs of that Run already queued are removed by id (or interrupted, if one already started) and their attempt records are deleted.
    - The app then reads the queue again. Jobs the server did not give back keep their attempts, and the message says how many will still run instead of "Nothing was queued". If the queue cannot be read, the jobs are kept and the queue poll settles them.

@@ -263,16 +263,20 @@
         "147",
         0
       ],
+      "ref_videos.ref_video_0": [
+        "160",
+        0
+      ],
+      "ref_video_audios.ref_video_audio_0": [
+        "160",
+        1
+      ],
+      "ref_audios.ref_audio_0": [
+        "155",
+        0
+      ],
       "ref_images.ref_image_3": [
         "148",
-        0
-      ],
-      "ref_images.ref_image_4": [
-        "150",
-        0
-      ],
-      "ref_images.ref_image_5": [
-        "151",
         0
       ]
     },
@@ -407,22 +411,35 @@
       "title": "Load Image"
     }
   },
-  "150": {
+  "154": {
     "inputs": {
-      "image": "shin-ye-3-vertical_0667.jpg"
+      "file": "MiniMax_H3_00032_.mp4",
+      "video-preview": ""
     },
-    "class_type": "LoadImage",
+    "class_type": "LoadVideo",
     "_meta": {
-      "title": "Load Image"
+      "title": "Load Video"
     }
   },
-  "151": {
+  "155": {
     "inputs": {
-      "image": "shin-ye-3-vertical_0675.jpg"
+      "audio": null
     },
-    "class_type": "LoadImage",
+    "class_type": "LoadAudio",
     "_meta": {
-      "title": "Load Image"
+      "title": "Load Audio"
+    }
+  },
+  "160": {
+    "inputs": {
+      "video": [
+        "154",
+        0
+      ]
+    },
+    "class_type": "GetVideoComponents",
+    "_meta": {
+      "title": "Get Video Components"
     }
   }
 }

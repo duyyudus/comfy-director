@@ -9,13 +9,30 @@ export type Link = [string, number]
 
 export type InputType = 'text' | 'number' | 'toggle' | 'select' | 'file' | 'file-group'
 
+/** What a file input holds. Decides the loader field, the file picker and the preview. */
+export type FileMedia = 'image' | 'video' | 'audio'
+
 export type InputTarget =
   /** A literal value on a node (primitive `value`, or an exposed field on a regular node). */
   | { kind: 'field'; nodeId: string; field: string }
-  /** One LoadImage node feeding one consumer input. */
-  | { kind: 'file'; nodeId: string; field: string; consumerId: string; consumerInput: string }
-  /** Several LoadImage nodes feeding `<prefix>.<base>N` inputs on one consumer node. */
-  | { kind: 'file-group'; consumerId: string; prefix: string; base: string; slots: { nodeId: string; input: string }[] }
+  /**
+   * One loader node (LoadImage, LoadVideo, LoadAudio) feeding one consumer input, directly or through
+   * `via` (a node that splits the file into parts). `also` lists the other inputs of the consumer fed
+   * by the same file, such as a video's audio track.
+   */
+  | {
+      kind: 'file'; nodeId: string; field: string; consumerId: string; consumerInput: string
+      via?: string; also?: { input: string; output: number }[]
+    }
+  /**
+   * Several loader nodes feeding `<prefix>.<base>N` inputs on one consumer node. `field` is the loader's
+   * filename field and `output` the output slot linked. Each `also` group gets a slot per file as well.
+   */
+  | {
+      kind: 'file-group'; consumerId: string; prefix: string; base: string; field: string; output: number
+      slots: { nodeId: string; input: string; via?: string }[]
+      also?: { prefix: string; base: string; output: number }[]
+    }
 
 export interface InputConstraints {
   min?: number
@@ -27,6 +44,8 @@ export interface InputConstraints {
   minCount?: number
   maxCount?: number
   multiline?: boolean
+  /** File inputs only. */
+  media?: FileMedia
 }
 
 export interface SchemaInput {

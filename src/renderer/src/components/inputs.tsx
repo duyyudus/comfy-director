@@ -1,5 +1,6 @@
-import { useState, type DragEvent, type ReactNode, type TextareaHTMLAttributes } from 'react'
-import type { SchemaInput } from '@core/workflow/types'
+import { useRef, useState, type DragEvent, type ReactNode, type TextareaHTMLAttributes } from 'react'
+import type { FileMedia, SchemaInput } from '@core/workflow/types'
+import { fileNoun } from '@core/workflow/validate'
 import type { InputFile, UploadFailure } from '@shared/types'
 import { api, errorMessage, media } from '../lib/api'
 import { cn } from '../lib/cn'
@@ -106,7 +107,7 @@ function SelectControl({ input, value, onChange, error }: InputProps): ReactNode
   )
 }
 
-function useDropFiles(projectPath: string, onAdd: (f: InputFile[]) => void): { over: boolean; handlers: Record<string, (e: DragEvent) => void> } {
+function useDropFiles(projectPath: string, kind: FileMedia, onAdd: (f: InputFile[]) => void): { over: boolean; handlers: Record<string, (e: DragEvent) => void> } {
   const [over, setOver] = useState(false)
   const toast = useStore((s) => s.toast)
   return {
@@ -125,7 +126,7 @@ function useDropFiles(projectPath: string, onAdd: (f: InputFile[]) => void): { o
         setOver(false)
         try {
           const added: InputFile[] = []
-          for (const f of Array.from(e.dataTransfer.files)) added.push(await api.addInputFromPath(projectPath, window.toolkit.pathForFile(f)))
+          for (const f of Array.from(e.dataTransfer.files)) added.push(await api.addInputFromPath(projectPath, window.toolkit.pathForFile(f), kind))
           onAdd(added)
         } catch (err) {
           toast(errorMessage(err), 'error')
@@ -179,19 +180,54 @@ function hintFor(input: SchemaInput): string | null {
   if (input.help) return input.help
   if (input.constraints.required) return null
   if (/first_frame|last_frame/.test(input.key)) return 'Leave both frames empty for text-to-video, or fill only the first frame for image-to-video.'
-  return 'Optional: leave empty and the image is left out of the workflow.'
+  return `Optional: leave empty and the ${fileNoun(input)} is left out of the workflow.`
+}
+
+/** A picked input file: the picture, the video (plays muted while hovered) or a play button for audio. */
+function FilePreview({ projectPath, name, kind, title }: { projectPath: string; name: string; kind: FileMedia; title: string }): ReactNode {
+  const src = media(projectPath, `inputs/${name}`)
+  const audio = useRef<HTMLAudioElement>(null)
+  const [playing, setPlaying] = useState(false)
+  if (kind === 'video') {
+    return (
+      <video
+        src={src}
+        muted
+        loop
+        preload="metadata"
+        className="size-full object-cover"
+        onMouseEnter={(e) => void e.currentTarget.play().catch(() => {})}
+        onMouseLeave={(e) => e.currentTarget.pause()}
+      />
+    )
+  }
+  if (kind === 'audio') {
+    return (
+      <button
+        className="flex size-full flex-col items-center justify-center gap-1.5 bg-panel px-1.5 text-text2"
+        aria-label={`${playing ? 'Pause' : 'Play'} ${title}`}
+        onClick={() => (playing ? audio.current?.pause() : void audio.current?.play().catch(() => {}))}
+      >
+        <span className="text-xl">{playing ? '❚❚' : '▶'}</span>
+        <span className="w-full truncate text-xs">{title}</span>
+        <audio ref={audio} src={src} preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
+      </button>
+    )
+  }
+  return <img src={src} alt={title} className="size-full object-cover" draggable={false} />
 }
 
 function FileControl({ input, value, onChange, error, projectPath, files, onFiles, uploadFailure, onRetryUpload }: InputProps): ReactNode {
   const name = typeof value === 'string' && value ? value : null
+  const kind = input.constraints.media ?? 'image'
   const pick = async (): Promise<void> => {
-    const r = await api.pickImages(projectPath, false)
+    const r = await api.pickInputs(projectPath, false, kind)
     if (r[0]) {
       onFiles(r)
       onChange(r[0].name)
     }
   }
-  const drop = useDropFiles(projectPath, (f) => {
+  const drop = useDropFiles(projectPath, kind, (f) => {
     onFiles(f)
     if (f[0]) onChange(f[0].name)
   })
@@ -209,7 +245,7 @@ function FileControl({ input, value, onChange, error, projectPath, files, onFile
         )}
       >
         {name ? (
-          <img src={media(projectPath, `inputs/${name}`)} alt={files[name]?.originalName ?? name} className="size-full object-cover" />
+          <FilePreview projectPath={projectPath} name={name} kind={kind} title={files[name]?.originalName ?? name} />
         ) : (
           <button className="size-full text-text2" onClick={() => void pick()}>+ Add</button>
         )}
@@ -224,7 +260,7 @@ function FileControl({ input, value, onChange, error, projectPath, files, onFile
           Upload failed: {uploadFailure.message}
           <div className="mt-1 flex gap-1.5">
             <Button size="sm" onClick={onRetryUpload}>Retry upload</Button>
-            <Button size="sm" variant="ghost" onClick={() => onChange(null)}>Remove image</Button>
+            <Button size="sm" variant="ghost" onClick={() => onChange(null)}>Remove {fileNoun(input)}</Button>
           </div>
         </div>
       )}
@@ -243,13 +279,16 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
   const list = Array.isArray(value) ? (value.filter((v) => typeof v === 'string' && v) as string[]) : []
   const max = input.constraints.maxCount
   const [dragFrom, setDragFrom] = useState<number | null>(null)
+  const kind = input.constraints.media ?? 'image'
+  // Matches how a prompt names its references: subjects (images), videos and audio are numbered separately.
+  const slot = kind === 'image' ? 'ref' : kind
   const add = async (): Promise<void> => {
-    const r = await api.pickImages(projectPath, true)
+    const r = await api.pickInputs(projectPath, true, kind)
     if (!r.length) return
     onFiles(r)
     onChange([...list, ...r.map((f) => f.name)].slice(0, max ?? Infinity))
   }
-  const drop = useDropFiles(projectPath, (f) => {
+  const drop = useDropFiles(projectPath, kind, (f) => {
     onFiles(f)
     onChange([...list, ...f.map((x) => x.name)].slice(0, max ?? Infinity))
   })
@@ -291,10 +330,10 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
               )}
               title={files[name]?.originalName ?? name}
             >
-              <img src={media(projectPath, `inputs/${name}`)} alt="" className="size-full object-cover" draggable={false} />
-              <span className="absolute bottom-1 left-1.5 rounded bg-black/55 px-1 font-mono text-11 text-white">ref {i + 1}</span>
+              <FilePreview projectPath={projectPath} name={name} kind={kind} title={files[name]?.originalName ?? name} />
+              <span className="pointer-events-none absolute bottom-1 left-1.5 rounded bg-black/55 px-1 font-mono text-11 text-white">{slot} {i + 1}</span>
               <button
-                aria-label={`Remove ref ${i + 1}`}
+                aria-label={`Remove ${slot} ${i + 1}`}
                 onClick={() => onChange(list.filter((_, j) => j !== i))}
                 className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full border border-control bg-panel text-xs text-text"
               >
@@ -306,7 +345,7 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
         {(max === undefined || list.length < max) && (
           <button
             onClick={() => void add()}
-            aria-label="Add images"
+            aria-label={`Add ${fileNoun(input, 2)}`}
             className={cn('flex h-[128px] w-[96px] items-center justify-center rounded-md border border-dashed border-control text-xl text-text2 hover:bg-stripe', drop.over && 'border-accent bg-tint')}
           >
             +
@@ -318,7 +357,7 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
         <div className="mt-1.5 flex items-center gap-2 text-13 text-danger">
           Upload of {files[uploadFailure.file]?.originalName ?? uploadFailure.file} failed: {uploadFailure.message}
           <Button size="sm" onClick={onRetryUpload}>Retry upload</Button>
-          <Button size="sm" variant="ghost" onClick={() => onChange(list.filter((n) => n !== uploadFailure.file))}>Remove image</Button>
+          <Button size="sm" variant="ghost" onClick={() => onChange(list.filter((n) => n !== uploadFailure.file))}>Remove {fileNoun(input)}</Button>
         </div>
       )}
       <FieldError>{error}</FieldError>

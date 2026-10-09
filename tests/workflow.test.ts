@@ -17,8 +17,8 @@ describe('format', () => {
     const r = detectFormat(r2v())
     expect(r.format).toBe('api')
     if (r.format === 'api') {
-      expect(r.nodeCount).toBe(30)
-      expect(r.nodeTypeCount).toBe(22)
+      expect(r.nodeCount).toBe(31)
+      expect(r.nodeTypeCount).toBe(25)
     }
   })
   it('rejects UI format', () => {
@@ -30,13 +30,13 @@ describe('schema', () => {
   it('discovers r2v inputs', () => {
     const s = buildSchema(r2v(), null, objectInfo)
     const keys = s.inputs.map((i) => i.key)
-    expect(keys).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'enable lightning lora', 'ref_images'])
+    expect(keys).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'enable lightning lora', 'ref_images', 'ref_videos', 'ref_audios'])
     expect(s.inputs.find((i) => i.key === 'aspect_ratio')?.type).toBe('select')
     const group = s.inputs.find((i) => i.key === 'ref_images')!
     expect(group.type).toBe('file-group')
     expect(group.constraints.maxCount).toBe(9)
     expect(group.constraints.minCount).toBe(1)
-    if (group.target.kind === 'file-group') expect(group.target.slots.map((x) => x.nodeId)).toEqual(['137', '149', '147', '148', '150', '151'])
+    if (group.target.kind === 'file-group') expect(group.target.slots.map((x) => x.nodeId)).toEqual(['137', '149', '147', '148'])
     // Steps primitives only feed switches: discovered but hidden by default
     expect(s.discovery.candidates.filter((c) => !c.defaultExposed).map((c) => c.id)).toEqual(['full', 'lightning lora'])
     expect(s.seedTargets).toEqual([{ nodeId: '129', field: 'noise_seed' }])
@@ -114,7 +114,57 @@ describe('schema', () => {
     expect(more[lastId].class_type).toBe('LoadImage')
     expect(more[lastId].inputs.image).toBe('8')
     // Template untouched
-    expect(Object.keys(wf['136'].inputs).filter((k) => k.startsWith('ref_images.'))).toHaveLength(6)
+    expect(Object.keys(wf['136'].inputs).filter((k) => k.startsWith('ref_images.'))).toHaveLength(4)
+  })
+
+  it('discovers video and audio references', () => {
+    const s = buildSchema(r2v(), null, objectInfo)
+    const videos = s.inputs.find((i) => i.key === 'ref_videos')!
+    expect(videos.type).toBe('file-group')
+    expect(videos.constraints).toMatchObject({ media: 'video', required: false, minCount: 0, maxCount: 3 })
+    // The loader is found through Get Video Components, whose audio output fills a slot group of its own.
+    expect(videos.target).toMatchObject({
+      field: 'file',
+      output: 0,
+      slots: [{ nodeId: '154', via: '160', input: 'ref_videos.ref_video_0' }],
+      also: [{ prefix: 'ref_video_audios', base: 'ref_video_audio_', output: 1 }]
+    })
+    const audios = s.inputs.find((i) => i.key === 'ref_audios')!
+    expect(audios.constraints).toMatchObject({ media: 'audio', maxCount: 3 })
+    expect(audios.target).toMatchObject({ field: 'audio', slots: [{ nodeId: '155', input: 'ref_audios.ref_audio_0' }] })
+    expect(s.inputs.find((i) => i.key === 'ref_images')?.constraints.media).toBe('image')
+    // The loaders' own fields are not offered as plain fields to expose.
+    expect(s.discovery.fields.some((f) => ['LoadVideo', 'LoadAudio', 'GetVideoComponents'].includes(f.nodeClass))).toBe(false)
+  })
+
+  it('leaves out unused video and audio references', () => {
+    const wf = r2v()
+    const s = buildSchema(wf, null, objectInfo)
+    const none = applyValues(wf, s, { ref_images: ['a.png'] })
+    expect(Object.keys(none['136'].inputs).filter((k) => !k.startsWith('ref_images.') && k.includes('.'))).toEqual([])
+    expect(Object.values(none).some((n) => ['LoadVideo', 'LoadAudio', 'GetVideoComponents'].includes(n.class_type))).toBe(false)
+  })
+
+  it('wires each video reference with its audio track', () => {
+    const wf = r2v()
+    const s = buildSchema(wf, null, objectInfo)
+    const out = applyValues(wf, s, { ref_images: ['a.png'], ref_videos: ['v1.mp4', 'v2.mp4'], ref_audios: ['s.wav'] })
+    const inputs = out['136'].inputs
+    expect(out['154'].inputs.file).toBe('v1.mp4')
+    expect(inputs['ref_videos.ref_video_0']).toEqual(['160', 0])
+    expect(inputs['ref_video_audios.ref_video_audio_0']).toEqual(['160', 1])
+    // The second video gets its own loader and unpack node, cloned from the first.
+    const [unpack, output] = inputs['ref_videos.ref_video_1'] as [string, number]
+    expect(output).toBe(0)
+    expect(unpack).not.toBe('160')
+    expect(out[unpack].class_type).toBe('GetVideoComponents')
+    expect(inputs['ref_video_audios.ref_video_audio_1']).toEqual([unpack, 1])
+    const loader = (out[unpack].inputs.video as [string, number])[0]
+    expect(loader).not.toBe('154')
+    expect(out[loader]).toMatchObject({ class_type: 'LoadVideo', inputs: { file: 'v2.mp4' } })
+    expect(out['155'].inputs.audio).toBe('s.wav')
+    expect(inputs['ref_audios.ref_audio_0']).toEqual(['155', 0])
+    expect(validateValues(s.inputs, { ref_images: ['a.png'], ref_videos: ['1', '2', '3', '4'] }).ref_videos).toBe('At most 3 videos. Remove 1.')
   })
 
   it('validates', () => {
@@ -132,7 +182,7 @@ describe('schema', () => {
     const b = buildSchema(wf, null, objectInfo).inputs
     const d = diffSchemas(a, b)
     expect(d.removed.map((i) => i.key)).toEqual(['enable lightning lora'])
-    expect(d.same.map((i) => i.key)).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'ref_images'])
+    expect(d.same.map((i) => i.key)).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'ref_images', 'ref_videos', 'ref_audios'])
   })
 
   it('checks against the server', () => {

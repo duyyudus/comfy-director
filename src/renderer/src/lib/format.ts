@@ -1,5 +1,6 @@
 import type { Attempt } from '@shared/types'
 import type { SchemaInput } from '@core/workflow/types'
+import { fileNoun } from '@core/workflow/validate'
 
 export function timeAgo(iso: string | null | undefined, nowMs = Date.now()): string {
   if (!iso) return ''
@@ -67,7 +68,7 @@ export function formatValue(input: SchemaInput | undefined, v: unknown, inputNam
   }
   if (Array.isArray(v)) {
     if (!v.length) return 'None'
-    return `${v.length} image${v.length === 1 ? '' : 's'}`
+    return `${v.length} ${fileNoun(input, v.length)}`
   }
   if (input?.type === 'file') return inputNames?.[String(v)] ?? String(v)
   const s = String(v)

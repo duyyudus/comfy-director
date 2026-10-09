@@ -1,5 +1,5 @@
 import type { ApiWorkflow, SchemaInput, Values, WorkflowSchema } from './types'
-import { cloneWorkflow, consumersOf, freeNodeId } from './graph'
+import { cloneWorkflow, consumersOf, freeNodeId, isLink, trailingNumber } from './graph'
 
 export interface ApplyOptions {
   seed?: number | null
@@ -9,7 +9,7 @@ export interface ApplyOptions {
 
 /**
  * Applies a value map to a copy of the template.
- * - Empty optional file inputs: the LoadImage node and the consumer link are removed.
+ * - Empty optional file inputs: the loader node (with its unpack node) and the consumer links are removed.
  * - File groups: extra slots removed, missing slots cloned from the first loader, indices kept contiguous.
  */
 export function applyValues(template: ApiWorkflow, schema: WorkflowSchema, values: Values, opts: ApplyOptions = {}): ApiWorkflow {
@@ -30,28 +30,49 @@ export function applyValues(template: ApiWorkflow, schema: WorkflowSchema, value
       if (name) {
         if (wf[t.nodeId]) wf[t.nodeId].inputs[t.field] = toServer(name)
       } else {
-        delete wf[t.consumerId]?.inputs[t.consumerInput]
+        for (const input of [t.consumerInput, ...(t.also ?? []).map((a) => a.input)]) delete wf[t.consumerId]?.inputs[input]
+        if (t.via) removeIfUnused(t.via)
         removeIfUnused(t.nodeId)
       }
     } else {
       const files = Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string' && !!v) : []
       const consumer = wf[t.consumerId]
       if (!consumer) continue
-      const template0 = t.slots[0] ? template[t.slots[0].nodeId] : undefined
-      for (const s of t.slots) delete consumer.inputs[s.input]
+      const also = t.also ?? []
+      const first = t.slots[0]
+      for (const s of t.slots) {
+        delete consumer.inputs[s.input]
+        for (const a of also) delete consumer.inputs[`${a.prefix}.${a.base}${trailingNumber(s.input)}`]
+      }
       const taken = new Set<string>()
+      const clone = (id: string): string => {
+        const nodeId = freeNodeId(wf, taken)
+        taken.add(nodeId)
+        wf[nodeId] = JSON.parse(JSON.stringify(template[id]))
+        return nodeId
+      }
       files.forEach((file, i) => {
         let nodeId = t.slots[i]?.nodeId
+        let via = t.slots[i]?.via
         if (!nodeId || !wf[nodeId]) {
-          if (!template0) return
-          nodeId = freeNodeId(wf, taken)
-          taken.add(nodeId)
-          wf[nodeId] = JSON.parse(JSON.stringify(template0))
+          if (!first || !template[first.nodeId]) return
+          nodeId = clone(first.nodeId)
+          via = undefined
+          if (first.via && template[first.via]) {
+            via = clone(first.via)
+            const inputs = wf[via].inputs
+            for (const [k, v] of Object.entries(inputs)) if (isLink(v) && v[0] === first.nodeId) inputs[k] = [nodeId, v[1]]
+          }
         }
-        wf[nodeId].inputs.image = toServer(file)
-        consumer.inputs[`${t.prefix}.${t.base}${i}`] = [nodeId, 0]
+        wf[nodeId].inputs[t.field] = toServer(file)
+        const source = via ?? nodeId
+        consumer.inputs[`${t.prefix}.${t.base}${i}`] = [source, t.output]
+        for (const a of also) consumer.inputs[`${a.prefix}.${a.base}${i}`] = [source, a.output]
       })
-      for (const s of t.slots) removeIfUnused(s.nodeId)
+      for (const s of t.slots) {
+        if (s.via) removeIfUnused(s.via)
+        removeIfUnused(s.nodeId)
+      }
     }
   }
 

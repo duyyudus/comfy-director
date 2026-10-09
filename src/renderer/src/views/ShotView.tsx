@@ -151,7 +151,8 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
   const keeper = detail.attempts.find((a) => a.id === shot.keeperAttemptId)
   const offline = server.state !== 'connected'
   const shotImages = (activeWf?.inputs ?? [])
-    .flatMap((i) => (i.type === 'file' || i.type === 'file-group' ? [form.values[i.key]].flat() : []))
+    .filter((i) => (i.type === 'file' || i.type === 'file-group') && (i.constraints.media ?? 'image') === 'image')
+    .flatMap((i) => [form.values[i.key]].flat())
     .filter((v): v is string => typeof v === 'string' && !!v)
     .map((name) => files[name] ?? { name, originalName: name, path: `inputs/${name}` })
 
