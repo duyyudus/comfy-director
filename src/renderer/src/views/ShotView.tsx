@@ -5,8 +5,8 @@ import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
 import { attemptSummary, pad2, plural, timeAgo } from '../lib/format'
-import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progress, SectionLabel, Segmented, Select, Tag, Textarea } from '../components/ui'
-import { InputControl, fileHint } from '../components/inputs'
+import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progress, SectionLabel, Segmented, Select, Tag } from '../components/ui'
+import { InputControl, PromptTextarea, fileHint } from '../components/inputs'
 import { PlayerDialog, Thumb } from '../components/Media'
 import { PromptListEditor } from './PromptList'
 import { PromptChat } from './PromptChat'
@@ -364,13 +364,13 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                     />
                   ) : (
                     <>
-                      <Textarea
+                      <PromptTextarea
                         rows={4}
                         className="min-h-[7.5rem] resize-none [field-sizing:content]"
                         value={String(form.values.prompt ?? (prompt.default as string) ?? '')}
                         invalid={!!errors.prompt}
-                        onChange={(e) => setValue('prompt', e.target.value)}
-                        placeholder="Describe the shot…"
+                        onText={(t) => setValue('prompt', t)}
+                        placeholder="Describe the shot, or drop a text file here…"
                       />
                       <div className="mt-1 flex justify-between">
                         <span className="text-13 text-danger">{errors.prompt}</span>

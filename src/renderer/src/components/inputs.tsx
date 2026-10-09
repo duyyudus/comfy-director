@@ -1,4 +1,4 @@
-import { useState, type DragEvent, type ReactNode } from 'react'
+import { useState, type DragEvent, type ReactNode, type TextareaHTMLAttributes } from 'react'
 import type { SchemaInput } from '@core/workflow/types'
 import type { InputFile, UploadFailure } from '@shared/types'
 import { api, errorMessage, media } from '../lib/api'
@@ -133,6 +133,46 @@ function useDropFiles(projectPath: string, onAdd: (f: InputFile[]) => void): { o
       }
     }
   }
+}
+
+const MAX_PROMPT_FILE_BYTES = 1024 * 1024
+
+/** A prompt box. Dropping text files on it replaces its text with their contents. */
+export function PromptTextarea({ className, onText, ...props }: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> & { invalid?: boolean; onText: (text: string) => void }): ReactNode {
+  const [over, setOver] = useState(false)
+  const toast = useStore((s) => s.toast)
+  return (
+    <Textarea
+      className={cn(className, over && 'border-accent bg-tint')}
+      onChange={(e) => onText(e.target.value)}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('Files')) {
+          e.preventDefault()
+          setOver(true)
+        }
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={async (e) => {
+        const dropped = Array.from(e.dataTransfer.files)
+        if (!dropped.length) return
+        e.preventDefault()
+        setOver(false)
+        try {
+          const texts: string[] = []
+          for (const f of dropped) {
+            if (f.size > MAX_PROMPT_FILE_BYTES) throw new Error(`${f.name} is too large to be a prompt.`)
+            const text = await f.text()
+            if (text.includes('\u0000')) throw new Error(`${f.name} is not a text file.`)
+            texts.push(text.replace(/^﻿/, '').replace(/\r\n/g, '\n').trim())
+          }
+          onText(texts.filter(Boolean).join('\n\n'))
+        } catch (err) {
+          toast(errorMessage(err), 'error')
+        }
+      }}
+      {...props}
+    />
+  )
 }
 
 function hintFor(input: SchemaInput): string | null {

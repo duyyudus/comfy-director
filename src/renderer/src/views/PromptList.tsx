@@ -3,6 +3,7 @@ import type { LibraryPrompt, PrompterRecord } from '@shared/types'
 import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { Button, Checkbox, Dialog, FieldError, Input, Segmented, Select, Spinner, Textarea } from '../components/ui'
+import { PromptTextarea } from '../components/inputs'
 
 /** Prompt row in list mode: prompter row, editable list, add/paste/pick. */
 export function PromptListEditor({ list, onChange, currentPrompt, error, shotName }: {
@@ -106,7 +107,7 @@ export function PromptListEditor({ list, onChange, currentPrompt, error, shotNam
         {list.map((p, i) => (
           <div key={i} className="flex items-start gap-2">
             <span className="w-6 pt-2.5 text-right font-mono text-xs text-muted">{i + 1}</span>
-            <Textarea rows={2} className="min-h-[4.25rem] flex-1 resize-none [field-sizing:content]" value={p} onChange={(e) => onChange(list.map((x, j) => (j === i ? e.target.value : x)))} />
+            <PromptTextarea rows={2} className="min-h-[4.25rem] flex-1 resize-none [field-sizing:content]" value={p} onText={(t) => onChange(list.map((x, j) => (j === i ? t : x)))} />
             <Button size="sm" variant="ghost" className="mt-1" onClick={() => onChange(list.filter((_, j) => j !== i))}>Remove</Button>
           </div>
         ))}
