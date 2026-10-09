@@ -579,10 +579,23 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
   const active = a.status === 'running' || a.status === 'queued' || a.status === 'submitting'
   const finished = a.status === 'done' || a.status === 'cached'
   const playable = finished && a.outputs.length > 0
+  const clickTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(clickTimer.current), [])
   return (
     <Card
-      className={cn('flex gap-3.5 p-3 transition-colors', keeper ? 'border-2 border-accent' : a.status === 'failed' ? 'border-danger/60 hover:border-danger' : 'hover:border-control')}
+      className={cn(
+        'flex gap-3.5 p-3 transition-colors',
+        keeper ? 'border-2 border-accent' : a.status === 'failed' ? 'border-danger/60 hover:border-danger' : selected ? 'border-accent' : 'hover:border-control',
+        selected && 'bg-tint',
+        finished && 'cursor-pointer'
+      )}
       title={playable ? 'Double-click to play' : undefined}
+      onClick={(e) => {
+        // A click on the card ticks it for compare, after a short wait so a double-click only plays.
+        if (!finished || (e.target as HTMLElement).closest('button, input')) return
+        clearTimeout(clickTimer.current)
+        if (e.detail === 1) clickTimer.current = setTimeout(() => onSelect(!selected), 220)
+      }}
       onDoubleClick={(e) => {
         // Double-clicking the card plays it; its buttons and checkbox keep their own clicks.
         if (!playable || (e.target as HTMLElement).closest('button, input')) return

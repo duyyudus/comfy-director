@@ -326,7 +326,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
 - **Attempts panel** (right side), newest first. Each card shows:
   - Preview thumbnail with play (while running: percent instead). Double-clicking a finished card anywhere outside its buttons and checkbox also opens the player.
   - Attempt id, workflow chip, and a KEEPER tag on the keeper.
-  - A one-line summary (turbo or full, duration, seed, age) and a compare checkbox.
+  - A one-line summary (turbo or full, duration, seed, age) and a compare checkbox. Clicking a finished card anywhere outside its buttons ticks or unticks it too, and ticked cards are tinted.
   - Actions: **Load settings**, **Set keeper**, **Delete**, and while running a progress bar with **Cancel**.
   - **Load settings** copies this attempt's workflow and values into the form and puts its seed in the seed field without changing Random/Fixed. If the attempt came from a list run, the Prompt row switches to single with that prompt.
   - "Compare selected" opens the Compare view (wireframe 09) for the 2 to 4 ticked attempts. "Show older attempts" loads the rest of the list.
