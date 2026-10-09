@@ -1,4 +1,4 @@
-/** Input key derivation (PRD: Workflow Handling > Input keys). */
+/** Input key derivation (docs/spec.md: Workflow Handling > Input keys). */
 
 export function normalize(s: string): string {
   return s.trim().replace(/\s+/g, ' ').toLowerCase()

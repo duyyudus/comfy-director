@@ -1,6 +1,8 @@
 # Decisions
 
-Short record of choices the PRD leaves open, and of places where the build differs from the PRD or the wireframes. When code and PRD disagree, the entry says which one is right. Newest last.
+Log of choices made while building and the reasons for them. Newest last. `docs/spec.md` describes the resulting behaviour; when behaviour changes, the spec is updated in the same change and an entry is added here if the reasoning is worth keeping.
+
+"The PRD" in entries up to 2026-10-08 is the original design document, which became `docs/spec.md` (the original text is in git history as `PRD.md`). Those entries are folded into the spec.
 
 ## 2026-10-08 (initial build)
 
@@ -62,3 +64,7 @@ Short record of choices the PRD leaves open, and of places where the build diffe
 - **"Nothing half-queued" is checked, not assumed.** After a failed Run the app reads the queue again. Jobs the server did not give back keep their attempts and the message says how many will still run, instead of "Nothing was queued". If the queue cannot be read, the jobs are kept and the queue poll settles them.
 - **Verified on the real server (2026-10-08, by duyyudus):** cancelling a waiting job (`POST /queue` delete), interrupting a running job, and `MiniMaxH3ImageToVideo` with a first frame only and with no frames. `SaveVideo` outputs are found in `/history` and downloaded (the video appears in the Gallery and plays), and the WebSocket connects (the app only allows Run once it is open). Not confirmed separately: the WebSocket through a reverse proxy with a token, if the test reached the server directly.
 - **Retry makes a new attempt.** Retry on a failed or cancelled attempt queues a new attempt with the next `#N` and leaves the old record as it is. ComfyUI cannot continue an interrupted job, so the render starts from the first step either way.
+
+## 2026-10-09 (PRD becomes the spec)
+
+- **`PRD.md` moved to `docs/spec.md` and now describes the app as built.** The decisions above that replaced or filled in PRD text were written into it, so one file says what the app does. The build-time sections (build order, milestones, "Record decisions as you go") were removed, and "Not designed yet" and "Open Decisions" moved out to `docs/backlog.md`: a spec that also lists unbuilt ideas cannot be trusted as a description of the app.

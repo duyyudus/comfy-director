@@ -2,8 +2,9 @@
 
 Comfy Toolkit: an Electron desktop client that runs ComfyUI API-format workflows on a remote server (shots, batch runs, prompt lists, queue, gallery, compare, keepers, sequences).
 
-- `PRD.md` is the behaviour spec; `docs/wireframes/png/` is the layout reference.
-- `docs/decisions.md` records where the build fills gaps in or differs from the PRD. Read it before changing behaviour, and append an entry (newest last) when you make such a choice.
+- `docs/spec.md` is the behaviour spec and describes the app as built; `docs/wireframes/png/` is the layout reference. When a change alters behaviour, update the spec in the same change.
+- `docs/decisions.md` is the log of why. Append an entry (newest last) when a choice needs its reasoning recorded. Entries up to 2026-10-08 are already folded into the spec.
+- `docs/backlog.md` lists what is wanted or undecided but not built. When an item ships, write it into the spec and remove it from the backlog.
 
 ## Commands
 

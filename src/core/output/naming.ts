@@ -1,4 +1,4 @@
-/** Output file naming (PRD: Implementation Notes > Output rules). Pure string functions, `/` separators. */
+/** Output file naming (docs/spec.md: Implementation Notes > Output rules). Pure string functions, `/` separators. */
 
 const ILLEGAL = /[<>:"/\\|?*\u0000-\u001f]/g
 const RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)$/i

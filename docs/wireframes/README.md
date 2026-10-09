@@ -1,10 +1,10 @@
 # Wireframes
 
-Low-fidelity wireframes for Comfy Toolkit, a desktop client for ComfyUI. They are a reference for **layout and structure**. They do not define behavior: for what each control does, see the "Features and UI" section of `PRD.md`.
+Low-fidelity wireframes for Comfy Toolkit, a desktop client for ComfyUI. They are a reference for **layout and structure**. They do not define behavior: for what each control does, see the "Features and UI" section of `docs/spec.md`.
 
 ## Screens
 
-| PNG | Screen | PRD section |
+| PNG | Screen | Spec section |
 |---|---|---|
 | `png/01-shot-ref2vid.png` | Shot view with the ref2vid workflow | Features and UI > Shot view |
 | `png/02-shot-fl2vid.png` | Shot view after switching to fl2vid (shared values kept, workflow-specific inputs swapped) | Features and UI > Shot view |
@@ -13,7 +13,7 @@ Low-fidelity wireframes for Comfy Toolkit, a desktop client for ComfyUI. They ar
 | `png/05-import-workflow.png` | Import workflow: file, exposed inputs, server checks, version diff | Features and UI > Import workflow |
 | `png/06-queue.png` | Queue drawer: running job, waiting jobs grouped by run, other clients' jobs, recently finished | Features and UI > Queue drawer |
 | `png/07-states-errors.png` | Error and connection states: offline, back online, upload failed, rejected run, failed/cancelled/cached attempts | Features and UI > States, Attempt states |
-| `png/08-states-empty.png` | First launch (connect, import) and empty states | Features and UI > Server settings and first launch, States |
+| `png/08-states-empty.png` | First launch (connect, import) and empty states | Features and UI > Settings and first launch, States |
 | `png/09-compare.png` | Compare view: 2 to 4 attempts, shared controls, what differs | Features and UI > Compare view |
 | `png/10-library-prompts.png` | Library, Prompts tab | Features and UI > Library |
 | `png/11-library-prompters.png` | Library, Prompters tab: Template editor, plus the LLM and Script variants | Features and UI > Library |
@@ -33,6 +33,6 @@ Low-fidelity wireframes for Comfy Toolkit, a desktop client for ComfyUI. They ar
 
 - Sample data (names, seeds, counts, diffs) is made up. The workflow numbers (30 nodes, 22 node types, 5 models, 6 ref images) come from `video_minimax_h3_r2v.json`.
 - The PNGs were rendered with a fallback font because IBM Plex Sans was not available, so text widths differ slightly from the original design.
-- All screens are drawn in the light theme. The dark tokens are in `png/14-theme.png` and the PRD.
-- Not drawn yet: presets, loading states, other window sizes, and the "Save to Library" link on the prompt box (described in the PRD).
+- All screens are drawn in the light theme. The dark tokens are in `png/14-theme.png` and the spec.
+- The wireframes were drawn before the app was built and are not kept in step with it. Where they disagree with the spec, the spec wins. Not drawn, but in the app and described in the spec: the "Save to Library" link on the prompt box, Export keepers, the delete actions (shot, sequence, attempt, workflow), Edit workflow and the Workflows card in Settings, Open existing project, and the Model and API key fields of the LLM prompter. Drawn but different: Seed is not offered under "Not found automatically".
 - The Library, Compare, Queue and states boards are linked together in the canvas source, but the links only work in the design tool.

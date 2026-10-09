@@ -2,7 +2,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Colour tokens (PRD: Theme and colours). Components only use these. */
+/* Colour tokens (docs/spec.md: Theme and colours). Components only use these. */
 :root {
   --bg: #f5f2ec;
   --panel: #fffdf9;

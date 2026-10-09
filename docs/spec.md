@@ -1,4 +1,6 @@
-# Comfy Toolkit: Foundations
+# Comfy Toolkit: Spec
+
+This document describes the app as it behaves today. A change that alters behaviour updates this file in the same change. `docs/decisions.md` is the log of why things are the way they are. Features that are planned but not built are not described here; they are listed in `docs/backlog.md`.
 
 ## Goal
 
@@ -13,14 +15,16 @@ This document covers the stack, the architecture, how workflows are handled, loc
 | Layer | Choice |
 |---|---|
 | Desktop shell | Electron |
-| Build/scaffold | electron-vite (React + TypeScript template) |
-| UI | React + Tailwind + shadcn/ui |
-| Language | TypeScript everywhere |
-| State (UI) | Zustand |
-| Local database | SQLite via better-sqlite3 (main process) |
+| Build/scaffold | electron-vite 4 on Vite 7 |
+| UI | React 19 + Tailwind 4, with a small set of shadcn-style components in `src/renderer/src/components/ui.tsx` (no shadcn CLI or Radix) |
+| Language | TypeScript 5.9 everywhere |
+| State (UI) | Zustand 5 |
+| Local database | SQLite via better-sqlite3 12 (main process, WAL mode) |
 | ComfyUI client | `fetch` + `ws` in the main process |
-| Theming | CSS variables (the tokens in Theme and colours), Tailwind `dark:` variant; Electron `nativeTheme.themeSource` set to `system`, `light` or `dark` |
+| Theming | CSS variables on `:root` / `.dark` (the tokens in Theme and colours), mapped to Tailwind colours (`bg-panel`, `text-muted`, `bg-accent`...); Electron `nativeTheme.themeSource` set to `system`, `light` or `dark`, and the renderer applies the `dark` class itself |
 | Packaging | electron-builder (only when an installer is wanted) |
+
+The main process and preload build as CommonJS. Versions are pinned to majors known to work together.
 
 Rationale: file size and performance are not concerns for this tool, so Electron wins on one-language-end-to-end (no Rust), predictable video playback (bundled Chromium), and the largest npm ecosystem.
 
@@ -50,12 +54,15 @@ Desktop app (this project)                     ComfyUI server
 
 ### Core modules
 
-Written as plain TypeScript with no Electron or React imports, so they can be reused from a CLI or another shell later:
+Written as plain TypeScript in `src/core` with no Electron or React imports, so they can be reused from a CLI or another shell later:
 
-1. **Workflow adapter:** loads an API-format JSON plus a mapping file (logical name to node ID and input, e.g. `positive_prompt` to node 6, `text`) and applies values to a copy of the template.
-2. **Run planner:** expands the prompt list and the runs count into a list of jobs (one attempt each).
-3. **Prompter:** produces prompt text, designed as a swappable interface so custom prompters can be plugged in.
-4. **Output manager:** handles completed jobs, downloads files, applies the user's naming/sorting rules, records them in SQLite.
+1. **Workflow:** discovers the inputs of an API-format JSON, builds the schema from them plus `overrides.json` and `object_info`, applies a values map to a copy of the workflow, and validates the result. Also reconciles a new version against the old one and checks a workflow against the server.
+2. **ComfyUI client:** the HTTP and WebSocket calls in "ComfyUI API Endpoints Used".
+3. **Run planner:** expands the prompt list and the runs count into a list of jobs (one attempt each).
+4. **Prompter:** produces prompt text. Template, LLM and script prompters share one interface.
+5. **Output naming:** pure functions for output folders and file names.
+
+Everything that touches Electron, the filesystem layout or SQLite is in `src/main`: the job queue with progress and downloads, the server connection, the workspace and the databases.
 
 ## Key Facts About ComfyUI to Design Around
 
@@ -63,7 +70,7 @@ Written as plain TypeScript with no Electron or React imports, so they can be re
 - **The app stores its own API-format workflows** (imported by the user, kept locally). After changing a workflow in the graph, the user re-exports and re-imports it. An API-format prompt can also be recovered from `GET /history/{prompt_id}` or from PNG output metadata.
 - **File inputs are filenames, not data.** Images/videos must be uploaded to the server first; the JSON then references the returned filename.
 - **Models are resolved on the server.** Checkpoint/LoRA/etc. names must match files on the server. `GET /object_info` lists valid options.
-- **Node IDs change when a workflow is re-exported.** Keep the mapping file separate (or look nodes up by `_meta.title`) instead of hardcoding IDs.
+- **Node IDs change when a workflow is re-exported.** Inputs are matched by node class and `_meta.title`, never by node id.
 - **Caching.** Identical workflow plus identical inputs (including the seed) may be served from ComfyUI's cache without re-rendering.
 - **No built-in auth.** If the server is reachable beyond a trusted network, put it behind a reverse proxy with a token or a VPN.
 - **Custom nodes** used by a workflow must be installed on the server, not on the desktop.
@@ -84,15 +91,15 @@ What these three files teach (each rule is written into the sections below):
 
 - Node ids are not stable: the same workflow exports with no prefix, `105:` or `140:`. Ids must be treated as opaque strings and never parsed or sorted as numbers.
 - Titles are not consistent across workflows either (`Float (Duration)` vs `Float (duration)`, `If/Else Switch (Model)` vs `(model)`). Input keys therefore need a derivation rule (see Input keys).
-- The prompt is not always an input node. In fl2vid and t2v it is a field on a regular node and must be exposed through the overrides layer.
+- The prompt is not always an input node. In fl2vid and t2v it is a field on a regular node, which auto-discovery picks up (see Three layers).
 - t2v is fl2vid with both images left out, so optional file inputs (below) cover t2v, i2v (first frame only) and fl2v in one workflow.
 
 ### Schema vs values
 
 - **Schema:** derived from a workflow. A list of inputs, each with `{key, type, label, constraints, default, where it writes in the JSON}`.
-- **Values:** a flat `{key: value}` map per job or preset.
+- **Values:** a flat `{key: value}` map per shot and per attempt.
 - The UI renders the schema using one small component per input type (text, number, toggle, select, file, file-group). A new input kind means adding one component, not a new screen.
-- The batch planner, presets, and history only handle `{workflow, values}`, so a workflow changing shape does not ripple through the app.
+- The run planner and history only handle `{workflow, values}`, so a workflow changing shape does not ripple through the app.
 
 ### Three layers
 
@@ -100,13 +107,27 @@ What these three files teach (each rule is written into the sections below):
    - `PrimitiveStringMultiline`, `PrimitiveInt`, `PrimitiveFloat`, `PrimitiveBoolean` become text, number and toggle controls. Label from `_meta.title`, default from the current value.
    - `LoadImage` becomes a file input.
    - Several `LoadImage` nodes feeding one dotted input group on a single node (e.g. `ref_images.ref_image_0..N`) become one **file-group** control with add/remove.
-   - Dropdown options and ranges come from `GET /object_info`.
+   - A literal text `prompt` field on a regular node (`MiniMaxH3ImageToVideo.prompt` in fl2vid and t2v) becomes a text input.
+   - Literal `seed` / `noise_seed` integer fields are found and always driven by the shot's Seed control (see Seed). They are not listed as inputs.
+   - Dropdown options and ranges come from `GET /object_info`. The last response is cached in the app data folder, so schemas work offline.
+   - A primitive whose every consumer is the `on_true` / `on_false` input of a switch node is "internal" and starts unticked on import (the two Steps values in the reference workflows).
    - Note: the old frontend-only "Primitive" node disappears at export (its value is baked into the target node), so workflows using it need the override layer. The newer `Primitive*` nodes remain real nodes and are discoverable.
-2. **Overrides (optional sidecar).** Holds exceptions only: exposing a field on a regular node (e.g. `ResolutionSelector.megapixels`), hiding a discovered input, renaming, ordering, min/max. Most workflows need little or nothing here.
+2. **Overrides (optional sidecar).** Holds exceptions only: exposing a field on a regular node (e.g. `ResolutionSelector.megapixels`), hiding a discovered input, renaming, ordering, min/max. Most workflows need little or nothing here. The format of `overrides.json`:
+
+   ```
+   {
+     inputs: { <candidate id>: { hidden, key, label, help, order, min, max, step, minCount, maxCount } },
+     expose: [ { class, title?, field, key?, label?, help?, order?, min?, max?, step? } ]
+   }
+   ```
+
+   The candidate id is the derived key (see Input keys). Exposed fields are matched by node class and normalised title.
 3. **Reconcile on re-import.** Diff the new schema against the old one using a stable key (node title, not node ID):
    - New input: appears in the UI with its default.
    - Removed input: disappears; saved values referencing it produce a warning, not a crash.
-   - Matching input: keeps saved values and presets.
+   - Matching input: keeps saved values.
+
+The schema is derived on every read from `workflow.json`, `overrides.json` and the cached `object_info`. It is never stored.
 
 ### Convention in the node graph
 
@@ -118,25 +139,27 @@ Values are matched across workflows and across re-imports by key, so keys must c
 
 - **Primitive input nodes:** the text inside the parentheses of the title if there is one, otherwise the whole title, lowercased and trimmed. `Float (Duration)` and `Float (duration)` both give `duration`. `Input Text (Prompt)` gives `prompt`. `Boolean (Enable Lightning LoRA)` gives `enable lightning lora`.
 - **Exposed fields on regular nodes (overrides):** the field name, for example `prompt`, `aspect_ratio`, `megapixels`, `noise_seed`. The same field on the same node class in two workflows gives the same key, so a typed-in prompt on `MiniMaxH3ImageToVideo` shares its value with the `Input Text (Prompt)` node in ref2vid.
-- **File inputs:** the name of the consumer input they feed (`first_frame`, `last_frame`, `ref_images.ref_image_N`), because `LoadImage` nodes are normally left as "Load Image".
-- An override can always set an explicit key. If two inputs in one workflow derive the same key, the Import screen flags it and asks for a rename.
+- **File inputs:** the name of the consumer input they feed (`first_frame`, `last_frame`), because `LoadImage` nodes are normally left as "Load Image". A file group uses the group prefix (`ref_images`), not the slot names.
+- **Repeated keys:** when two inputs in one workflow derive the same key (two nodes titled `Int`), each gets a unique key automatically: the label if the user renamed it (`full-steps`), otherwise the key numbered in workflow order (`int`, `int#2`, `int#3`). On import, keys resolved this way are written to `overrides.json` as an explicit `"key"`, so renaming a label later only changes the text in the form and the key that shots store values under stays fixed.
+- An override can always set an explicit key. Two explicitly typed keys that clash are flagged on the Import screen.
 
 ### Optional file inputs (first and last frame, text-to-video)
 
-- On import, `GET /object_info` tells which inputs of the consumer node are optional. A `LoadImage` feeding an **optional** input is an optional file input. One feeding a required input is required.
+- On import, `GET /object_info` tells which inputs of the consumer node are optional. A `LoadImage` feeding an **optional** input is an optional file input. One feeding a required input is required. Without server info the input is treated as optional, and the server reports it at Run if it is not.
+- **File inputs start empty**, not with the filename baked into the export (that file lives only on the server).
 - **Empty optional input:** before sending, the app deletes that `LoadImage` node and the link on the consumer node. The result is a valid workflow that simply has no image there. This is the same mechanism as unused ref image slots.
 - **Required input empty:** Run is blocked with a message on that field.
-- In `MiniMaxH3ImageToVideo`, `first_frame` and `last_frame` are optional. With both empty the result matches `video_minimax_h3_t2v.json` (checked by comparing the two files). With only a first frame it is image-to-video. Whether the node runs correctly with only a first frame has not been tested and must be tried once on the server.
+- In `MiniMaxH3ImageToVideo`, `first_frame` and `last_frame` are optional. With both empty the result matches `video_minimax_h3_t2v.json` (checked by comparing the two files). With only a first frame it is image-to-video. Both cases were run on the real server (2026-10-08).
 - Because of this, importing only the fl2vid file covers t2v, i2v and fl2v. Importing the t2v file as well is optional: it is the same graph with different defaults (16:9, 1 megapixel, 5 s, turbo off), so it would only add a tab.
 
 ### Variable-count inputs (ref images)
 
 - Ref slots are not a list. Each is a separate key on the consumer node (`ref_images.ref_image_N`) linking to its own `LoadImage` node.
 - To use fewer images: keep only the first N slots, delete the other keys and their unused `LoadImage` nodes, and set each remaining loader's filename to the uploaded file.
-- To use more: clone a `LoadImage` node with a new ID and add the next slot key.
-- Keep slot indices contiguous (0, 1, 2, ...).
+- To use more: the app clones the first `LoadImage` node under the next free integer id and adds the next slot key.
+- Slot indices stay contiguous (0, 1, 2, ...).
 - Slot order is defined by the links on the consumer node, not by node ID order.
-- Min and max counts should be checked via `GET /object_info` and tested (e.g. 1, 3, max).
+- Min and max counts come from `GET /object_info` (a numeric `min` / `max` in the input's options, or the length of a `names` list). Without it, the minimum is 1 if the input is required and the maximum is the number of slots in the export. `minCount` / `maxCount` in the overrides replace them.
 
 ### Toggles that change several things (turbo / Lightning LoRA)
 
@@ -144,7 +167,7 @@ In the reference workflow, a single boolean node drives two switch nodes: one se
 
 ### Seed
 
-API format has no "randomize after run". The app generates a new seed per job when wanted. Identical workflow, inputs and seed may be served from ComfyUI's cache instead of re-rendering.
+API format has no "randomize after run". The app writes the seed into every literal `seed` / `noise_seed` field and generates a new one per job when the shot's Seed control is on Random (random seeds are below 2^48). Identical workflow, inputs and seed may be served from ComfyUI's cache instead of re-rendering.
 
 ### Inputs left baked in
 
@@ -160,7 +183,7 @@ The ComfyUI API-format JSON is used as the workflow file itself. No custom workf
 - **Stay portable.** The file can be loaded back into ComfyUI, shared, or run by other tools.
 - **Never add custom keys to the workflow JSON.** ComfyUI treats every top-level key in the prompt as a node, so extra metadata would fail validation.
 - **App-specific data lives beside it,** not inside it.
-- **The schema is not stored.** It is derived from `workflow.json` on import and can be regenerated at any time.
+- **The schema is not stored.** It is derived on every read (see Three layers).
 
 ### Layout
 
@@ -172,13 +195,16 @@ Comfy Toolkit/                     workspace
     minimax_h3_r2v/
       workflow.json                exported API-format file, untouched
       overrides.json               optional, exceptions only
+      versions/1/                  earlier versions, kept when a new one is imported
     minimax_h3_fl2v/
       workflow.json
   app.db                           app-wide SQLite: prompt library, prompters, workflow index
+  .gitignore                       excludes app.db and projects/
   projects/
     Rooftop short/                 one folder per project (folder name = project name)
       project.db                   project SQLite: sequences, shots, attempts, keepers
       inputs/                      copies of images chosen in this project
+      thumbs/                      one still frame per attempt
       outputs/
         Rooftop chase/
           03 Roof edge/
@@ -192,20 +218,32 @@ Comfy Toolkit/                     workspace
 - **Project-wide** (`projects/<name>/`): everything that belongs to one body of work. A project can be renamed, moved, archived or backed up as one folder. Each attempt keeps the exact final JSON that was sent (see Reproducibility), so a project still makes sense on a machine that lacks the original workflow files.
 - **Paths inside `project.db` are relative to the project folder.** Renaming the project renames the folder and nothing else changes.
 - **Plain files** for things worth hand-editing (workflows, overrides). **SQLite** for things that grow and need querying (history, keepers, prompt library).
-- **Not in the workspace:** the server address and workspace path (app settings, in the app's data folder) and the access token (operating system keychain). Sharing a workspace never shares the token.
-- Add a `.gitignore` to the workspace that excludes `app.db`, `projects/` and anything else not meant for git, so `workflows/` can be versioned on its own.
+- **Not in the workspace**, but in the app's data folder:
+  - `settings.json`: server address, workspace path, theme, current project, and the ComfyUI `clientId`. The client id is generated once and kept, so progress events for jobs queued before a restart still reach the app.
+  - `token.bin`: the access token, encrypted with Electron `safeStorage` (Keychain on macOS, DPAPI on Windows, libsecret/kwallet on Linux). If no OS encryption is available it is stored as plain bytes there. Sharing a workspace never shares the token.
+  - The cached `object_info`.
+- The app writes a `.gitignore` into a new workspace that excludes `app.db` and `projects/`, so `workflows/` can be versioned on its own.
 - **Do not place the workspace in a synced folder** (Dropbox, iCloud, OneDrive): SQLite files can be corrupted. Settings shows a warning.
-- Presets (named value sets) are not designed yet (see Not designed yet).
+- **Hand-edited workflows.** If `workflow.json` changes on disk without an import, the next read records it as a new version (new hash). Folders found in `workflows/` but missing from `app.db` (for example after a git clone) are indexed automatically. A `workflow.json` that is not valid JSON is skipped in the workflow list.
+- `COMFY_TOOLKIT_WORKSPACE` and `COMFY_TOOLKIT_USER_DATA` override the workspace and app data folders (used for testing).
+
+### Databases
+
+Both are SQLite in WAL mode, defined in `src/main/db.ts`.
+
+- `app.db`: `meta`, `workflows`, `workflow_versions`, `projects`, `prompts`, `prompters`.
+- `project.db`: `meta`, `sequences`, `shots` (values JSON, prompt list, seed mode, runs, keeper, next attempt number), `attempts` (values, seed, status, prompt id, server URL, run id and indices, final JSON, outputs JSON, thumb, duration, error JSON, timestamps), `inputs`, `uploads`.
 
 ### Input files
 
-- When the user picks an image for a file input, the app **copies it into the project's `inputs/`**, named by a hash of its content (original name kept in the database for display). The project therefore does not depend on the original file staying where it was.
-- On Run, the file is uploaded to the server under its hash name, so two different pictures never collide and the same picture is uploaded only once.
+- When the user picks an image for a file input, the app **copies it into the project's `inputs/`** as `<first 20 hex of sha256>.<ext>` (original name kept in the database for display). The project therefore does not depend on the original file staying where it was.
+- On Run, the file is uploaded to the server under its hash name (`overwrite=true`), so two different pictures never collide. Uploads are remembered per server in `project.db`, so the same picture is uploaded once per server.
+- If the server rejects a Run on a file input whose upload the app had skipped as remembered, the app forgets those uploads, uploads again and posts the Run a second time. A second rejection is shown as usual. This covers a server whose input folder was emptied.
 
 ### Reproducibility
 
-- Store an import timestamp or hash of `workflow.json`, so a job record states which version of the workflow it ran.
-- Each finished job keeps the exact final JSON that was sent (or at minimum the values map plus the workflow hash), so an old render can be re-run or tweaked later.
+- Each import stores a timestamp and a hash of `workflow.json`, and every attempt records which version it ran.
+- Each attempt keeps its values map, its seed and the exact final JSON that was sent, so an old render can be re-run or tweaked later.
 
 ## Features and UI
 
@@ -220,7 +258,7 @@ Wireframes: `docs/wireframes/png/01` to `15` (see `docs/wireframes/README.md`). 
 | **Shot** | One moment of a video that the user is working on. Holds a name, an optional sequence and position, the active workflow, a values map, a list of attempts, and at most one keeper. |
 | **Sequence** | A named, ordered list of shots inside a project. |
 | **Loose shot** | A shot that belongs to a project but to no sequence. Listed under "Loose shots" in the sidebar. |
-| **Attempt** | One render. Stores the shot, the workflow and its version hash, the full values map, the seed, status, `prompt_id`, output files, and timestamps. Also keeps the exact final JSON that was sent (see Local Storage > Reproducibility). |
+| **Attempt** | One render. Stores the shot, the workflow and its version hash, the full values map, the seed, status, `prompt_id`, output files, and timestamps. Also keeps the exact final JSON that was sent (see Local Storage > Reproducibility). The `#N` shown in the UI is numbered per shot; the database id is unique in the project and is the one used in file names. |
 | **Keeper** | The attempt the user chose as the result for a shot. At most one per shot. |
 | **Run** | One click of the Run button. It creates one attempt per prompt per run (prompts x runs) and queues them all at once. |
 
@@ -229,6 +267,7 @@ Rules:
 - **Values belong to the shot, not the workflow.** Values are keyed by input key. Switching the active workflow keeps every value whose key exists in the new workflow's schema. Values for keys the new workflow does not have are kept but hidden, and come back if the user switches back.
 - **A shot's workflow is a per-attempt choice.** Attempts in one shot can use different workflows (e.g. to compare ref2vid and fl2vid on the same content).
 - **Setting a keeper** replaces the previous keeper. Deleting the keeper attempt clears the keeper (with a confirmation).
+- **Deleting** a shot, a sequence or an attempt removes records only. Rendered files stay in the project folder. Running and queued attempts must be cancelled first.
 - **Shared vs workflow-only inputs:** inputs whose key exists in every imported workflow are shown first; inputs that exist only in the active workflow are shown below a "WORKFLOW ONLY" divider.
 
 ### App shell (on every screen)
@@ -242,17 +281,18 @@ Rules:
   - **Theme switch** at the bottom: Auto / Light / Dark (see Theme and colours).
 - **Queue strip** (bottom of every screen): currently running job (shot name, percent), a progress bar, count of waiting jobs, and an "Open queue" button, which opens the Queue drawer (wireframe 06). When nothing is queued it reads "Idle".
 - **Connection banner** at the top of every screen when the server cannot be reached (see States).
-- The sidebar's Sequences, Loose shots, the Gallery and Compare show the current project. The queue strip and Queue drawer show jobs from every project, each labelled with its project when it is not the current one (not drawn).
+- The sidebar's Sequences, Loose shots, the Gallery and Compare show the current project. The queue strip and Queue drawer show jobs from every project, each labelled with its project when it is not the current one.
 - Clicking a sequence name opens the Sequence view. Clicking a shot opens the Shot view.
 
 ### Shot view (wireframes 01, 02)
 
 Purpose: set up inputs for one shot, run attempts, and review them. This is the main screen.
 
-- **Header:** breadcrumb (sequence, shot number, keeper id, attempt count), editable shot name, and two actions:
+- **Header:** breadcrumb (sequence, shot number, keeper id, attempt count), editable shot name, and these actions:
   - **Duplicate shot:** new shot with the same workflow and values, no attempts, placed after the original (or loose, if the original is loose).
   - **Move to sequence:** moves the shot to a sequence at a chosen position, or to Loose shots.
-- **Workflow tabs:** one tab per imported workflow plus "+ Import workflow" (opens the Import view). Switching tabs follows the values rules above.
+  - **Delete shot:** asks first, then removes the shot and its attempt records and opens the neighbouring shot.
+- **Workflow tabs:** one tab per imported workflow plus "+ Import workflow" (opens the Import view). Switching tabs follows the values rules above. **Edit workflow** opens the Import screen on the active workflow (see Import workflow).
 - **Input form:** generated from the active workflow's schema (see Workflow Handling), one component per input type:
 
   | Input type | Control |
@@ -265,8 +305,8 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   | file group | Slots as thumbnails with remove (x), add (+), drag to reorder, and a "n of max slots" count |
 
   The reference images control enforces the minimum and maximum slot counts from the schema. Unused slots are removed from the workflow before sending (see Variable-count inputs).
-- **Prompt: "single" / "list" toggle.** Only the prompt can be switched to list mode (see Prompt list mode below). Every other input stays a single value. To try another duration, aspect ratio, turbo setting, workflow or set of reference images, change it and press Run again: the queue holds the jobs, and Compare shows what differs. There is no separate batch screen and no lists for numbers or choices. This can be revisited later by adding a "Vary" toggle to one input (see Open Decisions).
-- **Seed:** a segmented control **Random / Fixed**.
+- **Prompt: "single" / "list" toggle.** Only the prompt can be switched to list mode (see Prompt list mode below). Every other input stays a single value. To try another duration, aspect ratio, turbo setting, workflow or set of reference images, change it and press Run again: the queue holds the jobs, and Compare shows what differs. There is no separate batch screen and no lists for numbers or choices. A **Save to Library** link on the prompt box stores the prompt in the Library.
+- **Seed:** a segmented control **Random / Fixed**. Hidden for workflows without a seed field.
   - Random: a new seed per job, generated by the app.
   - Fixed: the entered value is used for every job. Repeating a run with identical inputs and a fixed seed is answered from the server's cache (see Attempt states).
   - The field shows the last seed used (read-only while Random).
@@ -276,7 +316,8 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   - Preview thumbnail with play (while running: percent instead).
   - Attempt id, workflow chip, and a KEEPER tag on the keeper.
   - A one-line summary (turbo or full, duration, seed, age) and a compare checkbox.
-  - Actions: **Load settings** (copies this attempt's workflow and values into the form), **Set keeper**, and while running a progress bar with **Cancel**.
+  - Actions: **Load settings**, **Set keeper**, **Delete**, and while running a progress bar with **Cancel**.
+  - **Load settings** copies this attempt's workflow and values into the form and puts its seed in the seed field without changing Random/Fixed. If the attempt came from a list run, the Prompt row switches to single with that prompt.
   - "Compare selected" opens the Compare view (wireframe 09) for the 2 to 4 ticked attempts. "Show older attempts" loads the rest of the list.
   - Failed, cancelled and cached attempts have their own card states (see Attempt states).
 
@@ -284,7 +325,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
 
 Purpose: see the shots of a sequence in order, each represented by its keeper, and jump into any shot to revise it.
 
-- **Header:** sequence name, counts ("4 shots, 3 keepers"), **Add shot** (opens the New shot dialog preset to this sequence), and **Play keepers in order**. Also **Export keepers** (see Output rules; not drawn in the wireframe, place it next to Play keepers in order).
+- **Header:** sequence name, counts ("4 shots, 3 keepers"), **Add shot** (opens the New shot dialog preset to this sequence), **Play keepers in order**, **Export keepers** (see Output rules), and **Delete sequence** (its shots become loose shots).
 - **Shot cards**, in sequence order, drag to reorder (grip handle). Each card shows:
   - Number and name.
   - The keeper preview with play, or an empty state ("No keeper yet, 0 attempts") with a "Start shot" button.
@@ -299,7 +340,7 @@ Purpose: see the shots of a sequence in order, each represented by its keeper, a
 Purpose: find any render across all sequences and loose shots.
 
 - **Filters:** project (default the current project, or All projects), search in prompt text, workflow, sequence (including "Loose shots"), and "Keepers only". **Group by:** Shot (default) or Time.
-- **Groups:** a header per shot ("Sequence / NN Name, n attempts") followed by a grid of thumbnails, each with id, workflow, and KEEPER tag where it applies. The grid is virtualized and loads as the user scrolls.
+- **Groups:** a header per shot ("Sequence / NN Name, n attempts") followed by a grid of thumbnails, each with id, workflow, and KEEPER tag where it applies. The grid loads 60 renders at a time as the user scrolls, with lazy thumbnails.
 - **Detail panel** for the selected render: large preview, summary of its values (workflow, duration, turbo, aspect, seed, number of refs, prompt start), and actions:
   - **Load into shot:** opens the Shot view for that attempt's shot with the attempt's workflow and values loaded.
   - **Reveal file:** shows the output file in the operating system's file manager.
@@ -311,11 +352,15 @@ Purpose: add a workflow, or replace an existing one with a new version, and deci
 1. **Choose the file.** Drop or browse for an API-format `.json`. The file is validated: a file in UI format is rejected with a message that explains Save (API Format). Shows file name, "API format" badge, node count, and node-type count. Then:
    - **Workflow name** (default from the file name).
    - Either **replace the existing workflow with a new version**, or **save as a separate workflow**.
-2. **Choose which inputs to expose.** A table of auto-discovered inputs (see Workflow Handling > Three layers): a checkbox to expose, an editable label, the input type, the node it comes from, and its default. Primitives start checked, except ones that only feed internal switches (the two "Steps" values), which start unchecked. Below it, **Not found automatically**: fields on regular nodes (seed, aspect ratio, megapixels in the reference workflow) with an **Expose** button, which adds an entry to the overrides file.
+2. **Choose which inputs to expose.** A table of auto-discovered inputs (see Workflow Handling > Three layers): a checkbox to expose, an editable label, the input type, the node it comes from, and its default. Primitives and a discovered prompt field start checked, except primitives that only feed internal switches (the two "Steps" values), which start unchecked. Below it, **Not found automatically**: fields on regular nodes (aspect ratio, megapixels in the reference workflow) with an **Expose** button, which adds an entry to the overrides file. The suggested fields are `prompt`, `text`, `negative` / `negative_prompt`, `aspect_ratio`, `megapixels`, `width`, `height`, `steps`, `cfg`, `length`, `duration`, `num_frames`, `batch_size`, and any multiline string; **Show all fields** lists every literal field. Seed fields are not offered, because the Seed control drives them.
 3. **Checked against the server.** Using `GET /object_info`: every node type is installed, every model file referenced exists, every link points to an existing node. Missing node types or models are shown as warnings and do not block the import. Invalid files (step 1) and broken links block it.
-4. **What changes.** A diff against the current version, grouped as NEW, CHANGED, REMOVED, and SAME inputs, matched by node title. For removed inputs, shows how many saved presets use them: they keep the stored value, but the field is no longer shown or sent. A note states that past attempts keep the exact version they ran with.
+4. **What changes.** A diff against the current version, grouped as NEW, CHANGED, REMOVED, and SAME inputs, matched by node title. For removed inputs, shows how many saved shots use them: they keep the stored value, but the field is no longer shown or sent. A note states that past attempts keep the exact version they ran with.
 
-**Import as version N** stores the new `workflow.json`, the hash and timestamp, and the updated overrides. The previous version is kept so attempts can still reference it. Cancel returns to the previous screen.
+**Import as version N** stores the new `workflow.json`, the hash and timestamp, and the updated overrides. The previous version is kept in `workflows/<id>/versions/<N>/` so attempts can still reference it. Cancel returns to the previous screen.
+
+**Edit workflow** (from Settings, or from a shot) reuses this screen on the stored file. It changes the name and `overrides.json` only, so the version and hash stay the same. To update the graph, import the new export and choose Replace.
+
+**Delete** (in Settings) asks first, then moves `workflows/<id>/` to the system trash and drops it from the index. Its version records stay, so a later import under the same id continues the numbering. Shots that used it fall back to the first workflow; attempts keep their record and their files.
 
 ### Prompt list mode (wireframe 12)
 
@@ -337,7 +382,7 @@ Purpose: see and cancel what the server is running. The app does not reorder job
   - Jobs from one Run are grouped under a header (shot, workflow, "5 prompts x 1 seed", range of positions) with **Cancel remaining (n)**. Groups collapse and expand.
   - Each job shows shot, attempt id, workflow chip, and a note (for example "prompt 2 of 5, seed random"), with **Cancel**.
   - Jobs from other clients show "Started from another client" and a prompt id. Cancelling one asks first.
-- **Finished recently:** this session only. Each row shows a tag (DONE, CACHED, FAILED, CANCELLED), shot, id, workflow, a note (age, render time or reason), and **Open shot** or **Details** (for failures). Older attempts live in the shot and in the Gallery.
+- **Finished recently:** this session only (the last 50, kept in memory). Each row shows a tag (DONE, CACHED, FAILED, CANCELLED), shot, id, workflow, a note (age, render time or reason), and **Open shot** or **Details** (for failures). Older attempts live in the shot and in the Gallery.
 - **Not included:** reordering, pausing, and priorities. ComfyUI has none of these, and the app does not simulate them.
 - **Launch and reconnect:** the app compares its running attempts with `GET /queue` and `GET /history` and updates their states (see States).
 
@@ -348,6 +393,8 @@ Attempt cards in the Shot view say what happened and offer the next step:
 - **Failed:** the server's reason in plain words, the node and error type, and **Retry**, **Load settings**, **Copy details**.
 - **Cancelled:** "Stopped at 40%. No video was saved." **Retry**, **Load settings**.
 - **Cached:** "Finished instantly. The server reused an earlier result because every input, including the seed, was identical." **Render again with a new seed**.
+
+**Retry** queues a new attempt with the next `#N` and leaves the old record as it is. It uses the attempt's stored values, the current version of its workflow and the same seed. **Render again with a new seed** does the same with a random seed. Neither re-sends the stored final JSON, because that could not pick up re-uploaded inputs.
 
 ### Compare view (wireframe 09)
 
@@ -363,36 +410,37 @@ Purpose: judge 2 to 4 attempts of one shot side by side and pick the keeper.
 
 ### Library (wireframes 10, 11)
 
-Purpose: keep prompts for reuse, and define the prompters that generate new ones. Two tabs. Presets are not part of the Library (see Open Decisions).
+Purpose: keep prompts for reuse, and define the prompters that generate new ones. Two tabs.
 
 **Prompts tab (wireframe 10):**
 
 - Search, tag filter pills (with counts), sort (default "Recently used"), **New prompt**.
 - List of prompts: name, times used, first two lines of text, tags.
 - Detail panel for the selected prompt: **Name**, **Prompt**, **Tags** (add and remove), **Note**, and **Use in shot**: a shot dropdown with **Replace its prompt** or **Add to its prompt list** (switches that shot to list mode if needed). Shows usage ("Used 9 times, last in ..."). **Save changes**, **Duplicate**, **Delete**.
-- Prompts get into the Library with **New prompt**, or from a shot's prompt box with a "Save to Library" link (not drawn in the wireframes; add it when building).
+- Prompts get into the Library with **New prompt**, or from a shot's prompt box with the **Save to Library** link.
 
 **Prompters tab (wireframe 11):** a prompter turns a recipe into a list of prompts. Three types, chosen with a segmented control. All produce plain text prompts for the prompt list.
 
-- **Template:** a template with `{slot}` placeholders (anything in braces becomes a slot). A table of slots: name, **how to pick** (Pick at random, Go in order, Always the same), values (one per line), count. Below: **Prompts to make**, a **randomness seed** with **New seed** (the same seed always gives the same list, so a batch can be rebuilt), **Avoid repeats**, and a **Preview** that generates a few samples.
-- **LLM:** an instruction, an input (one idea per line, pasted when it runs, or the current shot prompt), an **endpoint** (an OpenAI-compatible chat API, such as a local server) and temperature, and **Test with one idea**. A note states that ideas are sent to this endpoint, not to the ComfyUI server.
-- **Script:** a script file and a runtime (Python or Node). The app starts it as a child process, writes a JSON object to stdin (count, seed, current prompt), and reads a JSON list of prompts from stdout. **Test run** shows the output. The script runs with the user's own rights and only from a path the user chose.
+- **Template:** a template with `{slot}` placeholders (anything in braces becomes a slot). A table of slots: name, **how to pick** (Pick at random, Go in order, Always the same), values (one per line), count. Below: **Prompts to make**, a **randomness seed** with **New seed** (the same seed always gives the same list, so a batch can be rebuilt), **Avoid repeats**, and a **Preview** that generates a few samples. Generate in a shot uses the prompter's saved seed, so a list can be rebuilt; press **New seed** in the Library for a different list. The first letter of each prompt is capitalised.
+- **LLM:** an instruction, an input (one idea per line, pasted when it runs, or the current shot prompt), an **endpoint** (an OpenAI-compatible chat API, such as a local server), a **Model**, an optional **API key** (stored in `app.db` with the prompter), temperature, and **Test with one idea**. The app calls `POST {endpoint}/chat/completions` once per idea, with the instruction as the system message. With the current shot prompt as input it makes N variations of that prompt. A note states that ideas are sent to this endpoint, not to the ComfyUI server.
+- **Script:** a script file and a runtime (Python or Node). The app starts it as a child process (`python3`, or `python` on Windows, or `node`; `COMFY_TOOLKIT_PYTHON` / `COMFY_TOOLKIT_NODE` override the command), writes a JSON object to stdin (count, seed, current prompt), and reads a JSON list of prompts from stdout, with a 60 s timeout. **Test run** shows the output. The script runs with the user's own rights and only from a path the user chose.
 - Each prompter has **Save prompter**, **Duplicate**, **Delete**. The Prompt list mode picks from this list.
 
 ### Projects (wireframe 15)
 
-- The **Project switcher** at the top of the sidebar lists the projects with their shot counts. Menu: **New project**, **Rename project** (renames the folder), **Open project folder**, **Remove from list**.
+- The **Project switcher** at the top of the sidebar lists the projects with their shot counts. Menu: **New project**, **Rename project** (renames the folder; refused while the project has queued or running jobs, because their downloads write into the folder), **Open project folder**, **Open existing project...**, **Remove from list**.
 - **New shot** (dialog, wireframe 15): opened from the **+** next to LOOSE SHOTS, or from **Add shot** in a Sequence view (then "Where" is preset). Fields: **Shot name** (default "Untitled shot"); **Where**: *Loose shot* (belongs to no sequence) or *In a sequence* with a sequence dropdown; **Workflow** (default the last used one). **Create shot** opens the new shot in the Shot view. A shot added to a sequence goes at the end. To change it later, use **Move to sequence** in the Shot view (loose to sequence, sequence to sequence, or back to loose).
 - **New sequence:** the **+** next to SEQUENCES asks for a name, then opens the empty Sequence view with its **Add shot** button.
 - **New project:** a name, and a read-only preview of its folder (`<workspace>/projects/<name>`). Names must be unique and file-system safe.
-- **Remove from list** only forgets the project in the app. It never deletes the folder or its files. To bring it back, use **Open existing project...** (not drawn: add it to the same menu) and pick the folder.
+- **Remove from list** only forgets the project in the app. It never deletes the folder or its files. To bring it back, use **Open existing project...** and pick the folder.
 - A project is self-contained (see Local Storage), so copying its folder to another workspace and opening it there works.
-- Moving a shot to another project is not supported in the first version. Duplicate shot works inside a project only.
+- Moving a shot to another project is not supported. Duplicate shot works inside a project only.
 
 ### Settings and first launch (wireframes 08, 13)
 
-- **Settings screen (wireframe 13)**, opened from the sidebar, has two cards:
-  - **Server:** server address, access token (optional, for a reverse proxy), **Test connection** ("Connected. 142 node types found", from `GET /object_info`). This is the same form as the first-launch connect step. The token is stored in the operating system's keychain, not in the settings file.
+- **Settings screen (wireframe 13)**, opened from the sidebar, has three cards:
+  - **Server:** server address, access token (optional, for a reverse proxy; sent as `Authorization: Bearer`), **Test connection** ("Connected. 142 node types found", from `GET /object_info`). This is the same form as the first-launch connect step. The token is stored encrypted in the app data folder, not in the settings file (see Local Storage).
+  - **Workflows:** the imported workflows, each with **Edit** and **Delete** (see Import workflow).
   - **Workspace folder:** its location with **Change folder** and **Open folder**, a one-line description of what it holds, and the warning not to use a synced folder (see Local Storage). Changing it moves nothing: the user picks an existing workspace or creates a new one.
 - **First launch:** three steps shown as a bar: Connect, Import a workflow (the Import screen, with "Skip for now"), First project (name it; the folder preview shows where it will live). The workspace folder is created silently at the default location and can be changed in Settings. The import step is also what the app shows any time it has no workflows.
 
@@ -428,9 +476,11 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
 Error and connection states (wireframe 07):
 
 1. **Server offline or token refused:** a banner on every screen ("Can't reach server-01. Retrying in 8 s. Your inputs and history are kept.") with **Retry now** and **Server settings**. Inputs, history and finished renders stay usable. Only Run is off. The sidebar shows "offline". A refused token says to check it in Server settings.
-2. **Back online, jobs updated:** on launch and on reconnect the app compares its running attempts with the server's queue and history. A banner summarises ("While the app was closed, 1 attempt finished and 1 failed. 4 jobs are still waiting.") with the affected attempts and **Open shot** or **Details**. **Dismiss** closes it.
+2. **Back online, jobs updated:** on launch and on reconnect the app compares its running attempts with the server's queue and history (see Job tracking). A banner summarises ("While the app was closed, 1 attempt finished and 1 failed. 4 jobs are still waiting.") with the affected attempts and **Open shot** or **Details**. **Dismiss** closes it.
 3. **Upload failed:** input files upload when Run is pressed. One failing file stops the whole run, so nothing half-queued is left behind. The failing slot is marked, with **Retry upload** and **Remove image**.
-4. **Rejected when pressing Run:** the app validates first (minimum and maximum values, option still offered by the server, slot count within the workflow's maximum). If the server still rejects a job, its message appears on the field it came from. Nothing is queued, and a line states how many problems remain.
+4. **Rejected when pressing Run:** the app validates first (minimum and maximum values, option still offered by the server, slot count within the workflow's maximum). If the server still rejects a job, its message appears on the field it came from (matched through the node id and input name in the server's error); anything that cannot be matched is listed in the message line. A line states how many problems remain.
+   - Run validates, uploads, then posts the jobs. If any `POST /prompt` fails, the jobs of that Run already queued are removed by id (or interrupted, if one already started) and their attempt records are deleted.
+   - The app then reads the queue again. Jobs the server did not give back keep their attempts, and the message says how many will still run instead of "Nothing was queued". If the queue cannot be read, the jobs are kept and the queue poll settles them.
 5. **Failed, cancelled and cached attempts:** see Attempt states.
 
 Empty states (wireframe 08), each pointing to the next step:
@@ -442,14 +492,6 @@ Empty states (wireframe 08), each pointing to the next step:
 - Empty Gallery: "Nothing rendered yet". A search with no results says "No renders match ..." with **Clear filters**. Filters stay visible so the cause is clear.
 - Queue idle: "Nothing running, nothing waiting."
 
-### Not designed yet
-
-These are known gaps. Design them before building them:
-
-- **Presets** (named sets of values): left out of the Library on purpose. "Duplicate shot" and "Load settings" cover most of the need. If wanted, they are a button in the Shot view, not a Library tab.
-- **Loading states** (skeletons while the Gallery or a shot loads).
-- Keyboard shortcuts and behavior at other window sizes.
-
 ### Out of scope
 
 - Stitching or exporting a final edited video. The Sequence view only previews the keepers in order.
@@ -457,28 +499,30 @@ These are known gaps. Design them before building them:
 
 ## Implementation Notes
 
-### Build order and first checks
+### Job tracking
 
-- **Spike first, kept simple.** Before building screens, write throwaway scripts from the ComfyUI source and docs (`server.py`, `execution.py`, the websocket API example) that connect to the server, queue one cheap job (turbo, short duration, low megapixels), follow its progress over the WebSocket, read `GET /history`, and download the result with `GET /view`. The scripts are temporary and can be deleted afterwards. Build the client layer from the same reading, and develop against a small fake ComfyUI server (plain HTTP and WebSocket that answers the routes in the table below, with scripted scenarios: progress, failure, out of memory, another client's job in the queue, offline, rejected upload).
-- **Smoke test on the real server** as soon as the first job runs end to end: connect, run one job per workflow, see progress and the result. Fix any difference from the docs then. Items to check there: where a `SaveVideo` output appears in `/history`, whether `POST /queue` with a `delete` list works on this ComfyUI version, whether WebSocket works through the reverse proxy and token, and whether first-frame-only and text-to-video run correctly.
-- **Milestones:** M1 connect, import, schema, run one job, show its attempt. M2 queue drawer, progress, Gallery. M3 sequences, keepers, Compare. M4 Library, prompters, prompt list mode. M5 states, polish.
+- **Progress percent** is an estimate, because ComfyUI has no overall progress: 0 to 5 % while nodes before sampling run, 5 to 95 % from `progress` events (sampler steps), 96 % after sampling, 100 % when the file is downloaded.
+- **Cached:** an attempt is CACHED when every output node of the job appears in `execution_cached`. The (identical) output file is still downloaded, so the attempt has its own file.
+- **Reconcile:** on launch and on reconnect the app compares its active attempts with `GET /queue` and `GET /history`. The summary is held in the main process until the window collects it.
+- **Jobs that leave the queue without an event** (removed by another client) are checked against history after 10 s and marked cancelled ("Removed from the queue before it started") if there is no record.
+- **A failed history request is not "no record".** A request error leaves the attempt as it is and the app asks again (reconcile after 5 s, otherwise on the next queue poll). Only an answered, empty history marks the job failed or cancelled.
+- **Downloads are tried three times.** When fetching the result fails on a request error, the attempt stays active and reconcile runs again after 5 s (or on reconnect); the third failure marks it failed. All output files of a job are fetched before any is written.
+- **Attempts sent to another server address** stay untouched while that address is not the one in Settings, and are picked up again if it comes back. Cancel on such an attempt marks it cancelled locally and says the job was not cancelled on that server.
 
 ### Interrupt rule
 
-`POST /interrupt` stops whatever the server is running, including a job started by another client. So **Interrupt** in the Queue drawer, and **Cancel** on a running attempt card, must first check that the running job's `prompt_id` belongs to an attempt of this app (from `GET /queue`). If it is not ours, the button is not offered. Where the server supports interrupting a specific `prompt_id`, use that. Cancelling a waiting job removes only that job's id, and never uses a clear-all call.
+`POST /interrupt` stops whatever the server is running, including a job started by another client. So **Interrupt** in the Queue drawer, and **Cancel** on a running attempt card, must first check that the running job's `prompt_id` belongs to an attempt of this app (from `GET /queue`). If it is not ours, the button is not offered. The interrupt is sent for that specific `prompt_id`. Cancelling a waiting job removes only that job's id, and never uses a clear-all call; the app reports when a waiting job was not removed.
 
 ### Output rules
 
 - **Where:** inside the project folder, `<workspace>/projects/<Project>/outputs/`. Files are downloaded automatically when a job finishes (`GET /view`), never on demand later. Nothing is deleted from the server.
+- **Which files:** every `{filename, subfolder, type: output}` entry of the job in `GET /history`, under any key.
 - **Layout:** `outputs/<Sequence name>/<NN Shot name>/attempt-<id>-<workflow>.<ext>`. Loose shots go under `outputs/_loose/<Shot name>/`. Names are made safe for the file system (illegal characters replaced, length limited).
+- **File names** use the project-wide attempt id, not the per-shot `#N` shown in the UI, because shot names are not unique and two shots can share a folder. If the name is still taken, ` (2)`, ` (3)`... is added: a rendered file is never overwritten.
 - **Renaming:** each attempt's file path is stored in `project.db`, relative to the project folder. Renaming or moving a shot does not move existing files. New attempts use the current names.
 - **Export keepers:** an action on the Sequence view that copies each shot's keeper to `outputs/_keepers/<Sequence name>/<NN Shot name>.<ext>`, numbered in sequence order, replacing earlier exports. It never moves or deletes the originals.
-- **Thumbnails:** one still frame per attempt, made when the file is downloaded and stored with the project. Gallery sort order is newest first by default.
-- These are defaults. If the agent finds a reason to change them, it records the change (see Record decisions).
-
-### Record decisions as you go
-
-The implementer keeps a short `docs/decisions.md`. Each entry is one or two lines: what was decided, why, and the date. It covers every choice the PRD leaves open (for example the SQLite schema, the LLM prompter's API shape, how images are named when uploaded, how the token is stored) and every place where the build differs from the PRD or the wireframes. When the code and this document disagree, the entry says which one is right.
+- **Thumbnails:** one still frame per attempt, made in the renderer when the file is downloaded (`<video>` to canvas to JPEG, 480 px at most, no ffmpeg) and stored at `thumbs/attempt-<id>.jpg` in the project. The video duration is recorded at the same time for the keeper timeline. Gallery sort order is newest first by default.
+- **Local media** is shown through `ctmedia://` URLs, which serve only the workspace and known project folders, with HTTP Range support for seeking.
 
 ## ComfyUI API Endpoints Used
 
@@ -492,15 +536,10 @@ The implementer keeps a short `docs/decisions.md`. Each entry is one or two line
 | `GET /object_info` | Available nodes and model names |
 | `GET /queue` | Queue inspection, including jobs from other clients |
 | `POST /queue` (`delete` list of prompt ids) | Cancel waiting jobs |
-| `POST /interrupt` | Stop the running job |
+| `POST /interrupt` (`prompt_id`) | Stop the running job, if it is ours |
 
-## Open Decisions (for later)
+When a token is set, every request and the WebSocket carry it as `Authorization: Bearer`.
 
-- Presets: whether to add them at all, and where (see Not designed yet).
-- Projects: moving a shot between projects, project archive, and a per-project override of where renders are stored (for example a bigger drive).
-- Import fl2vid only (covers t2v, i2v, fl2v) or import t2v as a separate tab too.
-- Smoke test: `MiniMaxH3ImageToVideo` with only `first_frame` filled, and with both frames empty, sent from the app after removing the unused `LoadImage` nodes.
-- Whether to add a "Vary" toggle on single inputs (duration, aspect ratio, turbo, seed) if repeating one change many times becomes a chore.
-- LLM prompter: which API shape to support first (assumed OpenAI-compatible chat completions).
-- "Save to Library" from a shot's prompt box (needed, but not drawn).
-- Whether `POST /queue` with a `delete` list is available on the user's ComfyUI version (cancelling waiting jobs depends on it). Checked in the smoke test.
+Checked on the real server (2026-10-08): cancelling a waiting job, interrupting a running job, finding and downloading `SaveVideo` outputs, and the WebSocket on a direct connection. The WebSocket through a reverse proxy with a token has not been confirmed separately.
+
+For development, `npm run fake-server` runs a fake ComfyUI that answers these routes with scripted scenarios (`#fail`, `#oom`, `#reject`, `#slow` in a prompt).
