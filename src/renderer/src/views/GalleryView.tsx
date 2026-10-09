@@ -5,7 +5,7 @@ import { api, errorMessage, media } from '../lib/api'
 import { cn } from '../lib/cn'
 import { formatValue, pad2, plural, timeAgo } from '../lib/format'
 import { Button, Card, Checkbox, Empty, Input, Label, Segmented, Select, Tag } from '../components/ui'
-import { Thumb } from '../components/Media'
+import { PlayerDialog, Thumb } from '../components/Media'
 
 const PAGE = 60
 
@@ -18,6 +18,7 @@ export function GalleryView(): ReactNode {
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(false)
   const [sel, setSel] = useState<GalleryItem | null>(null)
+  const [playing, setPlaying] = useState<GalleryItem | null>(null)
   const sentinel = useRef<HTMLDivElement>(null)
   const req = useRef(0)
 
@@ -140,7 +141,9 @@ export function GalleryView(): ReactNode {
                 {g.items.map((it) => {
                   const active = sel?.attempt.id === it.attempt.id && sel.projectPath === it.projectPath
                   return (
-                    <button key={`${it.projectPath}-${it.attempt.id}`} className="text-left" onClick={() => setSel(it)}>
+                    <button key={`${it.projectPath}-${it.attempt.id}`} className="text-left" onClick={() => setSel(it)}
+                      title={it.attempt.outputs.length ? 'Double-click to play' : undefined}
+                      onDoubleClick={() => (it.attempt.outputs.length ? setPlaying(it) : undefined)}>
                       <Thumb projectPath={it.projectPath} attempt={it.attempt} className={cn('aspect-[2/3] w-full border', active ? 'border-2 border-accent' : 'border-border')} />
                       <div className="mt-1.5 flex items-center gap-1.5 font-mono text-xs">
                         <span className="font-semibold">#{it.attempt.num}</span>
@@ -204,6 +207,8 @@ export function GalleryView(): ReactNode {
           </Card>
         )}
       </div>
+      <PlayerDialog open={!!playing} onClose={() => setPlaying(null)} title={playing ? `${playing.shotName} · #${playing.attempt.num}` : ''}
+        projectPath={playing?.projectPath ?? ''} attempt={playing?.attempt ?? null} />
     </div>
   )
 }

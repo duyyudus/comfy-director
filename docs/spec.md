@@ -324,7 +324,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
 - **Run button:** reads "Run N jobs", where N = prompts x runs. It validates inputs (required files present, counts within bounds), uploads any input files not yet on the server, creates the attempts, and queues them all at once. If anything fails before queueing, nothing is queued (see States). Disabled while the server is offline.
 - **Prompt chat panel** (optional, between the form and the Attempts panel): see Prompt chat below.
 - **Attempts panel** (right side), newest first. Each card shows:
-  - Preview thumbnail with play (while running: percent instead).
+  - Preview thumbnail with play (while running: percent instead). Double-clicking a finished card anywhere outside its buttons and checkbox also opens the player.
   - Attempt id, workflow chip, and a KEEPER tag on the keeper.
   - A one-line summary (turbo or full, duration, seed, age) and a compare checkbox.
   - Actions: **Load settings**, **Set keeper**, **Delete**, and while running a progress bar with **Cancel**.
@@ -351,7 +351,7 @@ Purpose: see the shots of a sequence in order, each represented by its keeper, a
 Purpose: find any render across all sequences and loose shots.
 
 - **Filters:** project (default the current project, or All projects), search in prompt text, workflow, sequence (including "Loose shots"), and "Keepers only". **Group by:** Shot (default) or Time.
-- **Groups:** a header per shot ("Sequence / NN Name, n attempts") followed by a grid of thumbnails, each with id, workflow, and KEEPER tag where it applies. The grid loads 60 renders at a time as the user scrolls, with lazy thumbnails.
+- **Groups:** a header per shot ("Sequence / NN Name, n attempts") followed by a grid of thumbnails, each with id, workflow, and KEEPER tag where it applies. The grid loads 60 renders at a time as the user scrolls, with lazy thumbnails. Clicking a thumbnail selects it; double-clicking it opens the player.
 - **Detail panel** for the selected render: large preview, summary of its values (workflow, duration, turbo, aspect, seed, number of refs, prompt start), and actions:
   - **Load into shot:** opens the Shot view for that attempt's shot with the attempt's workflow and values loaded.
   - **Reveal file:** shows the output file in the operating system's file manager.

@@ -578,8 +578,18 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
   const pct = live?.progress ?? a.progress
   const active = a.status === 'running' || a.status === 'queued' || a.status === 'submitting'
   const finished = a.status === 'done' || a.status === 'cached'
+  const playable = finished && a.outputs.length > 0
   return (
-    <Card className={cn('flex gap-3.5 p-3', keeper && 'border-2 border-accent', a.status === 'failed' && 'border-danger/60')}>
+    <Card
+      className={cn('flex gap-3.5 p-3 transition-colors', keeper ? 'border-2 border-accent' : a.status === 'failed' ? 'border-danger/60 hover:border-danger' : 'hover:border-control')}
+      title={playable ? 'Double-click to play' : undefined}
+      onDoubleClick={(e) => {
+        // Double-clicking the card plays it; its buttons and checkbox keep their own clicks.
+        if (!playable || (e.target as HTMLElement).closest('button, input')) return
+        window.getSelection()?.removeAllRanges()
+        onPlay()
+      }}
+    >
       <Thumb projectPath={projectPath} attempt={finished ? a : null} onPlay={onPlay} className="h-[126px] w-[84px] shrink-0">
         {a.status === 'running' && <span className="text-13 text-text2">{pct}%</span>}
         {a.status === 'queued' && <span className="text-xs text-text2">waiting</span>}
