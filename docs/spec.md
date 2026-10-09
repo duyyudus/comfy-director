@@ -219,7 +219,7 @@ Comfy Toolkit/                     workspace
 - **Paths inside `project.db` are relative to the project folder.** Renaming the project renames the folder and nothing else changes.
 - **Plain files** for things worth hand-editing (workflows, overrides). **SQLite** for things that grow and need querying (history, keepers, prompt library).
 - **Not in the workspace**, but in the app's data folder:
-  - `settings.json`: server address, workspace path, theme, current project, and the ComfyUI `clientId`. The client id is generated once and kept, so progress events for jobs queued before a restart still reach the app.
+  - `settings.json`: server address, workspace path, theme, text size, current project, and the ComfyUI `clientId`. The client id is generated once and kept, so progress events for jobs queued before a restart still reach the app.
   - `token.bin`: the access token, encrypted with Electron `safeStorage` (Keychain on macOS, DPAPI on Windows, libsecret/kwallet on Linux). If no OS encryption is available it is stored as plain bytes there. Sharing a workspace never shares the token.
   - The cached `object_info`.
 - The app writes a `.gitignore` into a new workspace that excludes `app.db` and `projects/`, so `workflows/` can be versioned on its own.
@@ -438,9 +438,10 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
 
 ### Settings and first launch (wireframes 08, 13)
 
-- **Settings screen (wireframe 13)**, opened from the sidebar, has three cards:
+- **Settings screen (wireframe 13)**, opened from the sidebar, has four cards:
   - **Server:** server address, access token (optional, for a reverse proxy; sent as `Authorization: Bearer`), **Test connection** ("Connected. 142 node types found", from `GET /object_info`). This is the same form as the first-launch connect step. The token is stored encrypted in the app data folder, not in the settings file (see Local Storage).
   - **Workflows:** the imported workflows, each with **Edit** and **Delete** (see Import workflow).
+  - **Text size:** the size of body text in pixels: 13, 14, 15 (default), 16 or 18. Every other text size scales with it; spacing, control heights and thumbnails do not change. It applies at once and is stored in the app settings. (The wireframes are drawn at 14.)
   - **Workspace folder:** its location with **Change folder** and **Open folder**, a one-line description of what it holds, and the warning not to use a synced folder (see Local Storage). Changing it moves nothing: the user picks an existing workspace or creates a new one.
 - **First launch:** three steps shown as a bar: Connect, Import a workflow (the Import screen, with "Skip for now"), First project (name it; the folder preview shows where it will live). The workspace folder is created silently at the default location and can be changed in Settings. The import step is also what the app shows any time it has no workflows.
 

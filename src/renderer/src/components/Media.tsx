@@ -85,7 +85,7 @@ export function SequencePlayer({ open, onClose, items }: {
       )}
       <div className="mt-3 flex flex-wrap gap-2">
         {items.map((it, n) => (
-          <button key={n} onClick={() => setI(n)} className={cn('rounded px-2 py-1 text-[13px]', n === i ? 'bg-tint text-accent-text' : 'bg-stripe text-text2')}>
+          <button key={n} onClick={() => setI(n)} className={cn('rounded px-2 py-1 text-13', n === i ? 'bg-tint text-accent-text' : 'bg-stripe text-text2')}>
             {it.label}
           </button>
         ))}

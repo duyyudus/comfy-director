@@ -70,7 +70,7 @@ export function PromptListEditor({ list, onChange, currentPrompt, error, shotNam
           {busy ? <Spinner /> : null} Generate
         </Button>
         <Segmented size="sm" value={mode} onChange={setMode} options={[{ value: 'replace', label: 'Replace list' }, { value: 'add', label: 'Add to list' }]} />
-        <Button variant="link" className="mb-2 text-[13px]" onClick={() => go({ name: 'library', tab: 'prompters' })}>Edit prompter</Button>
+        <Button variant="link" className="mb-2 text-13" onClick={() => go({ name: 'library', tab: 'prompters' })}>Edit prompter</Button>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -133,7 +133,7 @@ function LinesDialog({ title, hint, action, onClose, onSubmit }: { title: string
   return (
     <Dialog open onClose={onClose} title={title} width={640}
       footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!lines.length} onClick={() => onSubmit(lines)}>{action} ({lines.length})</Button></>}>
-      <div className="mb-2 text-[13px] text-text2">{hint}</div>
+      <div className="mb-2 text-13 text-text2">{hint}</div>
       <Textarea autoFocus rows={10} value={text} onChange={(e) => setText(e.target.value)} />
     </Dialog>
   )
@@ -158,7 +158,7 @@ function PickFromLibrary({ onClose, onPick }: { onClose: () => void; onPick: (p:
             <Checkbox checked={sel.includes(p.id)} onChange={(v) => setSel((s) => (v ? [...s, p.id] : s.filter((x) => x !== p.id)))} />
             <div className="min-w-0">
               <div className="font-semibold">{p.name}</div>
-              <div className="line-clamp-2 text-[13px] text-text2">{p.text}</div>
+              <div className="line-clamp-2 text-13 text-text2">{p.text}</div>
             </div>
           </div>
         ))}

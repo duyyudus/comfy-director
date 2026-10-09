@@ -35,7 +35,7 @@ export function Sidebar(): ReactNode {
   return (
     <aside className="flex w-[232px] shrink-0 flex-col border-r border-border bg-panel">
       <div className="px-5 pt-5 pb-4">
-        <div className="text-[17px] font-semibold">Comfy Toolkit</div>
+        <div className="text-17 font-semibold">Comfy Toolkit</div>
         <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
           <span className={cn('size-1.5 rounded-full', server.state === 'connected' ? 'bg-accent' : server.state === 'connecting' ? 'bg-control' : 'bg-danger')} />
           <span className="truncate">{server.serverName ? `${server.serverName} · ` : ''}{statusText}</span>
@@ -43,7 +43,7 @@ export function Sidebar(): ReactNode {
       </div>
 
       <div className="px-5">
-        <div className="mb-1.5 text-[11px] tracking-[0.12em] text-muted uppercase">Project</div>
+        <div className="mb-1.5 text-11 tracking-[0.12em] text-muted uppercase">Project</div>
         <ProjectSwitcher />
       </div>
 
@@ -51,7 +51,7 @@ export function Sidebar(): ReactNode {
         {tree && (
           <>
             <SectionHeader label="Sequences" onAdd={() => setDialog({ kind: 'new-sequence' })} addLabel="New sequence" />
-            {tree.sequences.length === 0 && <div className="px-2 pb-2 text-[13px] text-muted">No sequences yet.</div>}
+            {tree.sequences.length === 0 && <div className="px-2 pb-2 text-13 text-muted">No sequences yet.</div>}
             {tree.sequences.map((seq) => {
               const shots = tree.shots.filter((s) => s.sequenceId === seq.id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
               const open = expanded.has(seq.id)
@@ -86,7 +86,7 @@ export function Sidebar(): ReactNode {
 
             <div className="mt-4">
               <SectionHeader label="Loose shots" onAdd={() => setDialog({ kind: 'new-shot', sequenceId: null })} addLabel="New loose shot" />
-              {loose.length === 0 && <div className="px-2 pb-2 text-[13px] text-muted">None.</div>}
+              {loose.length === 0 && <div className="px-2 pb-2 text-13 text-muted">None.</div>}
               {loose.map((s) => (
                 <ShotRow key={s.id} active={currentShot === s.id} hasKeeper={s.hasKeeper} onClick={() => go({ name: 'shot', shotId: s.id })}>
                   {s.name}
@@ -106,7 +106,7 @@ export function Sidebar(): ReactNode {
       </div>
 
       <div className="px-5 pt-3 pb-5">
-        <div className="mb-1.5 text-[11px] tracking-[0.12em] text-muted uppercase">Theme</div>
+        <div className="mb-1.5 text-11 tracking-[0.12em] text-muted uppercase">Theme</div>
         <Segmented
           size="sm"
           className="flex w-full [&>button]:flex-1"
@@ -142,7 +142,7 @@ function ShotRow({ active, hasKeeper, onClick, children }: { active: boolean; ha
 function SectionHeader({ label, onAdd, addLabel }: { label: string; onAdd: () => void; addLabel: string }): ReactNode {
   return (
     <div className="mb-1 flex items-center justify-between px-2">
-      <span className="text-[11px] tracking-[0.12em] text-muted uppercase">{label}</span>
+      <span className="text-11 tracking-[0.12em] text-muted uppercase">{label}</span>
       <button
         onClick={onAdd}
         title={addLabel}

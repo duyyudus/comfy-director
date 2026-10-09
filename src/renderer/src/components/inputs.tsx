@@ -46,7 +46,7 @@ function TextControl({ input, value, onChange, error }: InputProps): ReactNode {
       ) : (
         <Input value={v} invalid={!!error} onChange={(e) => onChange(e.target.value)} />
       )}
-      {input.help && <div className="mt-1 text-[13px] text-muted">{input.help}</div>}
+      {input.help && <div className="mt-1 text-13 text-muted">{input.help}</div>}
       <FieldError>{error}</FieldError>
     </div>
   )
@@ -74,7 +74,7 @@ function NumberControl({ input, value, onChange, error }: InputProps): ReactNode
         }}
         onBlur={() => setText(null)}
       />
-      {input.help && <div className="mt-1 text-[13px] text-muted">{input.help}</div>}
+      {input.help && <div className="mt-1 text-13 text-muted">{input.help}</div>}
       <FieldError>{error}</FieldError>
     </div>
   )
@@ -100,7 +100,7 @@ function SelectControl({ input, value, onChange, error }: InputProps): ReactNode
         {missing && <option value={v}>{v} (not offered)</option>}
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </Select>
-      {input.help && <div className="mt-1 text-[13px] text-muted">{input.help}</div>}
+      {input.help && <div className="mt-1 text-13 text-muted">{input.help}</div>}
       <FieldError>{error}</FieldError>
     </div>
   )
@@ -180,7 +180,7 @@ function FileControl({ input, value, onChange, error, projectPath, files, onFile
         {name && !input.constraints.required && <Button size="sm" variant="ghost" onClick={() => onChange(null)}>Remove</Button>}
       </div>
       {failed && (
-        <div className="mt-1.5 text-[13px] text-danger">
+        <div className="mt-1.5 text-13 text-danger">
           Upload failed: {uploadFailure.message}
           <div className="mt-1 flex gap-1.5">
             <Button size="sm" onClick={onRetryUpload}>Retry upload</Button>
@@ -222,8 +222,8 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
   return (
     <div className="w-full">
       <div className="mb-1.5 flex items-baseline justify-between">
-        <span className="text-[13px]">{input.label}</span>
-        <span className="text-[13px] text-text2">
+        <span className="text-13">{input.label}</span>
+        <span className="text-13 text-text2">
           {list.length} of {max ?? '?'} slots{input.constraints.minCount ? ` · at least ${input.constraints.minCount}` : ''}
         </span>
       </div>
@@ -252,7 +252,7 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
               title={files[name]?.originalName ?? name}
             >
               <img src={media(projectPath, `inputs/${name}`)} alt="" className="size-full object-cover" draggable={false} />
-              <span className="absolute bottom-1 left-1.5 rounded bg-black/55 px-1 font-mono text-[11px] text-white">ref {i + 1}</span>
+              <span className="absolute bottom-1 left-1.5 rounded bg-black/55 px-1 font-mono text-11 text-white">ref {i + 1}</span>
               <button
                 aria-label={`Remove ref ${i + 1}`}
                 onClick={() => onChange(list.filter((_, j) => j !== i))}
@@ -273,9 +273,9 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
           </button>
         )}
       </div>
-      <div className="mt-2 text-[13px] text-text2">Drag to reorder. Unused slots are removed from the workflow before sending.</div>
+      <div className="mt-2 text-13 text-text2">Drag to reorder. Unused slots are removed from the workflow before sending.</div>
       {uploadFailure && list.includes(uploadFailure.file) && (
-        <div className="mt-1.5 flex items-center gap-2 text-[13px] text-danger">
+        <div className="mt-1.5 flex items-center gap-2 text-13 text-danger">
           Upload of {files[uploadFailure.file]?.originalName ?? uploadFailure.file} failed: {uploadFailure.message}
           <Button size="sm" onClick={onRetryUpload}>Retry upload</Button>
           <Button size="sm" variant="ghost" onClick={() => onChange(list.filter((n) => n !== uploadFailure.file))}>Remove image</Button>

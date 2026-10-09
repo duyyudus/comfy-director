@@ -47,7 +47,7 @@ export function ReconcileBanner(): ReactNode {
         <span className="font-semibold">Back online.</span> While the app was away, {parts.join(' and ')}.
         {reconcile.stillWaiting > 0 && ` ${reconcile.stillWaiting} job${reconcile.stillWaiting === 1 ? ' is' : 's are'} still waiting.`}
       </div>
-      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-13">
         {items.map((i) => (
           <button
             key={`${i.projectPath}-${i.attemptId}`}

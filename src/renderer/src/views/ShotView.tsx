@@ -214,7 +214,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
       blocks.push(
         <div key="files">
           <div className="flex flex-wrap gap-5">{fileSingles.map(renderInput)}</div>
-          {hint && <div className="mt-2 text-[13px] text-text2">{hint}</div>}
+          {hint && <div className="mt-2 text-13 text-text2">{hint}</div>}
         </div>
       )
     }
@@ -301,9 +301,9 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
           + Import workflow
         </button>
         <span className="flex-1" />
-        {workflows.length > 1 && <span className="pb-2.5 text-[13px] text-text2">Shared values carry over when you switch</span>}
+        {workflows.length > 1 && <span className="pb-2.5 text-13 text-text2">Shared values carry over when you switch</span>}
         {activeWf && (
-          <button className="pb-2.5 pl-3 text-[13px] text-accent-text hover:underline" onClick={() => go({ name: 'import', back: { name: 'shot', shotId }, editId: activeWf.id })}>
+          <button className="pb-2.5 pl-3 text-13 text-accent-text hover:underline" onClick={() => go({ name: 'import', back: { name: 'shot', shotId }, editId: activeWf.id })}>
             Edit workflow
           </button>
         )}
@@ -326,7 +326,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
               {prompt && (
                 <div>
                   <div className="mb-1.5 flex items-center justify-between">
-                    <span className="text-[13px]">{prompt.label}</span>
+                    <span className="text-13">{prompt.label}</span>
                     <Segmented
                       size="xs"
                       value={form.promptMode}
@@ -357,8 +357,8 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                         placeholder="Describe the shot…"
                       />
                       <div className="mt-1 flex justify-between">
-                        <span className="text-[13px] text-danger">{errors.prompt}</span>
-                        <Button variant="link" className="text-[13px]" disabled={!String(form.values.prompt ?? '').trim()} onClick={() => setSaveLibOpen(true)}>
+                        <span className="text-13 text-danger">{errors.prompt}</span>
+                        <Button variant="link" className="text-13" disabled={!String(form.values.prompt ?? '').trim()} onClick={() => setSaveLibOpen(true)}>
                           Save to Library
                         </Button>
                       </div>
@@ -379,16 +379,16 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                       options={[{ value: 'random', label: 'Random' }, { value: 'fixed', label: 'Fixed' }]}
                     />
                     <Input
-                      className="w-[220px] font-mono text-[13px]"
+                      className="w-[220px] font-mono text-13"
                       readOnly={form.seedMode === 'random'}
                       value={form.seedMode === 'random' ? String(shot.lastSeed ?? form.seedValue ?? '') : String(form.seedValue ?? '')}
                       placeholder={form.seedMode === 'random' ? 'not run yet' : ''}
                       invalid={!!errors.__seed}
                       onChange={(e) => update({ seedValue: e.target.value === '' ? null : Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
                     />
-                    <span className="text-[13px] text-muted">{form.seedMode === 'random' ? 'last seed used' : ''}</span>
+                    <span className="text-13 text-muted">{form.seedMode === 'random' ? 'last seed used' : ''}</span>
                   </div>
-                  {errors.__seed && <div className="mt-1.5 text-[13px] text-danger">{errors.__seed}</div>}
+                  {errors.__seed && <div className="mt-1.5 text-13 text-danger">{errors.__seed}</div>}
                 </div>
               )}
 
@@ -402,7 +402,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
               {/* Run bar */}
               <div className="border-t border-border pt-5">
                 {listMode && (
-                  <div className="mb-3 text-[13px] text-text2">
+                  <div className="mb-3 text-13 text-text2">
                     {plural(promptCount, 'prompt')} × {plural(Math.max(1, form.runs || 1), 'run')} = {plural(jobs, 'job')}
                   </div>
                 )}
@@ -418,11 +418,11 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                   <Button variant="primary" size="lg" disabled={offline || submitting || jobs < 1} onClick={() => void run()}>
                     {submitting ? 'Sending…' : `Run ${plural(jobs, 'job')}`}
                   </Button>
-                  <span className="text-[13px] text-text2">
+                  <span className="text-13 text-text2">
                     {offline ? 'Run is off while the server is offline.' : form.seedMode === 'random' ? 'Random seed gives each run a new take' : 'Fixed seed: identical inputs come back from the cache'}
                   </span>
                 </div>
-                {runMessage && <div className="mt-3 rounded-md bg-dtint px-3 py-2 text-[13px] text-danger">{runMessage}</div>}
+                {runMessage && <div className="mt-3 rounded-md bg-dtint px-3 py-2 text-13 text-danger">{runMessage}</div>}
               </div>
             </div>
           </Card>
@@ -430,7 +430,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
           {/* Attempts */}
           <div className="w-[460px] shrink-0">
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-[17px] font-semibold">
+              <div className="text-17 font-semibold">
                 Attempts <span className="font-normal text-text2">{detail.totalAttempts}</span>
               </div>
               <Button disabled={selected.length < 2 || selected.length > 4} onClick={() => go({ name: 'compare', shotId, attemptIds: selected })}>
@@ -511,7 +511,7 @@ function ShotName({ name, onSave }: { name: string; onSave: (n: string) => Promi
   return (
     <input
       aria-label="Shot name"
-      className="-ml-1 mt-0.5 w-full rounded border border-transparent bg-transparent px-1 text-[22px] font-semibold hover:border-border focus:border-control"
+      className="-ml-1 mt-0.5 w-full rounded border border-transparent bg-transparent px-1 text-22 font-semibold hover:border-border focus:border-control"
       value={v}
       onChange={(e) => setV(e.target.value)}
       onBlur={commit}
@@ -545,7 +545,7 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
   return (
     <Card className={cn('flex gap-3.5 p-3', keeper && 'border-2 border-accent', a.status === 'failed' && 'border-danger/60')}>
       <Thumb projectPath={projectPath} attempt={finished ? a : null} onPlay={onPlay} className="h-[126px] w-[84px] shrink-0">
-        {a.status === 'running' && <span className="text-[13px] text-text2">{pct}%</span>}
+        {a.status === 'running' && <span className="text-13 text-text2">{pct}%</span>}
         {a.status === 'queued' && <span className="text-xs text-text2">waiting</span>}
         {a.status === 'failed' && <span className="text-xs font-semibold text-danger">failed</span>}
         {a.status === 'cancelled' && <span className="text-xs text-text2">stopped</span>}
@@ -565,7 +565,7 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
             <button className="text-xs text-muted hover:text-danger" onClick={onDelete} aria-label={`Delete #${a.num}`}>Delete</button>
           )}
         </div>
-        <div className="mt-1 truncate text-[13px] text-text2">
+        <div className="mt-1 truncate text-13 text-text2">
           {attemptSummary(a)}
           {a.promptCount > 1 && ` · prompt ${a.promptIndex + 1}/${a.promptCount}`}
           {' · '}
@@ -574,7 +574,7 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
 
         {a.status === 'running' && <Progress value={pct} className="mt-2.5" />}
         {a.status === 'failed' && a.error && (
-          <div className="mt-2 text-[13px]">
+          <div className="mt-2 text-13">
             <div className="line-clamp-2 text-danger">{a.error.message}</div>
             {(a.error.nodeType || a.error.errorType) && (
               <div className="mt-0.5 text-xs text-muted">
@@ -583,9 +583,9 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
             )}
           </div>
         )}
-        {a.status === 'cancelled' && <div className="mt-2 text-[13px] text-text2">{a.error?.message ?? 'Stopped. No video was saved.'}</div>}
+        {a.status === 'cancelled' && <div className="mt-2 text-13 text-text2">{a.error?.message ?? 'Stopped. No video was saved.'}</div>}
         {a.status === 'cached' && (
-          <div className="mt-2 text-[13px] text-text2">
+          <div className="mt-2 text-13 text-text2">
             Finished instantly. The server reused an earlier result because every input, including the seed, was identical.
           </div>
         )}
@@ -645,7 +645,7 @@ function MoveDialog({ shot, onClose, onDone }: { shot: Shot; onClose: () => void
               </option>
             ))}
           </Select>
-          <div className="mt-1.5 text-[13px] text-muted">Existing files are not moved. New attempts use the new folder name.</div>
+          <div className="mt-1.5 text-13 text-muted">Existing files are not moved. New attempts use the new folder name.</div>
         </div>
       )}
     </Dialog>
@@ -669,7 +669,7 @@ export function SaveToLibraryDialog({ text, defaultName, onClose }: { text: stri
       <Label className="mt-4">Tags <span className="text-muted">comma separated</span></Label>
       <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="rooftop, night" />
       <Label className="mt-4">Prompt</Label>
-      <div className="max-h-40 overflow-auto rounded-md bg-fill p-3 text-[13px] text-text2">{text}</div>
+      <div className="max-h-40 overflow-auto rounded-md bg-fill p-3 text-13 text-text2">{text}</div>
     </Dialog>
   )
 }

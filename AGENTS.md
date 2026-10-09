@@ -47,6 +47,6 @@ Import aliases: `@core`, `@shared`, and `@renderer` (renderer only).
 - **Keep `src/core` pure.** Anything touching Electron, the filesystem layout or SQLite belongs in `src/main`.
 - **The workflow schema is derived on every read** from `workflow.json` + `overrides.json` + cached `object_info`; never store it. Exposed fields are matched by node class and title, never by node id.
 - **Storage:** `app.db` (workspace-wide) and `project.db` (per project) are defined in `src/main/db.ts`. The access token lives only in the app data folder, never in the workspace.
-- **Renderer UI:** use the components in `components/ui.tsx` and the colour tokens in `styles.css` (`bg-panel`, `text-muted`, `bg-accent`...). No shadcn CLI or Radix.
+- **Renderer UI:** use the components in `components/ui.tsx` and the colour tokens in `styles.css` (`bg-panel`, `text-muted`, `bg-accent`...). No shadcn CLI or Radix. Text sizes are the tokens there too (`text-13`, `text-xs`...), never `text-[13px]`, so they follow the Text size setting.
 - **Local media** is shown through `ctmedia://` URLs (`media()` in `lib/api.ts`), which only serve the workspace and known project folders.
 - The main process and preload build as CommonJS; `better-sqlite3` and `ws` stay external.

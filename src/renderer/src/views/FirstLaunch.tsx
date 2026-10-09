@@ -22,7 +22,7 @@ export function FirstLaunch(): ReactNode {
   return (
     <div className="h-full overflow-y-auto bg-bg scroll-thin">
       <div className="mx-auto max-w-[1180px] px-6 py-10">
-        <div className="mb-2 text-center text-[24px] font-semibold">Comfy Toolkit</div>
+        <div className="mb-2 text-center text-24 font-semibold">Comfy Toolkit</div>
         <div className="mb-8 flex items-center justify-center gap-6">
           {STEPS.map((s, i) => (
             <div key={s} className={cn('flex items-center gap-2', i === step ? 'font-semibold' : 'text-text2')}>
@@ -37,28 +37,28 @@ export function FirstLaunch(): ReactNode {
 
         {step === 0 && (
           <Card className="mx-auto max-w-[520px] p-6">
-            <div className="mb-4 text-[17px] font-semibold">Connect to ComfyUI</div>
+            <div className="mb-4 text-17 font-semibold">Connect to ComfyUI</div>
             <ServerForm saveLabel="Continue" onSaved={() => setStep(1)} />
-            <button className="mt-4 text-[13px] text-text2 hover:underline" onClick={() => setStep(1)}>Set the server later</button>
+            <button className="mt-4 text-13 text-text2 hover:underline" onClick={() => setStep(1)}>Set the server later</button>
           </Card>
         )}
 
         {step === 1 && (
           <Card className="p-6">
             <div className="mb-1 flex items-center">
-              <div className="flex-1 text-[17px] font-semibold">Add your first workflow</div>
-              <button className="text-[13px] text-text2 underline" onClick={() => setStep(2)}>Skip for now</button>
+              <div className="flex-1 text-17 font-semibold">Add your first workflow</div>
+              <button className="text-13 text-text2 underline" onClick={() => setStep(2)}>Skip for now</button>
             </div>
-            <div className="mb-5 text-[13px] text-text2">Its inputs become the form of every shot. You can import more later.</div>
+            <div className="mb-5 text-13 text-text2">Its inputs become the form of every shot. You can import more later.</div>
             <ImportView back={null} embedded onDone={() => setStep(2)} />
           </Card>
         )}
 
         {step === 2 && (
           <Card className="mx-auto max-w-[520px] p-6">
-            <div className="mb-4 text-[17px] font-semibold">Name your first project</div>
+            <div className="mb-4 text-17 font-semibold">Name your first project</div>
             {projects.length > 0 && (
-              <div className="mb-4 rounded-md bg-stripe px-3 py-2.5 text-[13px] text-text2">
+              <div className="mb-4 rounded-md bg-stripe px-3 py-2.5 text-13 text-text2">
                 This workspace already has {projects.length} project{projects.length === 1 ? '' : 's'}. <button className="underline" onClick={() => void finish()}>Use them</button>
               </div>
             )}

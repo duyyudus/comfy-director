@@ -86,6 +86,11 @@ function applyTheme(mode: ThemeMode = themeMode): boolean {
   return dark
 }
 
+/** Text size: every size in styles.css is multiplied by --font-scale (1 = 14px body text). */
+function applyFontSize(size: number): void {
+  document.documentElement.style.setProperty('--font-scale', String(size / 14))
+}
+
 export const useStore = create<State>((set, get) => ({
   ready: false,
   settings: null,
@@ -111,6 +116,7 @@ export const useStore = create<State>((set, get) => ({
     media.addEventListener('change', () => set({ dark: applyTheme() }))
     window.toolkit.onEvent((e) => get().handleEvent(e))
     const [settings, server, queue] = await Promise.all([api.getSettings(), api.getServerStatus(), api.getQueue()])
+    applyFontSize(settings.fontSize)
     set({ settings, server, queue, dark: applyTheme(settings.theme) })
     await Promise.all([get().loadWorkflows(), get().loadProjects()])
     const projects = get().projects
@@ -176,6 +182,7 @@ export const useStore = create<State>((set, get) => ({
     set({ queueOpen: v })
   },
   setSettings(s) {
+    applyFontSize(s.fontSize)
     set({ settings: s, dark: applyTheme(s.theme) })
   },
   setReconcile(r) {

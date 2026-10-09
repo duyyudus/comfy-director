@@ -174,7 +174,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
         <div className="flex items-start border-b border-border bg-panel px-6 pt-4 pb-4">
           <div className="flex-1">
             <div className="text-xs text-muted">Workflows</div>
-            <div className="text-[22px] font-semibold">{editId ? 'Edit workflow' : 'Import workflow'}</div>
+            <div className="text-22 font-semibold">{editId ? 'Edit workflow' : 'Import workflow'}</div>
           </div>
           {back && <Button onClick={() => go(back)}>Back</Button>}
         </div>
@@ -183,7 +183,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
         <div className="flex min-w-0 flex-[1.3] flex-col gap-6">
           <Card className="p-5">
             <Step n={1}>{editId ? 'Name the workflow' : 'Choose the exported file'}</Step>
-            {editId && !analysis && <div className="text-[13px] text-text2">Loading…</div>}
+            {editId && !analysis && <div className="text-13 text-text2">Loading…</div>}
             {!editId && <div
               onDragOver={(e) => (e.preventDefault(), setDragOver(true))}
               onDragLeave={() => setDragOver(false)}
@@ -199,20 +199,20 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                 Drop an API-format .json here, or{' '}
                 <button className="text-accent-text underline" onClick={() => void browse()}>browse</button>
               </div>
-              <div className="mt-1.5 text-[13px] text-text2">
+              <div className="mt-1.5 text-13 text-text2">
                 In ComfyUI, turn on Dev mode options, then use Save (API Format). Files saved from the normal Save button can't be run.
               </div>
             </div>}
             {analysis && (
               <div className={cn('flex flex-wrap items-center gap-3 rounded-md px-3 py-2.5', !editId && 'mt-4',analysis.ok ? 'bg-stripe' : 'bg-dtint')}>
-                <span className="font-mono text-[13px]">{analysis.fileName}</span>
+                <span className="font-mono text-13">{analysis.fileName}</span>
                 {analysis.nodeCount > 0 ? (
                   <>
                     <Chip>✓ API format</Chip>
-                    <span className="text-[13px] text-text2">{analysis.nodeCount} nodes · {analysis.nodeTypeCount} node types</span>
+                    <span className="text-13 text-text2">{analysis.nodeCount} nodes · {analysis.nodeTypeCount} node types</span>
                   </>
                 ) : null}
-                {analysis.error && <span className="w-full text-[13px] text-danger">{analysis.error}</span>}
+                {analysis.error && <span className="w-full text-13 text-danger">{analysis.error}</span>}
               </div>
             )}
             {analysis && analysis.nodeCount > 0 && (
@@ -228,7 +228,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                       <input type="radio" className="size-4 accent-[var(--accent)]" disabled={!workflows.length} checked={mode === 'replace'}
                         onChange={() => void changeTarget('replace', replaceId ?? workflows[0]?.id ?? null)} />
                       Replace
-                      <Select className="h-8 text-[13px]" disabled={mode !== 'replace'} value={replaceId ?? ''} onChange={(e) => void changeTarget('replace', e.target.value)}>
+                      <Select className="h-8 text-13" disabled={mode !== 'replace'} value={replaceId ?? ''} onChange={(e) => void changeTarget('replace', e.target.value)}>
                         {workflows.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                       </Select>
                       with a new version
@@ -246,17 +246,17 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
           {analysis && analysis.nodeCount > 0 && (
             <Card className="p-5">
               <Step n={2}>Choose which inputs to expose</Step>
-              <div className="mb-3 text-[13px] text-text2">
+              <div className="mb-3 text-13 text-text2">
                 Control nodes are found automatically and named from their titles in the graph. Rename them here if you like; everything left unticked stays as set in the graph.
               </div>
               {dupKeys.size > 0 && (
-                <div className="mb-3 rounded-md bg-dtint px-3 py-2 text-[13px] text-danger">
+                <div className="mb-3 rounded-md bg-dtint px-3 py-2 text-13 text-danger">
                   Two exposed inputs share the key {[...dupKeys].map((k) => `"${k}"`).join(', ')}. Give one of them another key, or untick one.
                 </div>
               )}
-              <table className="w-full text-[13px]">
+              <table className="w-full text-13">
                 <thead>
-                  <tr className="border-b border-border text-left text-[11px] tracking-[0.1em] text-muted uppercase">
+                  <tr className="border-b border-border text-left text-11 tracking-[0.1em] text-muted uppercase">
                     <th className="w-8 py-2" />
                     <th className="py-2">Label</th>
                     <th className="py-2">Type</th>
@@ -326,10 +326,10 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
               }>
                 Not found automatically
               </SectionLabel>
-              <div className="mb-2 text-[13px] text-text2">These are fields on regular nodes. Add the ones you want to change between runs.</div>
-              {visibleFields.length === 0 && <div className="py-2 text-[13px] text-muted">No {showAll ? '' : 'suggested '}fields left.</div>}
+              <div className="mb-2 text-13 text-text2">These are fields on regular nodes. Add the ones you want to change between runs.</div>
+              {visibleFields.length === 0 && <div className="py-2 text-13 text-muted">No {showAll ? '' : 'suggested '}fields left.</div>}
               {visibleFields.map((f) => (
-                <div key={`${f.nodeId}.${f.field}`} className="flex items-center gap-4 border-b border-border py-2.5 text-[13px]">
+                <div key={`${f.nodeId}.${f.field}`} className="flex items-center gap-4 border-b border-border py-2.5 text-13">
                   <span className="w-36 shrink-0">{f.label}</span>
                   <span className="w-20 shrink-0"><Chip className="font-sans whitespace-nowrap">{f.type}</Chip></span>
                   <span className="min-w-0 flex-1 truncate font-mono text-xs text-text2" title={f.source}>{f.source}</span>
@@ -337,7 +337,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                 </div>
               ))}
               {analysis.seedFields.length > 0 && (
-                <div className="mt-3 text-[13px] text-text2">
+                <div className="mt-3 text-13 text-text2">
                   Seed: {analysis.seedFields.join(', ')}. Set by the Seed control in each shot (Random or Fixed).
                 </div>
               )}
@@ -350,9 +350,9 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
             <Card className="p-5">
               <Step n={3}>Checked against {server.serverName || 'the server'}</Step>
               {!check?.checked ? (
-                <div className="text-[13px] text-text2">Not checked: the server is not connected and no node list is cached. Checks run on the next import while connected.</div>
+                <div className="text-13 text-text2">Not checked: the server is not connected and no node list is cached. Checks run on the next import while connected.</div>
               ) : (
-                <ul className="flex flex-col gap-2 text-[13px]">
+                <ul className="flex flex-col gap-2 text-13">
                   <CheckLine ok={!check.missingNodeTypes.length}>
                     {check.missingNodeTypes.length
                       ? `Missing node types: ${check.missingNodeTypes.join(', ')}. Install them on the server.`
@@ -369,7 +369,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                 </ul>
               )}
               {check && (check.missingNodeTypes.length > 0 || check.missingModels.length > 0) && (
-                <div className="mt-3 text-[13px] text-muted">Warnings do not block the import.</div>
+                <div className="mt-3 text-13 text-muted">Warnings do not block the import.</div>
               )}
             </Card>
 
@@ -382,7 +382,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                       ? `${replaceId} · version ${preview.previousVersion} · same file, inputs only`
                       : `${replaceId} · version ${preview.previousVersion} to ${preview.nextVersion} · hash ${preview.hash}`}
                   </div>
-                  <div className="flex flex-col gap-3 text-[13px]">
+                  <div className="flex flex-col gap-3 text-13">
                     {preview.diff.added.map((i) => (
                       <DiffLine key={`a-${i.key}`} tag={<Tag kind="new">New</Tag>}><b>{i.label}</b> {i.type}. Appears in the form with its default.</DiffLine>
                     ))}
@@ -403,7 +403,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                   </div>
                 </>
               ) : (
-                <div className="text-[13px] text-text2">
+                <div className="text-13 text-text2">
                   New workflow · {plural(preview?.inputs.length ?? 0, 'input')} in the form: {(preview?.inputs ?? []).map((i) => i.label).join(', ') || 'none'}.
                   {' '}Inputs whose key exists in other workflows share their values with them.
                 </div>
@@ -415,7 +415,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
 
       {analysis && analysis.nodeCount > 0 && (
         <div className={cn('flex items-center gap-3', embedded ? 'mt-6' : 'px-6 pb-6')}>
-          <span className="flex-1 text-[13px] text-text2">
+          <span className="flex-1 text-13 text-text2">
             {editId ? 'The workflow file is not changed, so the version stays the same.' : 'Past attempts keep the exact version they ran with.'}
           </span>
           {!embedded && <Button onClick={() => (back ? go(back) : go({ name: 'home' }))}>Cancel</Button>}
@@ -452,7 +452,7 @@ function Step({ n, children }: { n: number; children: ReactNode }): ReactNode {
   return (
     <div className="mb-4 flex items-center gap-3">
       <span className="flex size-6 items-center justify-center rounded-full bg-text text-xs font-semibold text-bg">{n}</span>
-      <span className="text-[17px] font-semibold">{children}</span>
+      <span className="text-17 font-semibold">{children}</span>
     </div>
   )
 }

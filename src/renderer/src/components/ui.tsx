@@ -15,7 +15,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
         className={cn(
           'inline-flex items-center justify-center gap-1.5 rounded-md whitespace-nowrap transition-colors select-none',
           'disabled:cursor-not-allowed',
-          size === 'sm' && 'h-8 px-3 text-[13px]',
+          size === 'sm' && 'h-8 px-3 text-13',
           size === 'md' && 'h-10 px-4',
           size === 'lg' && 'h-11 px-6 font-semibold',
           variant === 'default' && 'border border-control bg-panel text-text hover:bg-stripe disabled:border-fill disabled:bg-fill disabled:text-disabled',
@@ -126,7 +126,7 @@ export function Segmented<T extends string>({ value, options, onChange, size = '
           className={cn(
             'transition-colors disabled:cursor-not-allowed disabled:text-disabled',
             size === 'xs' && 'h-7 px-2.5 text-xs',
-            size === 'sm' && 'h-8 px-3 text-[13px]',
+            size === 'sm' && 'h-8 px-3 text-13',
             size === 'md' && 'h-10 px-4',
             value === o.value ? 'bg-text text-bg' : 'text-text hover:bg-stripe'
           )}
@@ -160,7 +160,7 @@ export function Tag({ kind, children, className }: { kind: TagKind; children: Re
   return (
     <span
       className={cn(
-        'inline-flex h-5 items-center rounded px-1.5 text-[11px] font-semibold tracking-wide uppercase',
+        'inline-flex h-5 items-center rounded px-1.5 text-11 font-semibold tracking-wide uppercase',
         kind === 'keeper' && 'bg-accent text-white',
         kind === 'running' && 'bg-tint text-accent-text',
         kind === 'queued' && 'border border-control text-text2',
@@ -183,7 +183,7 @@ export function Tag({ kind, children, className }: { kind: TagKind; children: Re
 
 export function Label({ children, className, htmlFor }: { children: ReactNode; className?: string; htmlFor?: string }): ReactNode {
   return (
-    <label htmlFor={htmlFor} className={cn('mb-1.5 block text-[13px] text-text', className)}>
+    <label htmlFor={htmlFor} className={cn('mb-1.5 block text-13 text-text', className)}>
       {children}
     </label>
   )
@@ -191,7 +191,7 @@ export function Label({ children, className, htmlFor }: { children: ReactNode; c
 
 export function SectionLabel({ children, className, action }: { children: ReactNode; className?: string; action?: ReactNode }): ReactNode {
   return (
-    <div className={cn('flex items-center gap-3 text-[11px] tracking-[0.12em] text-muted uppercase', className)}>
+    <div className={cn('flex items-center gap-3 text-11 tracking-[0.12em] text-muted uppercase', className)}>
       <span className="shrink-0">{children}</span>
       <span className="h-px flex-1 bg-border" />
       {action}
@@ -201,7 +201,7 @@ export function SectionLabel({ children, className, action }: { children: ReactN
 
 export function FieldError({ children }: { children?: ReactNode }): ReactNode {
   if (!children) return null
-  return <div className="mt-1.5 text-[13px] text-danger">{children}</div>
+  return <div className="mt-1.5 text-13 text-danger">{children}</div>
 }
 
 export function Progress({ value, className }: { value: number; className?: string }): ReactNode {

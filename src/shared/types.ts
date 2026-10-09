@@ -7,10 +7,15 @@ import type { MediaKind } from '../core/output/naming'
 
 export type ThemeMode = 'auto' | 'light' | 'dark'
 
+/** Body text size in px; every other text size scales with it. */
+export const FONT_SIZES = [13, 14, 15, 16, 18] as const
+export const DEFAULT_FONT_SIZE = 15
+
 export interface AppSettings {
   serverUrl: string
   workspacePath: string
   theme: ThemeMode
+  fontSize: number
   clientId: string
   currentProject: string | null
   setupDone: boolean

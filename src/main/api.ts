@@ -7,6 +7,7 @@ import { ServerManager } from './server'
 import type { JobManager } from './jobs'
 import type { ToolkitApi } from '@shared/api'
 import { mediaUrlFor } from '@shared/api'
+import { FONT_SIZES } from '@shared/types'
 import type {
   AppEvent, GalleryFilter, GalleryItem, ImportAnalysis, ImportPreview, InputFile, ProjectTree, ThumbnailJob
 } from '@shared/types'
@@ -64,6 +65,10 @@ export function createApi(ctx: Context): ToolkitApi {
     async setTheme(mode) {
       updateSettings({ theme: mode })
       nativeTheme.themeSource = mode === 'auto' ? 'system' : mode
+    },
+    async setFontSize(size) {
+      if (!(FONT_SIZES as readonly number[]).includes(size)) throw new Error(`Unsupported text size: ${size}`)
+      updateSettings({ fontSize: size })
     },
     async saveServer(url, token) {
       updateSettings({ serverUrl: url.trim() })

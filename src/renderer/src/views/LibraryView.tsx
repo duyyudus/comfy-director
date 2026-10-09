@@ -15,7 +15,7 @@ export function LibraryView({ tab }: { tab: 'prompts' | 'prompters' }): ReactNod
     <div className="flex min-h-full flex-col">
       <div className="border-b border-border bg-panel px-6 pt-4 pb-4">
         <div className="text-xs text-muted">Saved prompts and prompters</div>
-        <div className="text-[22px] font-semibold">Library</div>
+        <div className="text-22 font-semibold">Library</div>
       </div>
       <div className="flex gap-1 border-b border-border px-6 pt-3">
         {(['prompts', 'prompters'] as const).map((t) => (
@@ -108,9 +108,9 @@ function PromptsTab(): ReactNode {
       <div className="flex flex-1 items-start gap-6 p-6">
         <div className="min-w-0 flex-1">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-[17px] font-semibold">Prompts <span className="font-normal text-text2">{shown.length}</span></span>
+            <span className="text-17 font-semibold">Prompts <span className="font-normal text-text2">{shown.length}</span></span>
             <span className="flex items-center gap-2">
-              <span className="text-[13px]">Sort</span>
+              <span className="text-13">Sort</span>
               <Select className="h-9" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
                 <option value="recent">Recently used</option>
                 <option value="most">Most used</option>
@@ -129,7 +129,7 @@ function PromptsTab(): ReactNode {
               <button key={p.id} onClick={() => setSelId(p.id)}
                 className={cn('rounded-lg border bg-panel p-3.5 text-left', selId === p.id ? 'border-2 border-accent bg-tint' : 'border-border hover:bg-stripe')}>
                 <div><span className="font-semibold">{p.name}</span> <span className="ml-2 text-xs text-text2">Used {p.usedCount}×</span></div>
-                <div className="mt-1 line-clamp-2 text-[13px] text-text2">{p.text || '(empty)'}</div>
+                <div className="mt-1 line-clamp-2 text-13 text-text2">{p.text || '(empty)'}</div>
                 {p.tags.length > 0 && <div className="mt-1 text-xs text-muted">{p.tags.join(' · ')}</div>}
               </button>
             ))}
@@ -145,7 +145,7 @@ function PromptsTab(): ReactNode {
             <Label className="mt-4">Tags</Label>
             <div className="flex flex-wrap items-center gap-2">
               {draft.tags.map((t) => (
-                <span key={t} className="inline-flex h-9 items-center gap-2 rounded-full border border-control px-3 text-[13px]">
+                <span key={t} className="inline-flex h-9 items-center gap-2 rounded-full border border-control px-3 text-13">
                   {t}
                   <button aria-label={`Remove ${t}`} className="flex size-5 items-center justify-center rounded-full bg-fill text-xs" onClick={() => setDraft({ ...draft, tags: draft.tags.filter((x) => x !== t) })}>×</button>
                 </span>
@@ -163,7 +163,7 @@ function PromptsTab(): ReactNode {
 
             <div className="mt-5 rounded-lg bg-stripe p-3.5">
               <div className="flex items-center gap-3">
-                <span className="text-[13px]">Use in shot</span>
+                <span className="text-13">Use in shot</span>
                 <Select className="h-9 flex-1" value={shotId ?? ''} onChange={(e) => setShotId(Number(e.target.value) || null)}>
                   <option value="">Choose a shot…</option>
                   {shots.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -187,7 +187,7 @@ function PromptsTab(): ReactNode {
                 ))}
               </div>
             </div>
-            <div className="mt-3 text-[13px] text-text2">
+            <div className="mt-3 text-13 text-text2">
               Used {draft.usedCount} time{draft.usedCount === 1 ? '' : 's'}{draft.lastUsedIn ? ` · last in ${draft.lastUsedIn}, ${timeAgo(draft.lastUsedAt)}` : ''}
             </div>
             <div className="mt-4 flex gap-2 border-t border-border pt-4">
@@ -214,7 +214,7 @@ function PromptsTab(): ReactNode {
 
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }): ReactNode {
   return (
-    <button onClick={onClick} className={cn('h-9 rounded-full border px-3.5 text-[13px]', active ? 'border-text bg-text text-bg' : 'border-control bg-panel hover:bg-stripe')}>
+    <button onClick={onClick} className={cn('h-9 rounded-full border px-3.5 text-13', active ? 'border-text bg-text text-bg' : 'border-control bg-panel hover:bg-stripe')}>
       {children}
     </button>
   )
@@ -293,7 +293,7 @@ function PromptersTab(): ReactNode {
               <span className="rounded-full border border-control px-2 text-xs capitalize">{p.type === 'llm' ? 'LLM' : p.type}</span>
             </button>
           ))}
-          {!list.length && <div className="text-[13px] text-text2">No prompters yet. A prompter turns a recipe into a list of prompts for list mode.</div>}
+          {!list.length && <div className="text-13 text-text2">No prompters yet. A prompter turns a recipe into a list of prompts for list mode.</div>}
         </div>
       </div>
 
@@ -324,11 +324,11 @@ function PromptersTab(): ReactNode {
               <div className="mt-4 grid grid-cols-[2fr_1.2fr_1fr] gap-4">
                 <div>
                   <Label>Endpoint</Label>
-                  <Input className="font-mono text-[13px]" value={config.llm.endpoint} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, endpoint: e.target.value } })} />
+                  <Input className="font-mono text-13" value={config.llm.endpoint} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, endpoint: e.target.value } })} />
                 </div>
                 <div>
                   <Label>Model</Label>
-                  <Input className="font-mono text-[13px]" value={config.llm.model} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, model: e.target.value } })} />
+                  <Input className="font-mono text-13" value={config.llm.model} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, model: e.target.value } })} />
                 </div>
                 <div>
                   <Label>Temperature</Label>
@@ -338,7 +338,7 @@ function PromptersTab(): ReactNode {
               </div>
               <Label className="mt-4">API key <span className="text-muted">optional, for hosted endpoints</span></Label>
               <Input type="password" value={config.llm.apiKey ?? ''} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, apiKey: e.target.value || undefined } })} />
-              <div className="mt-4 rounded-md bg-tint px-3 py-2.5 text-[13px]">Your ideas are sent to this endpoint (an OpenAI-compatible chat API). It is not the ComfyUI server.</div>
+              <div className="mt-4 rounded-md bg-tint px-3 py-2.5 text-13">Your ideas are sent to this endpoint (an OpenAI-compatible chat API). It is not the ComfyUI server.</div>
               <div className="mt-4 flex gap-2">
                 <Input className="max-w-md" value={idea} placeholder="One idea to test with" onChange={(e) => setIdea(e.target.value)} />
                 <Button disabled={busy || !idea.trim()} onClick={async () => {
@@ -355,7 +355,7 @@ function PromptersTab(): ReactNode {
                 <div className="flex-1">
                   <Label>Script file</Label>
                   <div className="flex gap-2">
-                    <Input className="font-mono text-[13px]" readOnly value={config.script.path} placeholder="Choose a .py or .js file" />
+                    <Input className="font-mono text-13" readOnly value={config.script.path} placeholder="Choose a .py or .js file" />
                     <Button onClick={async () => {
                       const p = await api.pickScriptFile()
                       if (p) setConfig({ type: 'script', script: { ...config.script, path: p } })
@@ -370,7 +370,7 @@ function PromptersTab(): ReactNode {
                   </Select>
                 </div>
               </div>
-              <div className="mt-4 rounded-md bg-stripe px-3 py-2.5 text-[13px] text-text2">
+              <div className="mt-4 rounded-md bg-stripe px-3 py-2.5 text-13 text-text2">
                 The script gets a JSON object on stdin (count, seed, prompt) and prints a JSON list of prompts on stdout. It runs with your own rights, only from the path you chose.
               </div>
               <Button className="mt-4" disabled={busy || !config.script.path} onClick={async () => {
@@ -414,15 +414,15 @@ function TemplateEditor({ cfg, onChange, preview, onPreview, busy }: {
   return (
     <div className="mt-5">
       <Label>Template</Label>
-      <Textarea rows={2} className="font-mono text-[13px]" value={cfg.template} onChange={(e) => onChange({ ...cfg, template: e.target.value })} />
+      <Textarea rows={2} className="font-mono text-13" value={cfg.template} onChange={(e) => onChange({ ...cfg, template: e.target.value })} />
       <div className="mt-1 text-xs text-muted">Anything in {'{ }'} becomes a slot below.</div>
 
-      <div className="mt-4 text-[13px] font-semibold">Slots</div>
-      {!slots.length && <div className="mt-2 text-[13px] text-text2">No slots yet. Write a word in braces, like {'{subject}'}.</div>}
+      <div className="mt-4 text-13 font-semibold">Slots</div>
+      {!slots.length && <div className="mt-2 text-13 text-text2">No slots yet. Write a word in braces, like {'{subject}'}.</div>}
       {slots.length > 0 && (
-        <table className="mt-2 w-full text-[13px]">
+        <table className="mt-2 w-full text-13">
           <thead>
-            <tr className="border-b border-border text-left text-[11px] tracking-[0.1em] text-muted uppercase">
+            <tr className="border-b border-border text-left text-11 tracking-[0.1em] text-muted uppercase">
               <th className="w-32 py-2">Slot</th>
               <th className="w-48 py-2">How to pick</th>
               <th className="py-2">Values (one per line)</th>
@@ -444,7 +444,7 @@ function TemplateEditor({ cfg, onChange, preview, onPreview, busy }: {
                     </Select>
                   </td>
                   <td className="py-2 pr-3">
-                    <Textarea rows={Math.max(1, Math.min(5, s.values.length || 1))} className="py-1.5 text-[13px]" value={s.values.join('\n')}
+                    <Textarea rows={Math.max(1, Math.min(5, s.values.length || 1))} className="py-1.5 text-13" value={s.values.join('\n')}
                       onChange={(e) => setSlot(n, { ...s, values: e.target.value.split('\n') })} />
                   </td>
                   <td className="py-2.5 text-text2">{count}</td>
@@ -467,16 +467,16 @@ function TemplateEditor({ cfg, onChange, preview, onPreview, busy }: {
         <Button onClick={() => onChange({ ...cfg, seed: Math.floor(Math.random() * 100000) })}>New seed</Button>
         <Checkbox className="mb-2.5" checked={cfg.avoidRepeats} onChange={(v) => onChange({ ...cfg, avoidRepeats: v })} label={<span className="font-normal">Avoid repeats</span>} />
       </div>
-      <div className="mt-2 text-[13px] text-text2">Same seed gives the same list every time, so a batch can be rebuilt exactly.</div>
+      <div className="mt-2 text-13 text-text2">Same seed gives the same list every time, so a batch can be rebuilt exactly.</div>
 
       <div className="mt-5 rounded-lg bg-stripe p-4">
         <div className="flex items-center gap-3">
           <span className="font-semibold">Preview</span>
           <Button variant="primary" size="sm" disabled={busy} onClick={onPreview}>Generate preview</Button>
-          {preview && <span className="text-[13px] text-text2">Showing {preview.length} of {cfg.count}</span>}
+          {preview && <span className="text-13 text-text2">Showing {preview.length} of {cfg.count}</span>}
         </div>
         {preview && (
-          <ol className="mt-3 flex flex-col gap-1.5 text-[13px]">
+          <ol className="mt-3 flex flex-col gap-1.5 text-13">
             {preview.map((p, i) => (
               <li key={i} className="flex gap-2.5"><span className="w-4 text-right text-muted">{i + 1}</span>{p}</li>
             ))}

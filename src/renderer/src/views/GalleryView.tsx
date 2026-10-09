@@ -69,7 +69,7 @@ export function GalleryView(): ReactNode {
           <>
             {filter.project === 'all' && <span className="text-text2">{it.projectName} / </span>}
             {it.sequenceName ? `${it.sequenceName} / ${pad2(it.shotPosition)} ${it.shotName}` : `Loose shots / ${it.shotName}`}
-            <span className="ml-2.5 text-[13px] font-normal text-text2">{plural(it.shotAttemptCount, 'attempt')}</span>
+            <span className="ml-2.5 text-13 font-normal text-text2">{plural(it.shotAttemptCount, 'attempt')}</span>
           </>
         ) : (
           new Date(it.attempt.finishedAt ?? it.attempt.createdAt).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
@@ -85,8 +85,8 @@ export function GalleryView(): ReactNode {
   return (
     <div className="flex min-h-full flex-col">
       <div className="border-b border-border bg-panel px-6 pt-4 pb-4">
-        <div className="text-[22px] font-semibold">Gallery</div>
-        <div className="text-[13px] text-text2">Every render, across all sequences and loose shots</div>
+        <div className="text-22 font-semibold">Gallery</div>
+        <div className="text-13 text-text2">Every render, across all sequences and loose shots</div>
       </div>
       <div className="flex flex-wrap items-end gap-4 border-b border-border px-6 py-4">
         <div className="min-w-56 flex-1">
@@ -135,7 +135,7 @@ export function GalleryView(): ReactNode {
           )}
           {groups.map((g) => (
             <div key={g.key} className="mb-8">
-              <div className="mb-3 text-[17px] font-semibold">{g.title}</div>
+              <div className="mb-3 text-17 font-semibold">{g.title}</div>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-4">
                 {g.items.map((it) => {
                   const active = sel?.attempt.id === it.attempt.id && sel.projectPath === it.projectPath
@@ -145,7 +145,7 @@ export function GalleryView(): ReactNode {
                       <div className="mt-1.5 flex items-center gap-1.5 font-mono text-xs">
                         <span className="font-semibold">#{it.attempt.num}</span>
                         <span className="truncate text-text2">{it.attempt.workflowName}</span>
-                        {it.isKeeper && <Tag kind="keeper" className="h-4 text-[10px]">Keeper</Tag>}
+                        {it.isKeeper && <Tag kind="keeper" className="h-4 text-10">Keeper</Tag>}
                       </div>
                       {filter.groupBy === 'time' && <div className="truncate text-xs text-muted">{it.shotName}</div>}
                     </button>
@@ -154,13 +154,13 @@ export function GalleryView(): ReactNode {
               </div>
             </div>
           ))}
-          <div ref={sentinel} className="h-8 text-[13px] text-text2">{hasMore ? 'More renders below, loaded as you scroll' : ''}</div>
+          <div ref={sentinel} className="h-8 text-13 text-text2">{hasMore ? 'More renders below, loaded as you scroll' : ''}</div>
         </div>
 
         {sel && (
           <Card className="sticky top-6 w-[390px] shrink-0 p-4">
             <div className="mb-3 flex items-center gap-2">
-              <span className="text-[17px] font-semibold">#{sel.attempt.num} · {sel.shotName}</span>
+              <span className="text-17 font-semibold">#{sel.attempt.num} · {sel.shotName}</span>
               {sel.isKeeper && <Tag kind="keeper">Keeper</Tag>}
             </div>
             {(() => {
@@ -173,7 +173,7 @@ export function GalleryView(): ReactNode {
                 <img src={media(sel.projectPath, out.path)} className="media max-h-[360px] w-full rounded object-contain" alt="" />
               )
             })()}
-            <dl className="mt-4 grid grid-cols-[96px_1fr] gap-x-3 gap-y-1.5 text-[13px]">
+            <dl className="mt-4 grid grid-cols-[96px_1fr] gap-x-3 gap-y-1.5 text-13">
               <dt className="text-text2">Workflow</dt>
               <dd>{sel.attempt.workflowName} <span className="text-muted">v{sel.attempt.workflowVersion}</span></dd>
               {Object.entries(sel.attempt.values).filter(([k]) => k !== 'prompt').map(([k, v]) => {

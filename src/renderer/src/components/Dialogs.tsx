@@ -58,7 +58,7 @@ export function NewShotDialog({ sequenceId, onClose }: { sequenceId: number | nu
         <div className="flex flex-col gap-2.5">
           <label className="flex items-center gap-2.5">
             <input type="radio" className="size-4 accent-[var(--accent)]" checked={where === 'loose'} onChange={() => setWhere('loose')} />
-            Loose shot <span className="text-[13px] text-muted">belongs to no sequence</span>
+            Loose shot <span className="text-13 text-muted">belongs to no sequence</span>
           </label>
           <label className="flex items-center gap-2.5">
             <input type="radio" className="size-4 accent-[var(--accent)]" checked={where === 'sequence'} disabled={!tree.sequences.length}
@@ -68,7 +68,7 @@ export function NewShotDialog({ sequenceId, onClose }: { sequenceId: number | nu
               {tree.sequences.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           </label>
-          {where === 'sequence' && <div className="pl-7 text-[13px] text-muted">Added at the end. Use Move to sequence in the shot to change it later.</div>}
+          {where === 'sequence' && <div className="pl-7 text-13 text-muted">Added at the end. Use Move to sequence in the shot to change it later.</div>}
         </div>
       </div>
       <div className="mt-5">
@@ -128,8 +128,8 @@ export function ProjectNameField({ value, onChange, onEnter }: { value: string; 
       {value && <FieldError>{preview.error}</FieldError>}
       <div className="mt-4">
         <Label>Folder</Label>
-        <div className="rounded-md border border-border bg-fill px-3 py-2.5 font-mono text-[13px] break-all text-text2">{preview.path}</div>
-        <div className="mt-1.5 text-[13px] text-muted">Everything for this project lives in this folder: its database, input images and renders.</div>
+        <div className="rounded-md border border-border bg-fill px-3 py-2.5 font-mono text-13 break-all text-text2">{preview.path}</div>
+        <div className="mt-1.5 text-13 text-muted">Everything for this project lives in this folder: its database, input images and renders.</div>
       </div>
     </div>
   )
@@ -193,7 +193,7 @@ function RenameProjectDialog({ onClose }: { onClose: () => void }): ReactNode {
     >
       <Label htmlFor="rename">New name</Label>
       <Input id="rename" autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void save()} />
-      <div className="mt-2 text-[13px] text-muted">The project folder is renamed. Files inside keep working because their paths are relative.</div>
+      <div className="mt-2 text-13 text-muted">The project folder is renamed. Files inside keep working because their paths are relative.</div>
     </Dialog>
   )
 }

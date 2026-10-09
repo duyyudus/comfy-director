@@ -68,3 +68,8 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 ## 2026-10-09 (PRD becomes the spec)
 
 - **`PRD.md` moved to `docs/spec.md` and now describes the app as built.** The decisions above that replaced or filled in PRD text were written into it, so one file says what the app does. The build-time sections (build order, milestones, "Record decisions as you go") were removed, and "Not designed yet" and "Open Decisions" moved out to `docs/backlog.md`: a spec that also lists unbuilt ideas cannot be trusted as a description of the app.
+
+## 2026-10-09 (text size)
+
+- **Text size scales text only, not the whole window.** The setting drives one CSS variable, `--font-scale` (body size / 14), and every text size is a Tailwind token multiplied by it (`text-13`, `text-xs`... in `styles.css`). Electron's zoom factor was the smaller change but also grows spacing, panels and thumbnails, which costs room for media. Components must use the tokens, not `text-[13px]`, or that text will not scale.
+- **Default is 15 px**, up from the fixed 14 px the wireframes use. Existing installs get 15 too, since nothing was stored before.

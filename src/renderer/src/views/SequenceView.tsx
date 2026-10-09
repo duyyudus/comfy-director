@@ -134,7 +134,7 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
                     <div className="mt-1 text-xs text-muted">{plural(r.attemptCount, 'attempt')}</div>
                   </div>
                 )}
-                <div className="mt-2.5 flex items-center gap-2 text-[13px] whitespace-nowrap text-text2">
+                <div className="mt-2.5 flex items-center gap-2 text-13 whitespace-nowrap text-text2">
                   {r.keeper ? <Chip>{r.keeper.workflowName}</Chip> : <Chip>none yet</Chip>}
                   {r.keeper && lengthOf(r) > 0 && <span>{Math.round(lengthOf(r) * 10) / 10} s</span>}
                   {r.attemptCount > 0 && <span>{plural(r.attemptCount, 'attempt')}</span>}
@@ -155,7 +155,7 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
 
         {rows.length > 0 && (
           <Card className="mt-6 p-5">
-            <div className="mb-2.5 flex justify-between text-[13px]">
+            <div className="mb-2.5 flex justify-between text-13">
               <span>Keepers in order</span>
               <span className="text-text2">
                 {Math.round(total)} s so far{missing.length ? ` · shot${missing.length > 1 ? 's' : ''} ${missing.join(', ')} missing` : ''}
@@ -169,7 +169,7 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
                     key={r.shot.id}
                     style={{ flexGrow: len, flexBasis: 0 }}
                     className={cn(
-                      'min-w-12 truncate rounded px-2.5 py-2 text-[13px]',
+                      'min-w-12 truncate rounded px-2.5 py-2 text-13',
                       r.keeper ? 'bg-tint text-text' : 'border border-dashed border-control text-text2'
                     )}
                     title={r.shot.name}
@@ -196,7 +196,7 @@ function SeqName({ name, onSave }: { name: string; onSave: (n: string) => Promis
   return (
     <input
       aria-label="Sequence name"
-      className="-ml-1 mt-0.5 w-full rounded border border-transparent bg-transparent px-1 text-[22px] font-semibold hover:border-border focus:border-control"
+      className="-ml-1 mt-0.5 w-full rounded border border-transparent bg-transparent px-1 text-22 font-semibold hover:border-border focus:border-control"
       value={v}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => (v.trim() && v.trim() !== name ? void onSave(v.trim()) : setV(name))}

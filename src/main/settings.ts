@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
-import type { AppSettings, ThemeMode } from '@shared/types'
+import { DEFAULT_FONT_SIZE, FONT_SIZES, type AppSettings, type ThemeMode } from '@shared/types'
 
 /**
  * App settings live in the app's data folder (`Comfy Toolkit`), never in the workspace.
@@ -13,6 +13,7 @@ interface StoredSettings {
   serverUrl: string
   workspacePath: string
   theme: ThemeMode
+  fontSize: number
   clientId: string
   currentProject: string | null
   setupDone: boolean
@@ -40,6 +41,7 @@ function load(): StoredSettings {
     serverUrl: stored.serverUrl ?? '',
     workspacePath: process.env.COMFY_TOOLKIT_WORKSPACE || stored.workspacePath || defaultWorkspace(),
     theme: stored.theme ?? 'auto',
+    fontSize: (FONT_SIZES as readonly number[]).includes(stored.fontSize as number) ? (stored.fontSize as number) : DEFAULT_FONT_SIZE,
     clientId: stored.clientId ?? randomUUID(),
     currentProject: stored.currentProject ?? null,
     setupDone: stored.setupDone ?? false

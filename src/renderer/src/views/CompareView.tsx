@@ -113,7 +113,7 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
           <div className="text-xs text-muted">
             {detail.sequence ? `${detail.sequence.name} / Shot ${pad2(shot.position)}` : 'Loose shots'} · {shot.name}
           </div>
-          <div className="text-[20px] font-semibold">Compare {shown.length} attempts</div>
+          <div className="text-20 font-semibold">Compare {shown.length} attempts</div>
         </div>
         <Segmented
           value={String(layout)}
@@ -148,7 +148,7 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
                           #{x.num} {x.workflowName}
                         </MenuItem>
                       ))}
-                      {finished.length <= shown.length && <div className="px-3.5 py-2 text-[13px] text-muted">No other finished attempts.</div>}
+                      {finished.length <= shown.length && <div className="px-3.5 py-2 text-13 text-muted">No other finished attempts.</div>}
                     </Menu>
                   </div>
                 </div>
@@ -176,7 +176,7 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
                     <span className="text-text2">No file</span>
                   )}
                 </div>
-                <div className="mt-2.5 text-[13px] text-text2">
+                <div className="mt-2.5 text-13 text-text2">
                   {attemptSummary(a)} · {timeAgo(a.finishedAt)}
                 </div>
                 <div className="mt-2.5 flex gap-2">
@@ -207,7 +207,7 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
               <svg viewBox="0 0 24 24" className="size-5"><path d="M7 4.5v15l13-7.5z" fill="currentColor" /></svg>
             )}
           </button>
-          <span className="w-28 shrink-0 font-mono text-[13px]">{clock(time)} / {clock(duration)}</span>
+          <span className="w-28 shrink-0 font-mono text-13">{clock(time)} / {clock(duration)}</span>
           <input
             type="range"
             aria-label="Seek"
@@ -218,13 +218,13 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
             value={time}
             onChange={(e) => seek(Number(e.target.value))}
           />
-          <span className="text-[13px]">Speed</span>
+          <span className="text-13">Speed</span>
           <Select className="h-9 w-20" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
             <option value={1}>1×</option>
             <option value={0.5}>0.5×</option>
             <option value={0.25}>0.25×</option>
           </Select>
-          <span className="text-[13px]">Sound from</span>
+          <span className="text-13">Sound from</span>
           <Select className="h-9 w-24" value={soundFrom ?? ''} onChange={(e) => setSoundFrom(e.target.value ? Number(e.target.value) : null)}>
             <option value="">None</option>
             {shown.map((a) => <option key={a.id} value={a.id}>#{a.num}</option>)}
@@ -234,15 +234,15 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
 
         <Card className="mt-5 p-5">
           <div className="mb-3">
-            <span className="text-[17px] font-semibold">What differs</span>
-            <span className="ml-3 text-[13px] text-text2">
+            <span className="text-17 font-semibold">What differs</span>
+            <span className="ml-3 text-13 text-text2">
               {diff.rows.length} input{diff.rows.length === 1 ? '' : 's'}. Shaded cells differ from the first column (#{shown[0]?.num}).
             </span>
           </div>
           {diff.rows.length > 0 && (
-            <table className="w-full table-fixed text-[13px]">
+            <table className="w-full table-fixed text-13">
               <thead>
-                <tr className="border-b border-border text-left text-[11px] tracking-[0.1em] text-muted uppercase">
+                <tr className="border-b border-border text-left text-11 tracking-[0.1em] text-muted uppercase">
                   <th className="w-44 py-2">Input</th>
                   {shown.map((a) => <th key={a.id} className="py-2">#{a.num} · {a.workflowName}</th>)}
                 </tr>
@@ -261,7 +261,7 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
               </tbody>
             </table>
           )}
-          {diff.same.length > 0 && <div className="mt-3 text-[13px] text-text2">Same in all: {diff.same.join(', ')}.</div>}
+          {diff.same.length > 0 && <div className="mt-3 text-13 text-text2">Same in all: {diff.same.join(', ')}.</div>}
         </Card>
       </div>
     </div>
