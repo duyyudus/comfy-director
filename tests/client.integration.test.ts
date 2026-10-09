@@ -28,7 +28,7 @@ describe('ComfyClient against the fake server', () => {
   it('uploads, queues, follows progress, downloads', async () => {
     const client = new ComfyClient({ baseUrl: `127.0.0.1:${PORT}`, clientId: 'test-client' })
     const oi = await client.objectInfo()
-    const schema = buildSchema(r2v(), { expose: [{ class: 'ResolutionSelector', field: 'aspect_ratio' }] }, oi)
+    const schema = buildSchema(r2v(), null, oi)
     expect(schema.inputs.find((i) => i.key === 'aspect_ratio')?.constraints.options?.length).toBe(5)
     const up = await client.uploadImage('abc.png', new Uint8Array([1, 2, 3]))
     expect(up.name).toBe('abc.png')

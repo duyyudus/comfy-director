@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { ExposeEntry, InputOverride, Overrides } from '@core/workflow/types'
+import type { ExposeEntry, InputConstraints, InputOverride, InputType, Overrides } from '@core/workflow/types'
 import type { Candidate, FieldCandidate } from '@core/workflow/discover'
 import type { ImportAnalysis, ImportPreview } from '@shared/types'
 import { useStore, type Route } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
 import { plural } from '../lib/format'
-import { Button, Card, Chip, Input, Label, SectionLabel, Select, Tag } from '../components/ui'
+import { Button, Card, Chip, Input, Label, SectionLabel, Select, Tag, Textarea } from '../components/ui'
 
 interface CandState {
   exposed: boolean
   label: string
   key: string
+  /** The edited default (numbers as typed text); undefined means the value in the graph. */
+  def: unknown
 }
 
 /** Imports a workflow file. With `editId` it edits that workflow's name and inputs instead, keeping its file. */
@@ -63,7 +65,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
     const st: Record<string, CandState> = {}
     for (const c of a.candidates) {
       const o = ov.inputs?.[c.id]
-      st[c.id] = { exposed: o?.hidden !== undefined ? !o.hidden : c.defaultExposed, label: o?.label ?? defaultLabel(c.key, c.label), key: o?.key ?? c.key }
+      st[c.id] = { exposed: o?.hidden !== undefined ? !o.hidden : c.defaultExposed, label: o?.label ?? defaultLabel(c.key, c.label), key: o?.key ?? c.key, def: o?.default }
     }
     setCands(st)
     setExposes((ov.expose ?? []).filter((e) => a.fields.some((f) => f.nodeClass === e.class && f.field === e.field)))
@@ -90,14 +92,23 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
       delete o.hidden
       delete o.label
       delete o.key
+      delete o.default
       if (s.exposed !== c.defaultExposed) o.hidden = !s.exposed
       if (s.label.trim() && s.label.trim() !== c.label) o.label = s.label.trim()
       if (s.key.trim() && s.key.trim() !== c.key) o.key = s.key.trim()
+      const d = defaultOverride(c.type, s.def, c.default)
+      if (d !== undefined) o.default = d
       if (Object.keys(o).length) inputs[c.id] = o
     }
     const out: Overrides = {}
     if (Object.keys(inputs).length) out.inputs = inputs
-    if (exposes.length) out.expose = exposes
+    if (exposes.length) {
+      out.expose = exposes.map(({ default: def, ...e }) => {
+        const f = analysis.fields.find((x) => x.nodeClass === e.class && x.field === e.field && sameTitle(e, x))
+        const d = f ? defaultOverride(f.type, def, f.value) : def
+        return d !== undefined ? { ...e, default: d } : e
+      })
+    }
     return out
   }, [analysis, cands, exposes, baseOverrides])
 
@@ -160,7 +171,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
     const t = c.target
     return preview?.inputs.find((i) =>
       t.kind === 'file-group' ? i.target.kind === 'file-group' && i.target.consumerId === t.consumerId && i.target.prefix === t.prefix
-      : (i.target.kind === 'field' || i.target.kind === 'file') && i.target.nodeId === t.nodeId
+      : (i.target.kind === 'field' || i.target.kind === 'file') && i.target.nodeId === t.nodeId && i.target.field === t.field
     )?.key
   }
   const visibleFields = (analysis?.fields ?? []).filter((f) => (showAll || f.suggested) && !exposes.some((e) => e.class === f.nodeClass && e.field === f.field && sameTitle(e, f)))
@@ -247,7 +258,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
             <Card className="p-5">
               <Step n={2}>Choose which inputs to expose</Step>
               <div className="mb-3 text-13 text-text2">
-                Control nodes are found automatically and named from their titles in the graph. Rename them here if you like; everything left unticked stays as set in the graph.
+                Control nodes are found automatically and named from their titles in the graph. Rename them or change their defaults here if you like; everything left unticked stays as set in the graph.
               </div>
               {dupKeys.size > 0 && (
                 <div className="mb-3 rounded-md bg-dtint px-3 py-2 text-13 text-danger">
@@ -289,7 +300,10 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                         </td>
                         <td className="py-2.5 pr-3"><Chip className="font-sans whitespace-nowrap">{c.type.replace('-', ' ')}</Chip></td>
                         <td className="py-2.5 pr-3 font-mono text-xs text-text2">{c.source}</td>
-                        <td className="py-2.5 font-mono text-xs">{fmtDefault(c.default, c.type, c.constraints.maxCount)}</td>
+                        <td className="py-2.5">
+                          <DefaultEditor type={c.type} constraints={c.constraints} graph={c.default} value={s.def} label={s.label}
+                            onChange={(def) => setCands({ ...cands, [c.id]: { ...s, def } })} />
+                        </td>
                       </tr>
                     )
                   })}
@@ -314,7 +328,10 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                         </td>
                         <td className="py-2.5 pr-3"><Chip className="font-sans whitespace-nowrap">{f.type}</Chip></td>
                         <td className="py-2.5 pr-3 font-mono text-xs text-text2">{f.title} · {f.nodeClass}.{f.field} <span className="text-muted">(override)</span></td>
-                        <td className="py-2.5 font-mono text-xs">{fmtDefault(f.value, f.type)}</td>
+                        <td className="py-2.5">
+                          <DefaultEditor type={f.type} constraints={f.constraints} graph={f.value} value={e.default} label={e.label ?? f.label}
+                            onChange={(def) => setExposes(exposes.map((x) => (x === e ? { ...x, default: def } : x)))} />
+                        </td>
                       </tr>
                     )
                   })}
@@ -446,6 +463,51 @@ function fmtDefault(v: unknown, type: string, max?: number): string {
   if (typeof v === 'boolean') return v ? 'on' : 'off'
   const s = String(v)
   return s.length > 28 ? `${s.slice(0, 28)}…` : s
+}
+
+/** The default to save for an edited value, or undefined when there is nothing to save (same as the graph, or not a number). */
+function defaultOverride(type: InputType, edited: unknown, graph: unknown): unknown {
+  if (edited === undefined || type === 'file' || type === 'file-group') return undefined
+  const v = type === 'number' ? (String(edited).trim() === '' ? NaN : Number(edited)) : edited
+  if (typeof v === 'number' && !Number.isFinite(v)) return undefined
+  return v === graph ? undefined : v
+}
+
+/** Edits an input's default. The value in the graph stays the fallback and can be restored. */
+function DefaultEditor({ type, constraints, graph, value, label, onChange }: {
+  type: InputType
+  constraints: InputConstraints
+  graph: unknown
+  value: unknown
+  label: string
+  onChange: (v: unknown) => void
+}): ReactNode {
+  if (type === 'file' || type === 'file-group') return <span className="font-mono text-xs">{fmtDefault(graph, type, constraints.maxCount)}</span>
+  const v = value !== undefined ? value : graph
+  const aria = `Default for ${label}`
+  const options = constraints.options
+  return (
+    <div className="w-44">
+      {type === 'toggle' ? (
+        <input type="checkbox" className="size-[18px] accent-[var(--accent)]" checked={!!v} aria-label={aria} onChange={(e) => onChange(e.target.checked)} />
+      ) : type === 'select' && options ? (
+        <Select className="h-9 w-full text-13" value={String(v ?? '')} aria-label={aria} onChange={(e) => onChange(e.target.value)}>
+          {!options.includes(String(v ?? '')) && <option value={String(v ?? '')}>{String(v ?? '')}</option>}
+          {options.map((o) => <option key={o} value={o}>{o}</option>)}
+        </Select>
+      ) : type === 'number' ? (
+        <Input className="h-9 w-28 font-mono text-xs" type="number" min={constraints.min} max={constraints.max} step={constraints.step ?? 'any'}
+          value={String(v ?? '')} aria-label={aria} onChange={(e) => onChange(e.target.value)} />
+      ) : constraints.multiline ? (
+        <Textarea className="py-1.5 font-mono text-xs" rows={2} placeholder="(empty)" value={String(v ?? '')} aria-label={aria} onChange={(e) => onChange(e.target.value)} />
+      ) : (
+        <Input className="h-9 font-mono text-xs" placeholder="(empty)" value={String(v ?? '')} aria-label={aria} onChange={(e) => onChange(e.target.value)} />
+      )}
+      {defaultOverride(type, value, graph) !== undefined && (
+        <button className="mt-1 block text-xs text-accent-text" title={`In the graph: ${fmtDefault(graph, type)}`} onClick={() => onChange(undefined)}>Reset to graph value</button>
+      )}
+    </div>
+  )
 }
 
 function Step({ n, children }: { n: number; children: ReactNode }): ReactNode {

@@ -67,6 +67,8 @@ export interface InputOverride {
   key?: string
   label?: string
   help?: string
+  /** Replaces the value in the workflow file as the input's default. */
+  default?: unknown
   order?: number
   min?: number
   max?: number
@@ -83,6 +85,7 @@ export interface ExposeEntry {
   key?: string
   label?: string
   help?: string
+  default?: unknown
   order?: number
   min?: number
   max?: number

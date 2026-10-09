@@ -30,7 +30,8 @@ describe('schema', () => {
   it('discovers r2v inputs', () => {
     const s = buildSchema(r2v(), null, objectInfo)
     const keys = s.inputs.map((i) => i.key)
-    expect(keys).toEqual(['prompt', 'duration', 'enable lightning lora', 'ref_images'])
+    expect(keys).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'enable lightning lora', 'ref_images'])
+    expect(s.inputs.find((i) => i.key === 'aspect_ratio')?.type).toBe('select')
     const group = s.inputs.find((i) => i.key === 'ref_images')!
     expect(group.type).toBe('file-group')
     expect(group.constraints.maxCount).toBe(9)
@@ -39,14 +40,18 @@ describe('schema', () => {
     // Steps primitives only feed switches: discovered but hidden by default
     expect(s.discovery.candidates.filter((c) => !c.defaultExposed).map((c) => c.id)).toEqual(['full', 'lightning lora'])
     expect(s.seedTargets).toEqual([{ nodeId: '129', field: 'noise_seed' }])
-    const suggested = s.discovery.fields.filter((f) => f.suggested).map((f) => f.field)
-    expect(suggested).toEqual(['aspect_ratio', 'megapixels'])
+    // Resolution fields are standard inputs, so they are no longer left as fields to expose by hand.
+    expect(s.discovery.fields.filter((f) => f.suggested).map((f) => f.field)).toEqual([])
+    // An older overrides file that exposes one of them does not add it twice.
+    const again = buildSchema(r2v(), { expose: [{ class: 'ResolutionSelector', field: 'megapixels' }] }, objectInfo)
+    expect(again.inputs.filter((i) => i.key === 'megapixels')).toHaveLength(1)
+    expect(again.duplicateKeys).toEqual([])
   })
 
   it('discovers fl2v optional frames and the prompt typed on the node', () => {
     const s = buildSchema(fl2v(), null, objectInfo)
     const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
-    expect(Object.keys(byKey).sort()).toEqual(['duration', 'enable lightning lora', 'first_frame', 'last_frame', 'prompt'])
+    expect(Object.keys(byKey).sort()).toEqual(['aspect_ratio', 'duration', 'enable lightning lora', 'first_frame', 'last_frame', 'megapixels', 'prompt'])
     expect(byKey.first_frame.constraints.required).toBe(false)
     expect(byKey.prompt.type).toBe('text')
     expect(s.duplicateKeys).toEqual([])
@@ -68,6 +73,17 @@ describe('schema', () => {
     // Keys set explicitly are respected, and still reported if they clash.
     const clash = buildSchema(t2v(), { inputs: { int: { hidden: false, key: 'x' }, 'int#2': { hidden: false, key: 'x' } } }, objectInfo)
     expect(clash.duplicateKeys).toEqual(['x'])
+  })
+
+  it('takes defaults from the overrides', () => {
+    const ov = { inputs: { duration: { default: 8 }, megapixels: { default: 0.5 } }, expose: [{ class: 'ResolutionSelector', field: 'multiple', default: 16 }] }
+    const s = buildSchema(r2v(), ov, objectInfo)
+    const def = (k: string): unknown => s.inputs.find((i) => i.key === k)?.default
+    expect([def('duration'), def('megapixels'), def('multiple')]).toEqual([8, 0.5, 16])
+    expect(def('aspect_ratio')).toBe('2:3 (Portrait Photo)')
+    // Used when the shot has no value of its own; a value in the shot still wins.
+    expect(applyValues(r2v(), s, {})['115'].inputs).toMatchObject({ megapixels: 0.5, multiple: 16 })
+    expect(applyValues(r2v(), s, { megapixels: 2 })['115'].inputs.megapixels).toBe(2)
   })
 
   it('empty frames turn fl2v into t2v', () => {
@@ -102,7 +118,7 @@ describe('schema', () => {
   })
 
   it('validates', () => {
-    const s = buildSchema(r2v(), { expose: [{ class: 'ResolutionSelector', field: 'aspect_ratio' }] }, objectInfo)
+    const s = buildSchema(r2v(), null, objectInfo)
     const errs = validateValues(s.inputs, { prompt: 'x', duration: 5, ref_images: [], aspect_ratio: 'nope' })
     expect(Object.keys(errs).sort()).toEqual(['aspect_ratio', 'ref_images'])
   })
@@ -116,7 +132,7 @@ describe('schema', () => {
     const b = buildSchema(wf, null, objectInfo).inputs
     const d = diffSchemas(a, b)
     expect(d.removed.map((i) => i.key)).toEqual(['enable lightning lora'])
-    expect(d.same.map((i) => i.key)).toEqual(['prompt', 'duration', 'ref_images'])
+    expect(d.same.map((i) => i.key)).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'ref_images'])
   })
 
   it('checks against the server', () => {

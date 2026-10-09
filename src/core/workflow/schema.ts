@@ -29,7 +29,7 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
       type: c.type,
       label: ov?.label?.trim() || c.label,
       help: ov?.help,
-      default: c.default,
+      default: ov?.default !== undefined ? ov.default : c.default,
       constraints: {
         ...c.constraints,
         ...(ov?.min !== undefined && { min: ov.min }),
@@ -70,7 +70,7 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
       type: f.type,
       label: e.label?.trim() || f.label,
       help: e.help,
-      default: f.value,
+      default: e.default !== undefined ? e.default : f.value,
       constraints: {
         ...f.constraints,
         ...(e.min !== undefined && { min: e.min }),

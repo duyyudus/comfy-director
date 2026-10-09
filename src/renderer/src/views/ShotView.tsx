@@ -123,14 +123,14 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
   const loadSettings = (a: Attempt): void =>
     setPendingLoad({ shotId, workflowId: a.workflowId, values: a.values, seed: a.seed })
 
-  // Keys shared by all workflows come first; others go below a "WORKFLOW ONLY" divider.
-  const { prompt, shared, only } = useMemo(() => {
+  // Keys shared by all workflows come first; others go below an "OTHER INPUTS" divider.
+  const { prompt, shared, other } = useMemo(() => {
     const inputs = activeWf?.inputs ?? []
     const isShared = (i: SchemaInput): boolean => workflows.every((w) => w.inputs.some((x) => x.key === i.key))
     return {
       prompt: inputs.find((i) => i.key === 'prompt' && i.type === 'text'),
       shared: inputs.filter((i) => !(i.key === 'prompt' && i.type === 'text') && isShared(i)),
-      only: inputs.filter((i) => !(i.key === 'prompt' && i.type === 'text') && !isShared(i))
+      other: inputs.filter((i) => !(i.key === 'prompt' && i.type === 'text') && !isShared(i))
     }
   }, [activeWf, workflows])
 
@@ -392,10 +392,10 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                 </div>
               )}
 
-              {only.length > 0 && (
+              {other.length > 0 && (
                 <>
-                  {workflows.length > 1 && <SectionLabel>{activeWf.name} only</SectionLabel>}
-                  {renderGroup(only)}
+                  {workflows.length > 1 && <SectionLabel>Other inputs</SectionLabel>}
+                  {renderGroup(other)}
                 </>
               )}
 

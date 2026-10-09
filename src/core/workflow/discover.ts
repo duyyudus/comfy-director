@@ -57,6 +57,11 @@ const SUGGESTED_FIELDS = new Set([
 /** Literal string fields discovered as inputs (exposed by default). */
 const PROMPT_FIELDS = new Set(['prompt'])
 
+/** Literal fields on known node classes discovered as inputs (exposed by default). */
+const STANDARD_FIELDS: Record<string, Set<string>> = {
+  ResolutionSelector: new Set(['aspect_ratio', 'megapixels'])
+}
+
 const SWITCH_BRANCH_INPUTS = new Set(['on_true', 'on_false'])
 
 export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
@@ -147,6 +152,21 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
           defaultExposed: true,
           target: { kind: 'field', nodeId, field },
           constraints: { ...f.constraints, multiline: true },
+          nodeClass: node.class_type
+        })
+        continue
+      }
+      if (STANDARD_FIELDS[node.class_type]?.has(field)) {
+        candidates.push({
+          id: field,
+          key: field,
+          type: f.type,
+          label: f.label,
+          source: `${title} · ${node.class_type}.${field}`,
+          default: value,
+          defaultExposed: true,
+          target: { kind: 'field', nodeId, field },
+          constraints: f.constraints,
           nodeClass: node.class_type
         })
         continue

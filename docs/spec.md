@@ -110,20 +110,23 @@ What these three files teach (each rule is written into the sections below):
    - `LoadImage` becomes a file input.
    - Several `LoadImage` nodes feeding one dotted input group on a single node (e.g. `ref_images.ref_image_0..N`) become one **file-group** control with add/remove.
    - A literal text `prompt` field on a regular node (`MiniMaxH3ImageToVideo.prompt` in fl2vid and t2v) becomes a text input.
+   - The `aspect_ratio` and `megapixels` fields of a `ResolutionSelector` node become a dropdown and a number input, so every workflow sized by that node offers the same two controls and their values carry over between workflows.
    - Literal `seed` / `noise_seed` integer fields are found and always driven by the shot's Seed control (see Seed). They are not listed as inputs.
    - Dropdown options and ranges come from `GET /object_info`. The last response is cached in the app data folder, so schemas work offline.
    - A primitive whose every consumer is the `on_true` / `on_false` input of a switch node is "internal" and starts unticked on import (the two Steps values in the reference workflows).
    - Note: the old frontend-only "Primitive" node disappears at export (its value is baked into the target node), so workflows using it need the override layer. The newer `Primitive*` nodes remain real nodes and are discoverable.
-2. **Overrides (optional sidecar).** Holds exceptions only: exposing a field on a regular node (e.g. `ResolutionSelector.megapixels`), hiding a discovered input, renaming, ordering, min/max. Most workflows need little or nothing here. The format of `overrides.json`:
+2. **Overrides (optional sidecar).** Holds exceptions only: exposing a field on a regular node (e.g. `KSampler.cfg`), hiding a discovered input, renaming, a different default, ordering, min/max. Most workflows need little or nothing here. The format of `overrides.json`:
 
    ```
    {
-     inputs: { <candidate id>: { hidden, key, label, help, order, min, max, step, minCount, maxCount } },
-     expose: [ { class, title?, field, key?, label?, help?, order?, min?, max?, step? } ]
+     inputs: { <candidate id>: { hidden, key, label, help, default, order, min, max, step, minCount, maxCount } },
+     expose: [ { class, title?, field, key?, label?, help?, default?, order?, min?, max?, step? } ]
    }
    ```
 
    The candidate id is the derived key (see Input keys). Exposed fields are matched by node class and normalised title.
+
+   An input's default is the value in the workflow file unless `default` is set here. The default is what a shot uses for an input it has no value of its own for, so changing it changes those shots too. Each attempt records the defaults it ran with, so past attempts are not affected. File inputs have no default.
 3. **Reconcile on re-import.** Diff the new schema against the old one using a stable key (node title, not node ID):
    - New input: appears in the UI with its default.
    - Removed input: disappears; saved values referencing it produce a warning, not a crash.
@@ -140,7 +143,7 @@ Give every control node a clear, unique `_meta.title` (e.g. `Input Text (Prompt)
 Values are matched across workflows and across re-imports by key, so keys must come out the same for the same thing:
 
 - **Primitive input nodes:** the text inside the parentheses of the title if there is one, otherwise the whole title, lowercased and trimmed. `Float (Duration)` and `Float (duration)` both give `duration`. `Input Text (Prompt)` gives `prompt`. `Boolean (Enable Lightning LoRA)` gives `enable lightning lora`.
-- **Exposed fields on regular nodes (overrides):** the field name, for example `prompt`, `aspect_ratio`, `megapixels`, `noise_seed`. The same field on the same node class in two workflows gives the same key, so a typed-in prompt on `MiniMaxH3ImageToVideo` shares its value with the `Input Text (Prompt)` node in ref2vid.
+- **Fields on regular nodes (discovered, or exposed through overrides):** the field name, for example `prompt`, `aspect_ratio`, `megapixels`, `cfg`. The same field on the same node class in two workflows gives the same key, so a typed-in prompt on `MiniMaxH3ImageToVideo` shares its value with the `Input Text (Prompt)` node in ref2vid.
 - **File inputs:** the name of the consumer input they feed (`first_frame`, `last_frame`), because `LoadImage` nodes are normally left as "Load Image". A file group uses the group prefix (`ref_images`), not the slot names.
 - **Repeated keys:** when two inputs in one workflow derive the same key (two nodes titled `Int`), each gets a unique key automatically: the label if the user renamed it (`full-steps`), otherwise the key numbered in workflow order (`int`, `int#2`, `int#3`). On import, keys resolved this way are written to `overrides.json` as an explicit `"key"`, so renaming a label later only changes the text in the form and the key that shots store values under stays fixed.
 - An override can always set an explicit key. Two explicitly typed keys that clash are flagged on the Import screen.
@@ -271,7 +274,7 @@ Rules:
 - **A shot's workflow is a per-attempt choice.** Attempts in one shot can use different workflows (e.g. to compare ref2vid and fl2vid on the same content).
 - **Setting a keeper** replaces the previous keeper. Deleting the keeper attempt clears the keeper (with a confirmation).
 - **Deleting** a shot, a sequence or an attempt removes records only. Rendered files stay in the project folder. Running and queued attempts must be cancelled first.
-- **Shared vs workflow-only inputs:** inputs whose key exists in every imported workflow are shown first; inputs that exist only in the active workflow are shown below a "WORKFLOW ONLY" divider.
+- **Shared vs other inputs:** inputs whose key exists in every imported workflow are shown first; the active workflow's remaining inputs are shown below an "OTHER INPUTS" divider. These may still exist in some of the other workflows, just not all of them.
 
 ### App shell (on every screen)
 
@@ -355,7 +358,7 @@ Purpose: add a workflow, or replace an existing one with a new version, and deci
 1. **Choose the file.** Drop or browse for an API-format `.json`. The file is validated: a file in UI format is rejected with a message that explains Save (API Format). Shows file name, "API format" badge, node count, and node-type count. Then:
    - **Workflow name** (default from the file name).
    - Either **replace the existing workflow with a new version**, or **save as a separate workflow**.
-2. **Choose which inputs to expose.** A table of auto-discovered inputs (see Workflow Handling > Three layers): a checkbox to expose, an editable label, the input type, the node it comes from, and its default. Primitives and a discovered prompt field start checked, except primitives that only feed internal switches (the two "Steps" values), which start unchecked. Below it, **Not found automatically**: fields on regular nodes (aspect ratio, megapixels in the reference workflow) with an **Expose** button, which adds an entry to the overrides file. The suggested fields are `prompt`, `text`, `negative` / `negative_prompt`, `aspect_ratio`, `megapixels`, `width`, `height`, `steps`, `cfg`, `length`, `duration`, `num_frames`, `batch_size`, and any multiline string; **Show all fields** lists every literal field. Seed fields are not offered, because the Seed control drives them.
+2. **Choose which inputs to expose.** A table of auto-discovered inputs (see Workflow Handling > Three layers): a checkbox to expose, an editable label, the input type, the node it comes from, and its default. The default can be edited for text, number, dropdown and toggle inputs (saved to the overrides file); **Reset to graph value** goes back to the value in the workflow file. Primitives, a discovered prompt field and the `ResolutionSelector` aspect ratio and megapixels start checked, except primitives that only feed internal switches (the two "Steps" values), which start unchecked. Below it, **Not found automatically**: other fields on regular nodes with an **Expose** button, which adds an entry to the overrides file. The suggested fields are `prompt`, `text`, `negative` / `negative_prompt`, `aspect_ratio`, `megapixels`, `width`, `height`, `steps`, `cfg`, `length`, `duration`, `num_frames`, `batch_size`, and any multiline string; **Show all fields** lists every literal field. Seed fields are not offered, because the Seed control drives them.
 3. **Checked against the server.** Using `GET /object_info`: every node type is installed, every model file referenced exists, every link points to an existing node. Missing node types or models are shown as warnings and do not block the import. Invalid files (step 1) and broken links block it.
 4. **What changes.** A diff against the current version, grouped as NEW, CHANGED, REMOVED, and SAME inputs, matched by node title. For removed inputs, shows how many saved shots use them: they keep the stored value, but the field is no longer shown or sent. A note states that past attempts keep the exact version they ran with.
 

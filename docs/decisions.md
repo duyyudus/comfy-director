@@ -94,3 +94,16 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 - **No migration code.** Nothing has been released, so the one existing install is moved by hand: rename the app data folder to `Comfy Director` and uninstall the old build (the new app ID makes the installer treat it as a different app). A workspace path already stored in `settings.json` keeps working.
 - **Internal identifiers stay** (`window.toolkit`, `ToolkitApi`, `ctmedia://`): they are never shown to the user and renaming them is churn.
 - **The wireframe PNGs still show the old name.** They are a layout reference only; the sources are updated and the PNGs change at the next export.
+
+## 2026-10-09 (resolution as a standard input)
+
+- **`ResolutionSelector.aspect_ratio` and `.megapixels` are discovered automatically,** like a prompt typed on a node. Before, each had to be exposed by hand per workflow, so a workflow where that step was skipped lacked a control the others had, and the shot form showed it as if it belonged to one workflow.
+- **Matched by node class and field, not by field name alone** (`STANDARD_FIELDS` in `discover.ts`). A field called `megapixels` on an unknown node may mean something else, so those stay under "Not found automatically" as suggestions.
+- **They can still be unticked on import,** and an older `overrides.json` that exposes the same field is skipped rather than added twice. Any label, key or range set on that old entry no longer applies.
+- **The divider in the shot form now reads "Other inputs"** (was "<workflow> only"): the group is every input whose key is not in all workflows, which says nothing about it being unique to one.
+
+## 2026-10-09 (editable defaults)
+
+- **An input's default can be changed on the Import / Edit workflow screen** and is saved as `default` in `overrides.json`. Before, the only way was to edit the graph in ComfyUI and re-import. The workflow file is never rewritten, so the hash and version stay the same and the graph's own value remains the fallback.
+- **Only a default that differs from the graph is saved,** keeping the overrides file to exceptions. A number field left empty saves nothing.
+- **Attempts now record the defaults they ran with** alongside the shot's own values (file inputs excluded). Editing a default does not create a new workflow version, so without this an old attempt's settings and its re-run would silently follow the new default. Attempts made before this change still hold only the shot's own values; their exact graph is in the stored final JSON.

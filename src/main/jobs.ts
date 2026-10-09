@@ -198,6 +198,11 @@ export class JobManager {
     const created: Attempt[] = []
     const submitted = new Map<string, Attempt>()
     const firstNum = (pdb.db.prepare('SELECT next_attempt_num AS n FROM shots WHERE id=?').get(shotId) as { n: number }).n
+    // Recorded with each attempt, so it still reads the same if a default is changed later.
+    const usedDefaults: Record<string, unknown> = {}
+    for (const i of schema.inputs) {
+      if (!(i.key in req.values) && i.type !== 'file' && i.type !== 'file-group') usedDefaults[i.key] = i.default
+    }
     try {
       for (const job of jobs) {
         const values = { ...req.values }
@@ -212,7 +217,7 @@ export class JobManager {
           workflowName: loaded.row.name,
           workflowVersion: loaded.row.version,
           workflowHash: loaded.row.hash,
-          values: listMode ? values : req.values,
+          values: { ...usedDefaults, ...(listMode ? values : req.values) },
           seed: job.seed,
           runId,
           promptIndex: job.promptIndex,
