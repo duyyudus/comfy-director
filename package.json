@@ -43,5 +43,11 @@
     "vite": "^7.1.9",
     "vitest": "^3.2.4",
     "zustand": "^5.0.8"
+  },
+  "allowScripts": {
+    "electron": true,
+    "better-sqlite3": true,
+    "esbuild": true,
+    "electron-winstaller": false
   }
 }

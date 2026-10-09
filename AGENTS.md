@@ -20,6 +20,8 @@ npm run icon          # re-render resources/icon.png and icon.ico from resources
 
 Run `npm run typecheck` and `npm test` before finishing a change. There is no linter or formatter config; match the surrounding style (2 spaces, single quotes, no semicolons, explicit return types).
 
+npm 12 and later only run the install scripts of dependencies listed under `allowScripts` in `package.json` (`electron`, `better-sqlite3`, `esbuild`). A new dependency that needs its install script must be added with `npm install-scripts approve <pkg> --no-allow-scripts-pin`; a missing Electron binary ("Electron uninstall" from `npm run dev`) means its script was blocked.
+
 For manual testing without touching real data, set `COMFY_DIRECTOR_WORKSPACE` and `COMFY_DIRECTOR_USER_DATA`. In the fake server, `#fail`, `#oom`, `#reject` or `#slow` in a prompt triggers that scenario.
 
 ## Layout
