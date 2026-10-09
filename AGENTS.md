@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Comfy Toolkit: an Electron desktop client that runs ComfyUI API-format workflows on a remote server (shots, batch runs, prompt lists, queue, gallery, compare, keepers, sequences).
+Comfy Director: an Electron desktop client that runs ComfyUI API-format workflows on a remote server (shots, batch runs, prompt lists, queue, gallery, compare, keepers, sequences).
 
 - `docs/spec.md` is the behaviour spec and describes the app as built; `docs/wireframes/png/` is the layout reference. When a change alters behaviour, update the spec in the same change.
 - `docs/decisions.md` is the log of why. Append an entry (newest last) when a choice needs its reasoning recorded. Entries up to 2026-10-08 are already folded into the spec.
@@ -20,7 +20,7 @@ npm run icon          # re-render resources/icon.png and icon.ico from resources
 
 Run `npm run typecheck` and `npm test` before finishing a change. There is no linter or formatter config; match the surrounding style (2 spaces, single quotes, no semicolons, explicit return types).
 
-For manual testing without touching real data, set `COMFY_TOOLKIT_WORKSPACE` and `COMFY_TOOLKIT_USER_DATA`. In the fake server, `#fail`, `#oom`, `#reject` or `#slow` in a prompt triggers that scenario.
+For manual testing without touching real data, set `COMFY_DIRECTOR_WORKSPACE` and `COMFY_DIRECTOR_USER_DATA`. In the fake server, `#fail`, `#oom`, `#reject` or `#slow` in a prompt triggers that scenario.
 
 ## Layout
 

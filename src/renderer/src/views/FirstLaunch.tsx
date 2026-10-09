@@ -23,7 +23,7 @@ export function FirstLaunch(): ReactNode {
     <div className="h-full overflow-y-auto bg-bg scroll-thin">
       <div className="mx-auto max-w-[1180px] px-6 py-10">
         <Logo className="mx-auto mb-3 size-14" />
-        <div className="mb-2 text-center text-24 font-semibold">Comfy Toolkit</div>
+        <div className="mb-2 text-center text-24 font-semibold">Comfy Director</div>
         <div className="mb-8 flex items-center justify-center gap-6">
           {STEPS.map((s, i) => (
             <div key={s} className={cn('flex items-center gap-2', i === step ? 'font-semibold' : 'text-text2')}>

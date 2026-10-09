@@ -1,4 +1,4 @@
-# Comfy Toolkit
+# Comfy Director
 
 A desktop client for a ComfyUI server. Design workflows in the ComfyUI graph, export them in API format, and use this app to run them: per-shot inputs generated from the workflow, batch runs, prompt lists, a queue, a gallery, compare, keepers and sequences. See `docs/spec.md` for the full behaviour and `docs/decisions.md` for the reasons behind choices made while building, and `docs/backlog.md` for what is not built yet.
 

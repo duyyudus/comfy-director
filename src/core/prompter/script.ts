@@ -10,7 +10,7 @@ export class ScriptPrompter implements Prompter {
 
   generate(req: GenerateRequest): Promise<string[]> {
     if (!this.cfg.path) return Promise.reject(new Error('Choose a script file first.'))
-    const cmd = this.cfg.runtime === 'node' ? process.env.COMFY_TOOLKIT_NODE || 'node' : pythonCommand()
+    const cmd = this.cfg.runtime === 'node' ? process.env.COMFY_DIRECTOR_NODE || 'node' : pythonCommand()
     return new Promise((resolve, reject) => {
       const child = spawn(cmd, [this.cfg.path], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
       let out = ''
@@ -40,7 +40,7 @@ export class ScriptPrompter implements Prompter {
 }
 
 function pythonCommand(): string {
-  return process.env.COMFY_TOOLKIT_PYTHON || (process.platform === 'win32' ? 'python' : 'python3')
+  return process.env.COMFY_DIRECTOR_PYTHON || (process.platform === 'win32' ? 'python' : 'python3')
 }
 
 export function parseScriptOutput(out: string): string[] {

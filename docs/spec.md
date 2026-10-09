@@ -1,10 +1,10 @@
-# Comfy Toolkit: Spec
+# Comfy Director: Spec
 
 This document describes the app as it behaves today. A change that alters behaviour updates this file in the same change. `docs/decisions.md` is the log of why things are the way they are. Features that are planned but not built are not described here; they are listed in `docs/backlog.md`.
 
 ## Goal
 
-The app is called **Comfy Toolkit**. Use that name for the window title, the installer, the app data folder (`Comfy Toolkit`), the package name (`comfy-toolkit`) and the default output folder.
+The app is called **Comfy Director**. Use that name for the window title, the installer, the app data folder (`Comfy Director`), the package name (`comfy-director`) and the default output folder.
 
 The **app icon** is a blue accent tile holding a stack of three frames (a batch of takes); the front, paper-coloured frame carries one link between two node ports (the workflow). The source is `resources/icon.svg`; `npm run icon` renders `icon.png` and `icon.ico` from it. It is used for the window, the installer, and as the logo beside the app name in the sidebar and on first launch (`Logo` in `components/ui.tsx`, the same in both themes).
 
@@ -189,10 +189,10 @@ The ComfyUI API-format JSON is used as the workflow file itself. No custom workf
 
 ### Layout
 
-One **workspace folder** (default `~/Comfy Toolkit/`, set in Settings) holds app-wide data and a folder per project:
+One **workspace folder** (default `~/Comfy Director/`, set in Settings) holds app-wide data and a folder per project:
 
 ```
-Comfy Toolkit/                     workspace
+Comfy Director/                     workspace
   workflows/                       app-wide
     minimax_h3_r2v/
       workflow.json                exported API-format file, untouched
@@ -228,7 +228,7 @@ Comfy Toolkit/                     workspace
 - The app writes a `.gitignore` into a new workspace that excludes `app.db` and `projects/`, so `workflows/` can be versioned on its own.
 - **Do not place the workspace in a synced folder** (Dropbox, iCloud, OneDrive): SQLite files can be corrupted. Settings shows a warning.
 - **Hand-edited workflows.** If `workflow.json` changes on disk without an import, the next read records it as a new version (new hash). Folders found in `workflows/` but missing from `app.db` (for example after a git clone) are indexed automatically. A `workflow.json` that is not valid JSON is skipped in the workflow list.
-- `COMFY_TOOLKIT_WORKSPACE` and `COMFY_TOOLKIT_USER_DATA` override the workspace and app data folders (used for testing).
+- `COMFY_DIRECTOR_WORKSPACE` and `COMFY_DIRECTOR_USER_DATA` override the workspace and app data folders (used for testing).
 
 ### Databases
 
@@ -276,7 +276,7 @@ Rules:
 ### App shell (on every screen)
 
 - **Sidebar:**
-  - Logo and app name (Comfy Toolkit), and server status (dot plus server name; "connected" or offline).
+  - Logo and app name (Comfy Director), and server status (dot plus server name; "connected" or offline).
   - **Project switcher** under the app name: the current project with a menu (see Projects). Everything below it belongs to that project.
   - **Sequences:** a **+** button in the header row creates a new sequence (see Projects). Each sequence expands to its shots, one row per shot (`NN Name`). A filled dot means the shot has a keeper, a ring means none yet. The current shot is highlighted.
   - **Loose shots:** same rows, no numbering. A **+** button in the header row creates a new loose shot (New shot dialog, preset to Loose shot).
@@ -426,7 +426,7 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
 
 - **Template:** a template with `{slot}` placeholders (anything in braces becomes a slot). A table of slots: name, **how to pick** (Pick at random, Go in order, Always the same), values (one per line), count. Below: **Prompts to make**, a **randomness seed** with **New seed** (the same seed always gives the same list, so a batch can be rebuilt), **Avoid repeats**, and a **Preview** that generates a few samples. Generate in a shot uses the prompter's saved seed, so a list can be rebuilt; press **New seed** in the Library for a different list. The first letter of each prompt is capitalised.
 - **LLM:** an instruction, an input (one idea per line, pasted when it runs, or the current shot prompt), an **endpoint** (an OpenAI-compatible chat API, such as a local server), a **Model**, an optional **API key** (stored in `app.db` with the prompter), temperature, and **Test with one idea**. The app calls `POST {endpoint}/chat/completions` once per idea, with the instruction as the system message. With the current shot prompt as input it makes N variations of that prompt. A note states that ideas are sent to this endpoint, not to the ComfyUI server.
-- **Script:** a script file and a runtime (Python or Node). The app starts it as a child process (`python3`, or `python` on Windows, or `node`; `COMFY_TOOLKIT_PYTHON` / `COMFY_TOOLKIT_NODE` override the command), writes a JSON object to stdin (count, seed, current prompt), and reads a JSON list of prompts from stdout, with a 60 s timeout. **Test run** shows the output. The script runs with the user's own rights and only from a path the user chose.
+- **Script:** a script file and a runtime (Python or Node). The app starts it as a child process (`python3`, or `python` on Windows, or `node`; `COMFY_DIRECTOR_PYTHON` / `COMFY_DIRECTOR_NODE` override the command), writes a JSON object to stdin (count, seed, current prompt), and reads a JSON list of prompts from stdout, with a 60 s timeout. **Test run** shows the output. The script runs with the user's own rights and only from a path the user chose.
 - Each prompter has **Save prompter**, **Duplicate**, **Delete**. The Prompt list mode picks from this list.
 
 ### Projects (wireframe 15)

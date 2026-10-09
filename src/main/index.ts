@@ -11,8 +11,8 @@ import icon from '../../resources/icon.png?asset'
 import type { AppEvent } from '@shared/types'
 import type { ApiMethod, ToolkitApi } from '@shared/api'
 
-app.setName('Comfy Toolkit')
-if (process.env.COMFY_TOOLKIT_USER_DATA) app.setPath('userData', process.env.COMFY_TOOLKIT_USER_DATA)
+app.setName('Comfy Director')
+if (process.env.COMFY_DIRECTOR_USER_DATA) app.setPath('userData', process.env.COMFY_DIRECTOR_USER_DATA)
 
 registerMediaScheme()
 
@@ -33,7 +33,7 @@ function createWindow(): void {
     y: state.y,
     minWidth: min.width,
     minHeight: min.height,
-    title: 'Comfy Toolkit',
+    title: 'Comfy Director',
     icon,
     show: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1C1A17' : '#F5F2EC',

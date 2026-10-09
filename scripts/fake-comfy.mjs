@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A small fake ComfyUI server for developing Comfy Toolkit without a GPU.
+ * A small fake ComfyUI server for developing Comfy Director without a GPU.
  * Answers the routes the app uses (prompt, ws, history, view, upload, object_info, queue, interrupt)
  * with scripted scenarios. Put a keyword in the prompt text to pick one:
  *   #fail     execution error on the sampler        #oom     out of GPU memory

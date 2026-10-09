@@ -1,6 +1,6 @@
 # Wireframes
 
-Low-fidelity wireframes for Comfy Toolkit, a desktop client for ComfyUI. They are a reference for **layout and structure**. They do not define behavior: for what each control does, see the "Features and UI" section of `docs/spec.md`.
+Low-fidelity wireframes for Comfy Director, a desktop client for ComfyUI. They are a reference for **layout and structure**. They do not define behavior: for what each control does, see the "Features and UI" section of `docs/spec.md`.
 
 ## Screens
 

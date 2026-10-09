@@ -37,7 +37,7 @@ export function Sidebar(): ReactNode {
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-2 text-17 font-semibold">
           <Logo className="size-6" />
-          Comfy Toolkit
+          Comfy Director
         </div>
         <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
           <span className={cn('size-1.5 rounded-full', server.state === 'connected' ? 'bg-accent' : server.state === 'connecting' ? 'bg-control' : 'bg-danger')} />

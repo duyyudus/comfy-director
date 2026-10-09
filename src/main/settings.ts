@@ -6,7 +6,7 @@ import { homedir } from 'node:os'
 import { DEFAULT_FONT_SIZE, FONT_SIZES, type AppSettings, type ThemeMode } from '@shared/types'
 
 /**
- * App settings live in the app's data folder (`Comfy Toolkit`), never in the workspace.
+ * App settings live in the app's data folder (`Comfy Director`), never in the workspace.
  * The access token is encrypted with Electron safeStorage (OS keychain / DPAPI / libsecret).
  */
 interface StoredSettings {
@@ -26,7 +26,7 @@ const tokenFile = (): string => join(dir(), 'token.bin')
 let cache: StoredSettings | null = null
 
 export function defaultWorkspace(): string {
-  return join(homedir(), 'Comfy Toolkit')
+  return join(homedir(), 'Comfy Director')
 }
 
 function load(): StoredSettings {
@@ -39,7 +39,7 @@ function load(): StoredSettings {
   }
   cache = {
     serverUrl: stored.serverUrl ?? '',
-    workspacePath: process.env.COMFY_TOOLKIT_WORKSPACE || stored.workspacePath || defaultWorkspace(),
+    workspacePath: process.env.COMFY_DIRECTOR_WORKSPACE || stored.workspacePath || defaultWorkspace(),
     theme: stored.theme ?? 'auto',
     fontSize: (FONT_SIZES as readonly number[]).includes(stored.fontSize as number) ? (stored.fontSize as number) : DEFAULT_FONT_SIZE,
     clientId: stored.clientId ?? randomUUID(),

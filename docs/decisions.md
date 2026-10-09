@@ -40,10 +40,10 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 - **Gallery paging.** "Virtualized" is implemented as paged loading (60 at a time) with an intersection observer and lazy thumbnails; enough for thousands of attempts. Revisit with a windowed grid if needed.
 - **LLM prompter.** OpenAI-compatible `POST {endpoint}/chat/completions`, instruction as the system message, one call per idea. Added a **Model** field and an optional **API key** (stored in `app.db` with the prompter; the PRD's wireframe has neither). In "current shot prompt" mode it makes N variations of the shot prompt.
 - **Template prompter in a shot.** Generate uses the prompter's saved seed, so a list can be rebuilt; change the seed in the Library ("New seed") for a different list. The first letter of each prompt is capitalised.
-- **Script prompter** runs `python3` (`python` on Windows) or `node`; override with `COMFY_TOOLKIT_PYTHON` / `COMFY_TOOLKIT_NODE`. 60 s timeout.
+- **Script prompter** runs `python3` (`python` on Windows) or `node`; override with `COMFY_DIRECTOR_PYTHON` / `COMFY_DIRECTOR_NODE`. 60 s timeout.
 - **Deleting.** Added "Delete shot", "Delete sequence" (its shots become loose) and "Delete" on attempt cards (not in the PRD). Deleting never removes rendered files. Running/queued attempts must be cancelled first.
 - **Renaming a project** is refused while it has queued or running jobs (their downloads write into the folder).
-- **Workspace via env.** `COMFY_TOOLKIT_WORKSPACE` and `COMFY_TOOLKIT_USER_DATA` override the workspace and app data folders (used for testing).
+- **Workspace via env.** `COMFY_DIRECTOR_WORKSPACE` and `COMFY_DIRECTOR_USER_DATA` override the workspace and app data folders (used for testing).
 - **Not built (PRD "Not designed yet"):** presets, loading skeletons, keyboard shortcuts.
 - **To verify on the real server** (PRD smoke test): `POST /queue` delete support (the app reports when a waiting job is not removed), targeted `POST /interrupt {prompt_id}`, where `SaveVideo` outputs appear in `/history` (the app takes every `{filename, subfolder, type: output}` entry under any key), WebSocket through the reverse proxy (the token is sent as `Authorization: Bearer`), and `MiniMaxH3ImageToVideo` with first frame only / no frames.
 
@@ -87,3 +87,10 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 - **The icon shows what the app does, not ComfyUI's graph editor:** a stack of frames (many takes of a shot) with one link between two ports on the front frame (the workflow that made them). It uses the accent blue and the paper `panel` colour so it matches the app in both themes.
 - **Icon files live in `resources/`, not electron-builder's default `build/`,** because `.gitignore` ignores `build/`. `buildResources` points there, and `resources/icon.png` is also shipped in the package because the window loads it at run time.
 - **`icon.svg` is the source; the PNG and ICO are rendered from it by Electron** (`npm run icon`), so no image library was added.
+
+## 2026-10-09 (renamed to Comfy Director)
+
+- **The app is now Comfy Director** (was Comfy Toolkit): the name says what the user does with it, directing shots, rather than describing a bag of tools. Product name, package name (`comfy-director`), app ID (`com.comfydirector.app`), installer name, default workspace (`~/Comfy Director`) and the `COMFY_DIRECTOR_*` environment variables all changed together.
+- **No migration code.** Nothing has been released, so the one existing install is moved by hand: rename the app data folder to `Comfy Director` and uninstall the old build (the new app ID makes the installer treat it as a different app). A workspace path already stored in `settings.json` keeps working.
+- **Internal identifiers stay** (`window.toolkit`, `ToolkitApi`, `ctmedia://`): they are never shown to the user and renaming them is churn.
+- **The wireframe PNGs still show the old name.** They are a layout reference only; the sources are updated and the PNGs change at the next export.

@@ -9,7 +9,7 @@ import type { ObjectInfo } from '@core/workflow/objectInfo'
 import { safeName } from '@core/output/naming'
 import type { ImportCommit, ProjectInfo, ResetScope, WorkflowInfo } from '@shared/types'
 
-const GITIGNORE = `# Comfy Toolkit workspace: only workflows/ is meant for git.
+const GITIGNORE = `# Comfy Director workspace: only workflows/ is meant for git.
 app.db
 app.db-*
 projects/
@@ -260,7 +260,7 @@ export class Workspace {
 
   addExistingProject(path: string): ProjectInfo {
     const p = resolve(path)
-    if (!existsSync(join(p, 'project.db'))) throw new Error('This folder has no project.db. Pick a Comfy Toolkit project folder.')
+    if (!existsSync(join(p, 'project.db'))) throw new Error('This folder has no project.db. Pick a Comfy Director project folder.')
     const name = basename(p)
     this.app.addProject(p, name)
     return { path: p, name, shotCount: this.project(p).shotCount(), missing: false }

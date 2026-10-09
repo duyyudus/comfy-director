@@ -1,6 +1,6 @@
 {
-  "name": "comfy-toolkit",
-  "productName": "Comfy Toolkit",
+  "name": "comfy-director",
+  "productName": "Comfy Director",
   "version": "0.1.0",
   "description": "Desktop client for running ComfyUI workflows on a remote server",
   "main": "./out/main/index.js",
