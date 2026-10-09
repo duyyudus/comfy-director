@@ -1,7 +1,7 @@
 import type {
   AppSettings, Attempt, GalleryFilter, GalleryPage, GenerateOptions, ImportAnalysis, ImportCommit, ImportPreview,
-  InputFile, LibraryPrompt, ProjectInfo, ProjectTree, PrompterRecord, QueueSnapshot, ReconcileSummary, ResetScope, RunRequest, RunResult,
-  Sequence, ServerStatus, Shot, ShotDetail, TestResult, ThemeMode, ThumbnailJob, WorkflowInfo
+  InputFile, LibraryPrompt, ProjectInfo, ProjectTree, PrompterRecord, PromptSkill, QueueSnapshot, ReconcileSummary, ResetScope, RunRequest, RunResult,
+  Sequence, ServerStatus, Shot, ShotChat, ShotDetail, TestResult, ThemeMode, ThumbnailJob, WorkflowInfo
 } from './types'
 import type { Overrides } from '../core/workflow/types'
 import type { PrompterConfig } from '../core/prompter/types'
@@ -97,6 +97,23 @@ export interface ToolkitApi {
   deletePrompter(id: number): Promise<void>
   generatePrompts(config: PrompterConfig, opts: GenerateOptions): Promise<string[]>
   pickScriptFile(): Promise<string | null>
+  listSkills(): Promise<PromptSkill[]>
+  /** Asks for a Markdown file and copies it in as the skill of this workflow type, replacing the one there. Null if cancelled. */
+  addSkill(type: string): Promise<PromptSkill | null>
+  revealSkill(type: string): Promise<void>
+  deleteSkill(type: string): Promise<void>
+
+  // prompt chat (per shot)
+  getChat(projectPath: string, shotId: number): Promise<ShotChat>
+  /**
+   * Adds the user's message and the prompter's reply. `message` null asks again for a reply to the last
+   * message, after a failure. A failed call keeps the user's message and throws. The reply also arrives
+   * piece by piece as `chat-delta` events while the call is pending.
+   */
+  sendChat(projectPath: string, shotId: number, prompterId: number, message: { text: string; images: string[] } | null): Promise<ShotChat>
+  /** Stops the reply being written for this shot. What has arrived is kept as the reply. */
+  stopChat(projectPath: string, shotId: number): Promise<void>
+  clearChat(projectPath: string, shotId: number): Promise<void>
 
   // misc
   mediaUrl(absPath: string): Promise<string>
@@ -120,7 +137,8 @@ export const API_METHODS: ApiMethod[] = [
   'getQueue', 'cancelJobs', 'cancelOtherClientJob', 'interrupt', 'cancelAllWaiting', 'takeReconcileSummary',
   'gallery',
   'listPrompts', 'savePrompt', 'deletePrompt', 'usePrompt', 'markPromptsUsed', 'listPrompters', 'savePrompter',
-  'deletePrompter', 'generatePrompts', 'pickScriptFile',
+  'deletePrompter', 'generatePrompts', 'pickScriptFile', 'listSkills', 'addSkill', 'revealSkill', 'deleteSkill',
+  'getChat', 'sendChat', 'stopChat', 'clearChat',
   'mediaUrl', 'copyText'
 ]
 

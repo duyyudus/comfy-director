@@ -220,12 +220,18 @@ export const useStore = create<State>((set, get) => ({
       case 'thumbnail':
         thumbnailListeners.forEach((l) => l(e.job))
         break
+      case 'chat-delta':
+        chatListeners.forEach((l) => l(e))
+        break
     }
   }
 }))
 
 type ThumbListener = (job: Extract<AppEvent, { type: 'thumbnail' }>['job']) => void
 export const thumbnailListeners = new Set<ThumbListener>()
+
+type ChatListener = (e: Extract<AppEvent, { type: 'chat-delta' }>) => void
+export const chatListeners = new Set<ChatListener>()
 
 /** The current project's path (throws if none: views using it only render inside a project). */
 export function useProjectPath(): string {

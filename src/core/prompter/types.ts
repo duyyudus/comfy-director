@@ -14,6 +14,8 @@ export interface TemplateConfig {
 
 export interface LlmConfig {
   instruction: string
+  /** Workflow type of the prompting skill sent ahead of the instruction, or none. */
+  skill?: string
   /** `lines`: one idea per line, pasted when it runs. `shot-prompt`: the current shot prompt. */
   inputMode: 'lines' | 'shot-prompt'
   /** Base URL of an OpenAI-compatible API, e.g. http://localhost:11434/v1 */

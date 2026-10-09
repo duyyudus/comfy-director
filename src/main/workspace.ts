@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { AppDb, ProjectDb, type WorkflowRow } from './db'
 import { buildSchema } from '@core/workflow/schema'
@@ -7,7 +7,7 @@ import { detectFormat } from '@core/workflow/format'
 import type { ApiWorkflow, Overrides } from '@core/workflow/types'
 import type { ObjectInfo } from '@core/workflow/objectInfo'
 import { safeName } from '@core/output/naming'
-import type { ImportCommit, ProjectInfo, ResetScope, WorkflowInfo } from '@shared/types'
+import type { ImportCommit, ProjectInfo, PromptSkill, ResetScope, WorkflowInfo } from '@shared/types'
 
 const GITIGNORE = `# Comfy Director workspace: only workflows/ is meant for git.
 app.db
@@ -196,6 +196,60 @@ export class Workspace {
   removeWorkflow(id: string): void {
     this.app.deleteWorkflow(id)
     if (this.app.getMeta('last_workflow') === id) this.app.setMeta('last_workflow', null)
+  }
+
+  /* --------------------------------------------------------------- skills */
+
+  skillsDir(): string {
+    return join(this.root, 'prompter', 'skills')
+  }
+
+  skillDir(type: string): string {
+    return join(this.skillsDir(), workflowIdFromName(type))
+  }
+
+  /** Skills are plain files, read on every use, so a hand-edited or hand-added `skill.md` is picked up. */
+  listSkills(): PromptSkill[] {
+    let names: string[] = []
+    try {
+      names = readdirSync(this.skillsDir())
+    } catch {
+      return []
+    }
+    return names.sort().flatMap((type) => {
+      const s = this.skill(type)
+      return s ? [s.info] : []
+    })
+  }
+
+  skill(type: string): { info: PromptSkill; text: string } | null {
+    const dir = this.skillDir(type)
+    let file: string | undefined
+    try {
+      // skill.md whatever its case (SKILL.md copied in by hand), else the folder's only Markdown file.
+      const md = readdirSync(dir).filter((f) => /\.md$/i.test(f) && statSync(join(dir, f)).isFile())
+      file = md.find((f) => f.toLowerCase() === 'skill.md') ?? (md.length === 1 ? md[0] : undefined)
+    } catch {
+      return null
+    }
+    if (!file) return null
+    const path = join(dir, file)
+    const text = readFileSync(path, 'utf8').replace(/^﻿/, '')
+    const front = text.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? ''
+    const field = (k: string): string => front.match(new RegExp(`^${k}:\\s*(.*)$`, 'm'))?.[1].trim().replace(/^(["'])(.*)\1$/, '$2') ?? ''
+    return { info: { type: basename(dir), name: field('name'), description: field('description'), size: text.length, path }, text }
+  }
+
+  /** Copies a Markdown file in as the skill of this workflow type. The file there before is replaced. */
+  saveSkill(type: string, sourcePath: string): PromptSkill {
+    if (!type.trim()) throw new Error('Enter a workflow type.')
+    const text = readFileSync(sourcePath, 'utf8')
+    if (!text.trim()) throw new Error('This file is empty.')
+    const dir = this.skillDir(type)
+    mkdirSync(dir, { recursive: true })
+    const old = this.skill(type)
+    writeFileSync(old ? old.info.path : join(dir, 'skill.md'), text)
+    return this.skill(type)!.info
   }
 
   /* ------------------------------------------------------------- projects */

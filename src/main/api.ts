@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, nativeTheme, shell } from 'electron'
+import { BrowserWindow, clipboard, dialog, nativeImage, nativeTheme, shell } from 'electron'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, extname, join, resolve } from 'node:path'
 import { settings, updateSettings, publicSettings, getToken, setToken } from './settings'
@@ -9,7 +9,7 @@ import type { ToolkitApi } from '@shared/api'
 import { mediaUrlFor } from '@shared/api'
 import { FONT_SIZES } from '@shared/types'
 import type {
-  AppEvent, GalleryFilter, GalleryItem, ImportAnalysis, ImportPreview, InputFile, ProjectTree, ThumbnailJob
+  AppEvent, GalleryFilter, GalleryItem, ImportAnalysis, ImportPreview, InputFile, ProjectTree, ShotChat, ThumbnailJob
 } from '@shared/types'
 import { detectFormat } from '@core/workflow/format'
 import { discover } from '@core/workflow/discover'
@@ -17,7 +17,8 @@ import { buildSchema } from '@core/workflow/schema'
 import { checkWorkflow } from '@core/workflow/check'
 import { diffSchemas } from '@core/workflow/reconcile'
 import { keeperExportPath, extOf, looksSynced, safeName } from '@core/output/naming'
-import { createPrompter } from '@core/prompter'
+import { createPrompter, LlmPrompter } from '@core/prompter'
+import type { ChatPart, ChatTurn, LlmConfig } from '@core/prompter'
 import { randomSeed } from '@core/planner'
 import { titleOf } from '@core/workflow/graph'
 
@@ -32,6 +33,20 @@ export interface Context {
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp']
 const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+/** Longest side of an image sent to an LLM. Larger ones are scaled down to keep the request small. */
+const CHAT_IMAGE_MAX = 1568
+const IMAGE_MIME: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', bmp: 'image/bmp' }
+
+function imageDataUrl(file: string): string {
+  const img = nativeImage.createFromPath(file)
+  const { width, height } = img.getSize()
+  // nativeImage reads PNG and JPEG; anything else (or a small picture) is sent as the file is.
+  if (img.isEmpty() || Math.max(width, height) <= CHAT_IMAGE_MAX) {
+    return `data:${IMAGE_MIME[extOf(file)] ?? 'image/png'};base64,${readFileSync(file).toString('base64')}`
+  }
+  const scaled = width >= height ? img.resize({ width: CHAT_IMAGE_MAX, quality: 'best' }) : img.resize({ height: CHAT_IMAGE_MAX, quality: 'best' })
+  return `data:image/jpeg;base64,${scaled.toJPEG(90).toString('base64')}`
+}
 
 export function createApi(ctx: Context): ToolkitApi {
   const ws = ctx.ws
@@ -56,6 +71,25 @@ export function createApi(ctx: Context): ToolkitApi {
     if (!existsSync(dest)) writeFileSync(dest, data)
     ws().project(projectPath).addInput(name, basename(src))
     return { name, originalName: basename(src), path: `inputs/${name}` }
+  }
+
+  /** The whole skill file of an LLM prompter, read fresh so edits on disk apply. Null when it has none. */
+  const skillText = (cfg: LlmConfig): string | null => {
+    if (!cfg.skill) return null
+    const s = ws().skill(cfg.skill)
+    if (!s) throw new Error(`This prompter's skill is missing: no skill.md in ${ws().skillDir(cfg.skill)}. Add it again in Library > Prompters, or set the prompter to no skill.`)
+    return s.text
+  }
+
+  /** Replies being written, by project and shot, so Stop can abort them. */
+  const chatsInFlight = new Map<string, AbortController>()
+  const chatKey = (projectPath: string, shotId: number): string => `${resolve(projectPath)}#${shotId}`
+
+  const shotChat = (projectPath: string, shotId: number): ShotChat => {
+    const pdb = ws().project(projectPath)
+    const messages = pdb.chat(shotId)
+    const names = [...new Set(messages.flatMap((m) => m.images))]
+    return { messages, files: Object.fromEntries(pdb.inputs(names).map((i) => [i.name, i])) }
   }
 
   const api: ToolkitApi = {
@@ -568,7 +602,8 @@ export function createApi(ctx: Context): ToolkitApi {
     },
     async generatePrompts(config, opts) {
       const seed = opts.seed ?? (config.type === 'template' ? config.template.seed : randomSeed())
-      return createPrompter(config).generate({ count: opts.count, seed, currentPrompt: opts.currentPrompt, ideas: opts.ideas })
+      const skill = config.type === 'llm' ? skillText(config.llm) : null
+      return createPrompter(config, skill).generate({ count: opts.count, seed, currentPrompt: opts.currentPrompt, ideas: opts.ideas })
     },
     async pickScriptFile() {
       const r = await dialog.showOpenDialog(win()!, {
@@ -577,6 +612,85 @@ export function createApi(ctx: Context): ToolkitApi {
         filters: [{ name: 'Scripts', extensions: ['py', 'js', 'mjs', 'cjs'] }, { name: 'All files', extensions: ['*'] }]
       })
       return r.canceled ? null : r.filePaths[0] ?? null
+    },
+    async listSkills() {
+      return ws().listSkills()
+    },
+    async addSkill(type) {
+      if (!type.trim()) throw new Error('Enter a workflow type.')
+      const r = await dialog.showOpenDialog(win()!, {
+        title: 'Choose a skill file',
+        properties: ['openFile'],
+        filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }, { name: 'All files', extensions: ['*'] }]
+      })
+      if (r.canceled || !r.filePaths[0]) return null
+      return ws().saveSkill(type, r.filePaths[0])
+    },
+    async revealSkill(type) {
+      const s = ws().skill(type)
+      if (s) shell.showItemInFolder(s.info.path)
+    },
+    async deleteSkill(type) {
+      const dir = ws().skillDir(type)
+      if (existsSync(dir)) await shell.trashItem(dir)
+    },
+
+    /* ---------------------------------------------------- prompt chat */
+    async getChat(projectPath, shotId) {
+      return shotChat(projectPath, shotId)
+    },
+    async sendChat(projectPath, shotId, prompterId, message) {
+      const pdb = ws().project(projectPath)
+      if (!pdb.shot(shotId)) throw new Error('This shot no longer exists.')
+      const prompter = ws().app.prompter(prompterId)
+      if (!prompter || prompter.config.type !== 'llm') throw new Error('Choose an LLM prompter for the chat.')
+      const skill = skillText(prompter.config.llm)
+      const key = chatKey(projectPath, shotId)
+      if (chatsInFlight.has(key)) throw new Error('A reply is still being written for this shot.')
+      if (message) {
+        if (!message.text.trim() && !message.images.length) throw new Error('Write a message first.')
+        pdb.addChatMessage(shotId, 'user', message.text.trim(), message.images)
+      }
+      const history = pdb.chat(shotId)
+      if (history[history.length - 1]?.role !== 'user') throw new Error('There is no message waiting for a reply.')
+      // Images are numbered across the whole chat, so "Image 3" means the same picture in every turn.
+      let n = 0
+      const turns: ChatTurn[] = history.map((m) => {
+        if (!m.images.length) return { role: m.role, content: m.text }
+        const parts: ChatPart[] = []
+        for (const name of m.images) {
+          const file = join(projectPath, 'inputs', name)
+          n++
+          if (!existsSync(file)) {
+            parts.push({ type: 'text', text: `Image ${n}: (file no longer available)` })
+            continue
+          }
+          parts.push({ type: 'text', text: `Image ${n}:` }, { type: 'image_url', image_url: { url: imageDataUrl(file) } })
+        }
+        if (m.text) parts.push({ type: 'text', text: m.text })
+        return { role: m.role, content: parts }
+      })
+      const abort = new AbortController()
+      chatsInFlight.set(key, abort)
+      try {
+        const reply = await new LlmPrompter(prompter.config.llm, skill).chat(turns, {
+          signal: abort.signal,
+          onDelta: (delta) => ctx.emit({ type: 'chat-delta', projectPath, shotId, delta })
+        })
+        // Stopped before anything arrived: nothing to keep, and the message still waits for a reply.
+        if (reply) pdb.addChatMessage(shotId, 'assistant', reply)
+      } catch (e) {
+        if (!abort.signal.aborted) throw e
+      } finally {
+        chatsInFlight.delete(key)
+      }
+      return shotChat(projectPath, shotId)
+    },
+    async stopChat(projectPath, shotId) {
+      chatsInFlight.get(chatKey(projectPath, shotId))?.abort()
+    },
+    async clearChat(projectPath, shotId) {
+      ws().project(projectPath).clearChat(shotId)
     },
 
     /* ----------------------------------------------------------- misc */

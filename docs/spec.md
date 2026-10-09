@@ -61,7 +61,7 @@ Written as plain TypeScript in `src/core` with no Electron or React imports, so 
 1. **Workflow:** discovers the inputs of an API-format JSON, builds the schema from them plus `overrides.json` and `object_info`, applies a values map to a copy of the workflow, and validates the result. Also reconciles a new version against the old one and checks a workflow against the server.
 2. **ComfyUI client:** the HTTP and WebSocket calls in "ComfyUI API Endpoints Used".
 3. **Run planner:** expands the prompt list and the runs count into a list of jobs (one attempt each).
-4. **Prompter:** produces prompt text. Template, LLM and script prompters share one interface.
+4. **Prompter:** produces prompt text. Template, LLM and script prompters share one interface. An LLM prompter can carry a prompting skill and also answers a shot's Prompt chat.
 5. **Output naming:** pure functions for output folders and file names.
 
 Everything that touches Electron, the filesystem layout or SQLite is in `src/main`: the job queue with progress and downloads, the server connection, the workspace and the databases.
@@ -203,6 +203,10 @@ Comfy Director/                     workspace
       versions/1/                  earlier versions, kept when a new one is imported
     minimax_h3_fl2v/
       workflow.json
+  prompter/
+    skills/
+      minimax_h3/                  one folder per workflow type
+        skill.md                   prompting guide, sent whole to the LLM
   app.db                           app-wide SQLite: prompt library, prompters, workflow index
   .gitignore                       excludes app.db and projects/
   projects/
@@ -219,7 +223,7 @@ Comfy Director/                     workspace
     Client teaser/
 ```
 
-- **App-wide** (`workflows/`, `app.db`): things shared by every project. Workflows are plain files so they can be hand-edited and versioned with git. The prompt library and prompters are shared so they can be reused across projects.
+- **App-wide** (`workflows/`, `prompter/`, `app.db`): things shared by every project. Workflows and prompting skills are plain files so they can be hand-edited and versioned with git. The prompt library and prompters are shared so they can be reused across projects.
 - **Project-wide** (`projects/<name>/`): everything that belongs to one body of work. A project can be renamed, moved, archived or backed up as one folder. Each attempt keeps the exact final JSON that was sent (see Reproducibility), so a project still makes sense on a machine that lacks the original workflow files.
 - **Paths inside `project.db` are relative to the project folder.** Renaming the project renames the folder and nothing else changes.
 - **Plain files** for things worth hand-editing (workflows, overrides). **SQLite** for things that grow and need querying (history, keepers, prompt library).
@@ -238,7 +242,7 @@ Comfy Director/                     workspace
 Both are SQLite in WAL mode, defined in `src/main/db.ts`.
 
 - `app.db`: `meta`, `workflows`, `workflow_versions`, `projects`, `prompts`, `prompters`.
-- `project.db`: `meta`, `sequences`, `shots` (values JSON, prompt list, seed mode, runs, keeper, next attempt number), `attempts` (values, seed, status, prompt id, server URL, run id and indices, final JSON, outputs JSON, thumb, duration, error JSON, timestamps), `inputs`, `uploads`.
+- `project.db`: `meta`, `sequences`, `shots` (values JSON, prompt list, seed mode, runs, keeper, next attempt number), `attempts` (values, seed, status, prompt id, server URL, run id and indices, final JSON, outputs JSON, thumb, duration, error JSON, timestamps), `inputs`, `uploads`, `chat_messages` (shot, role, text, attached image names; deleted with the shot).
 
 ### Input files
 
@@ -318,6 +322,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   - The field shows the last seed used (read-only while Random).
 - **Runs box** (next to Run): how many attempts to make from the current inputs, default 1. With Random seed each run gets a new seed. In prompt list mode it is "Runs per prompt".
 - **Run button:** reads "Run N jobs", where N = prompts x runs. It validates inputs (required files present, counts within bounds), uploads any input files not yet on the server, creates the attempts, and queues them all at once. If anything fails before queueing, nothing is queued (see States). Disabled while the server is offline.
+- **Prompt chat panel** (optional, between the form and the Attempts panel): see Prompt chat below.
 - **Attempts panel** (right side), newest first. Each card shows:
   - Preview thumbnail with play (while running: percent instead).
   - Attempt id, workflow chip, and a KEEPER tag on the keeper.
@@ -373,9 +378,30 @@ Purpose: add a workflow, or replace an existing one with a new version, and deci
 Purpose: render many prompts for one shot in a single Run. This is the only batch feature besides the Runs box.
 
 - Switching the Prompt row to **list** replaces the prompt box with a list of editable prompts. The rest of the form stays where it is, and every prompt uses its current values. **single** switches back (the list is kept).
-- **Prompter row:** Prompter (dropdown of Library prompters), **How many**, **Generate**, a choice of **Replace list / Add to list**, and an **Edit prompter** link to the Library. Generated prompts are plain text. Nothing is re-rolled unless Generate is pressed again.
-- **List:** one text box per prompt with Remove. Below: **Add prompt**, **Paste lines** (one prompt per line), **Pick from Library**.
+- **Prompter row** ("Fill the list with a prompter"): a dropdown of Library prompters, **Prompts to write**, a choice of **Replace list / Add to list**, **Generate**, and an **Edit prompter** link to the Library. A line under the row says what Generate will do with the chosen prompter. Generated prompts are plain text. Nothing is re-rolled unless Generate is pressed again.
+  - **Prompts to write** is how many prompts one press of Generate produces. It is unrelated to how many boxes the list already has: the results replace the list or are appended to it.
+  - Template and script prompters generate at once ("Generate 6").
+  - An LLM prompter shows a **From** switch, **Many ideas / One idea, variations**. It starts on the input saved with the prompter and can be changed here for this shot view without changing the prompter.
+  - An LLM prompter always asks for its input first ("Generate…"). With Many ideas (the prompter's "one idea per line") a dialog takes shot descriptions, one per line, and writes one prompt each; Prompts to write is hidden because the lines decide the count. With One idea, variations ("the current shot prompt") a dialog shows the shot's single-mode prompt, editable, and writes that many variations of it; it cannot be sent empty. No images are sent either way; the Prompt chat is the place for that.
+- **List:** a count line ("3 prompts in the list. Each one is rendered as its own job; empty boxes are skipped.") and one text box per prompt with Remove. Each box grows to fit its text, as does the single-mode prompt box. Below: **Add prompt**, **Paste lines** (one prompt per line), **Pick from Library**.
 - **Run bar:** "Runs per prompt" box and "Run N jobs", with the line "6 prompts x 2 runs = 12 jobs". Each job becomes an attempt in the shot. All are sent to the server at once and run in the server's own order. In the Queue drawer they appear as one group.
+
+### Prompt chat
+
+Purpose: work out one shot's prompt with an LLM, back and forth: describe the shot, get a prompt, render it, come back and say what to change. One conversation per shot, kept in `project.db`.
+
+- **Where:** its own panel in the Shot view, between the form and the Attempts panel, so the prompt box it writes into and the attempts it is about are both visible. It is open by default. The panel's × closes it and an **Open prompt chat** button on the Prompt row brings it back; the app remembers the choice while it runs. While it is open the Attempts panel is narrower (380 px instead of 460). The panel fills the window height, stays in place while the page scrolls, and scrolls inside. Workflows without a prompt input have no chat.
+- **Prompter:** a dropdown of the Library's LLM prompters, each shown with its skill's workflow type. The default is the prompter whose skill type equals the active workflow's id or starts it (`minimax_h3` for `minimax_h3_r2v`; `-` and `_` count as the same), else the one used last, else the first. With no LLM prompter the panel links to the Library. The prompter can be changed mid-conversation.
+- **Composer:** a text box (Enter sends, Shift+Enter is a new line) and:
+  - **Add images** (file dialog) and dropping image files on the composer. Images are copied into the project's `inputs/` like any input image.
+  - **Shot's images (n):** attaches the images in the shot's form, in the workflow's order (file inputs and reference slots).
+  - **Quote prompt:** pastes the shot's current prompt into the message as a fenced block.
+  - Attached images show as thumbnails labelled **Image N**. N counts across the whole chat, and the LLM is told the same numbers.
+- **What is sent:** every Send posts the whole conversation to `POST {endpoint}/chat/completions`. The system message is the prompter's skill file in full (read from disk each time), then its instruction, then a fixed rule: put each proposed prompt in its own fenced code block and keep explanations outside it. Images go as `image_url` data URLs before the message's text, each preceded by its "Image N" label; PNG and JPEG larger than 1568 px on the long side are scaled down to that as JPEG. The model must accept images for attachments to work. Nothing is sent to the ComfyUI server.
+- **Messages are rendered as Markdown** (GitHub flavour: headings, lists, tables, bold, inline code), on both sides. A single line break stays a line break. Raw HTML is shown as text, pictures linked in a reply are not fetched (their alt text is shown), and links open in the system browser.
+- **Replies** are shown whole. Each fenced block is a prompt card with **Use as prompt** (replaces the shot's prompt; in list mode it reads **Add to prompt list** and appends) and **Copy**. The reply is streamed (`stream: true`): it appears as it is written, with **Stop** beside "Writing…". Stop keeps what has arrived as the reply; stopped before anything arrived, the message stays waiting and can be sent again with **Try again**. The prompt cards get their buttons when the reply is complete. An endpoint that ignores `stream` and answers in one piece works too.
+- **Failure:** the user's message is kept, the endpoint's error is shown under it, and **Try again** asks for the reply again. A reply that breaks off part-way is not saved.
+- **Clear chat** deletes the shot's messages after a confirmation. Attached images stay in `inputs/`. Duplicating a shot does not copy its chat; deleting a shot deletes it.
 
 ### Queue drawer (wireframe 06)
 
@@ -428,7 +454,12 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
 **Prompters tab (wireframe 11):** a prompter turns a recipe into a list of prompts. Three types, chosen with a segmented control. All produce plain text prompts for the prompt list.
 
 - **Template:** a template with `{slot}` placeholders (anything in braces becomes a slot). A table of slots: name, **how to pick** (Pick at random, Go in order, Always the same), values (one per line), count. Below: **Prompts to make**, a **randomness seed** with **New seed** (the same seed always gives the same list, so a batch can be rebuilt), **Avoid repeats**, and a **Preview** that generates a few samples. Generate in a shot uses the prompter's saved seed, so a list can be rebuilt; press **New seed** in the Library for a different list. The first letter of each prompt is capitalised.
-- **LLM:** an instruction, an input (one idea per line, pasted when it runs, or the current shot prompt), an **endpoint** (an OpenAI-compatible chat API, such as a local server), a **Model**, an optional **API key** (stored in `app.db` with the prompter), temperature, and **Test with one idea**. The app calls `POST {endpoint}/chat/completions` once per idea, with the instruction as the system message. With the current shot prompt as input it makes N variations of that prompt. A note states that ideas are sent to this endpoint, not to the ComfyUI server.
+- **LLM:** a **prompting skill** (optional, see below), an instruction, an input (one idea per line, pasted when it runs, or the current shot prompt), an **endpoint** (an OpenAI-compatible chat API, such as a local server), a **Model**, an optional **API key** (stored in `app.db` with the prompter), temperature, and **Test with one idea**. The app calls `POST {endpoint}/chat/completions` once per idea, with the instruction as the system message. With the current shot prompt as input it makes N variations of that prompt. If a reply contains a fenced code block, the first block is taken as the prompt. A note states that ideas are sent to this endpoint, not to the ComfyUI server. An LLM prompter is also what a shot's Prompt chat talks to.
+  - **Prompting skill:** a Markdown guide written for one class of workflows (a **workflow type**, such as `minimax_h3`), holding the rules and best practices for prompting them. Skills are plain files at `prompter/skills/<workflow type>/skill.md` in the workspace, shared by all prompters and projects.
+  - The dropdown lists **No skill** and every skill in the workspace (type, plus the `name` from the file's front matter). Under it: the front matter `description`, the file's size with a rough token count, **Show file**, **Replace file…** and **Delete skill** (asks first, then moves the folder to the system trash).
+  - **Add skill file…** asks for the workflow type (letters, digits, `_` and `-`; anything else becomes `_`), then for a Markdown file from anywhere, and copies it into the workspace. An existing skill of that type is replaced.
+  - With a skill, the system message is the whole skill file, then the instruction (which may be empty), then a line asking for the prompt only. The file is read from disk on every request, so hand edits apply at once and a folder added by hand (for example from git) is listed. Any file name's case is accepted (`SKILL.md`). If the file is missing, generating fails with a message naming the folder; nothing is sent.
+  - The whole file goes out with every request, so the model's context window must fit it.
 - **Script:** a script file and a runtime (Python or Node). The app starts it as a child process (`python3`, or `python` on Windows, or `node`; `COMFY_DIRECTOR_PYTHON` / `COMFY_DIRECTOR_NODE` override the command), writes a JSON object to stdin (count, seed, current prompt), and reads a JSON list of prompts from stdout, with a 60 s timeout. **Test run** shows the output. The script runs with the user's own rights and only from a path the user chose.
 - Each prompter has **Save prompter**, **Duplicate**, **Delete**. The Prompt list mode picks from this list.
 

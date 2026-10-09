@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import type {
-  Attempt, AttemptError, AttemptStatus, InputFile, LibraryPrompt, OutputFile, PrompterRecord, Sequence, Shot, ShotSummary
+  Attempt, AttemptError, AttemptStatus, ChatMessage, InputFile, LibraryPrompt, OutputFile, PrompterRecord, Sequence, Shot, ShotSummary
 } from '@shared/types'
 import type { PrompterConfig, PrompterType } from '@core/prompter/types'
 
@@ -143,6 +143,10 @@ export class AppDb {
   prompters(): PrompterRecord[] {
     return (this.db.prepare('SELECT * FROM prompters ORDER BY name COLLATE NOCASE').all() as PrompterRow[]).map(prompterFromRow)
   }
+  prompter(id: number): PrompterRecord | null {
+    const r = this.db.prepare('SELECT * FROM prompters WHERE id=?').get(id) as PrompterRow | undefined
+    return r ? prompterFromRow(r) : null
+  }
   savePrompter(p: { id?: number; name: string; config: PrompterConfig }): PrompterRecord {
     const t = now()
     if (p.id) {
@@ -262,6 +266,10 @@ export class ProjectDb {
       CREATE TABLE IF NOT EXISTS inputs(name TEXT PRIMARY KEY, original_name TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS uploads(
         name TEXT NOT NULL, server TEXT NOT NULL, server_name TEXT NOT NULL, PRIMARY KEY(name, server));
+      CREATE TABLE IF NOT EXISTS chat_messages(
+        id INTEGER PRIMARY KEY, shot_id INTEGER NOT NULL REFERENCES shots(id) ON DELETE CASCADE,
+        role TEXT NOT NULL, text TEXT NOT NULL, images_json TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS chat_shot ON chat_messages(shot_id, id);
     `)
   }
 
@@ -476,6 +484,21 @@ export class ProjectDb {
       const v = parse<Record<string, unknown>>(r.values_json, {})[key]
       return v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && v.length === 0)
     }).length
+  }
+
+  // prompt chat
+  chat(shotId: number): ChatMessage[] {
+    const rows = this.db.prepare('SELECT * FROM chat_messages WHERE shot_id=? ORDER BY id').all(shotId) as
+      { id: number; role: string; text: string; images_json: string; created_at: string }[]
+    return rows.map((r) => ({
+      id: r.id, role: r.role === 'assistant' ? 'assistant' : 'user', text: r.text, images: parse<string[]>(r.images_json, []), createdAt: r.created_at
+    }))
+  }
+  addChatMessage(shotId: number, role: ChatMessage['role'], text: string, images: string[] = []): void {
+    this.db.prepare('INSERT INTO chat_messages(shot_id,role,text,images_json,created_at) VALUES(?,?,?,?,?)').run(shotId, role, text, JSON.stringify(images), now())
+  }
+  clearChat(shotId: number): void {
+    this.db.prepare('DELETE FROM chat_messages WHERE shot_id=?').run(shotId)
   }
 
   // input files

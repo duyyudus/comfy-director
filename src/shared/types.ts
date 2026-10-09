@@ -316,6 +316,34 @@ export interface PrompterRecord {
   updatedAt: string
 }
 
+/** A prompting guide for one class of workflows: `prompter/skills/<type>/skill.md` in the workspace. */
+export interface PromptSkill {
+  /** Workflow type: the folder name, e.g. `minimax_h3`. */
+  type: string
+  /** `name` and `description` from the file's front matter, when it has one. */
+  name: string
+  description: string
+  /** Length of the file in characters. */
+  size: number
+  path: string
+}
+
+/** One message of a shot's prompt chat. */
+export interface ChatMessage {
+  id: number
+  role: 'user' | 'assistant'
+  text: string
+  /** Names of attached images in the project's `inputs/`, in the order they were attached. */
+  images: string[]
+  createdAt: string
+}
+
+export interface ShotChat {
+  messages: ChatMessage[]
+  /** Display names of the attached images. */
+  files: Record<string, InputFile>
+}
+
 export interface GenerateOptions {
   count: number
   seed?: number
@@ -339,6 +367,8 @@ export type AppEvent =
   | { type: 'reconciled'; summary: ReconcileSummary }
   | { type: 'thumbnail'; job: ThumbnailJob }
   | { type: 'theme'; dark: boolean }
+  /** The next piece of the reply a shot's prompt chat is waiting for. */
+  | { type: 'chat-delta'; projectPath: string; shotId: number; delta: string }
 
 export interface TestResult {
   ok: boolean

@@ -9,6 +9,10 @@ import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progre
 import { InputControl, fileHint } from '../components/inputs'
 import { PlayerDialog, Thumb } from '../components/Media'
 import { PromptListEditor } from './PromptList'
+import { PromptChat } from './PromptChat'
+
+/** Whether the Prompt chat panel is open, kept while moving between shots and back from Compare. */
+let chatWasOpen = true
 
 interface Form {
   workflowId: string | null
@@ -46,6 +50,11 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
   const [moreOpen, setMoreOpen] = useState(false)
   const [playing, setPlaying] = useState<Attempt | null>(null)
   const [saveLibOpen, setSaveLibOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(chatWasOpen)
+  const showChat = (v: boolean): void => {
+    chatWasOpen = v
+    setChatOpen(v)
+  }
   const formShot = useRef<number | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPatch = useRef<Partial<Shot>>({})
@@ -141,6 +150,10 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
   const jobs = promptCount * Math.max(1, form.runs || 1)
   const keeper = detail.attempts.find((a) => a.id === shot.keeperAttemptId)
   const offline = server.state !== 'connected'
+  const shotImages = (activeWf?.inputs ?? [])
+    .flatMap((i) => (i.type === 'file' || i.type === 'file-group' ? [form.values[i.key]].flat() : []))
+    .filter((v): v is string => typeof v === 'string' && !!v)
+    .map((name) => files[name] ?? { name, originalName: name, path: `inputs/${name}` })
 
   const run = async (): Promise<void> => {
     if (!activeWf) return
@@ -321,12 +334,14 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
       ) : (
         <div className="flex flex-1 items-start gap-6 p-6">
           {/* Input form */}
-          <Card className="min-w-0 flex-[1.25] p-5">
+          <Card className={cn('flex-[1.25] p-5', chatOpen ? 'min-w-[320px]' : 'min-w-0')}>
             <div className="flex flex-col gap-6">
               {prompt && (
                 <div>
-                  <div className="mb-1.5 flex items-center justify-between">
+                  <div className="mb-1.5 flex items-center gap-3">
                     <span className="text-13">{prompt.label}</span>
+                    <span className="flex-1" />
+                    {!chatOpen && <Button size="sm" className="h-7 px-2.5 text-xs" onClick={() => showChat(true)}>Open prompt chat</Button>}
                     <Segmented
                       size="xs"
                       value={form.promptMode}
@@ -351,6 +366,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                     <>
                       <Textarea
                         rows={4}
+                        className="min-h-[7.5rem] resize-none [field-sizing:content]"
                         value={String(form.values.prompt ?? (prompt.default as string) ?? '')}
                         invalid={!!errors.prompt}
                         onChange={(e) => setValue('prompt', e.target.value)}
@@ -427,8 +443,28 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
             </div>
           </Card>
 
+          {/* Prompt chat */}
+          {chatOpen && (
+            <div className="sticky top-6 max-w-[560px] min-w-[360px] flex-1">
+              <PromptChat
+                projectPath={projectPath}
+                shotId={shotId}
+                workflowId={activeWf.id}
+                currentPrompt={listMode ? '' : String(form.values.prompt ?? '')}
+                shotImages={shotImages}
+                listMode={listMode}
+                onUsePrompt={(t) => {
+                  if (listMode) update({ promptList: [...form.promptList.filter((p) => p.trim()), t] })
+                  else setValue('prompt', t)
+                  toast(listMode ? 'Added to the prompt list.' : 'Prompt replaced.')
+                }}
+                onClose={() => showChat(false)}
+              />
+            </div>
+          )}
+
           {/* Attempts */}
-          <div className="w-[460px] shrink-0">
+          <div className={cn('shrink-0', chatOpen ? 'w-[380px]' : 'w-[460px]')}>
             <div className="mb-3 flex items-center justify-between">
               <div className="text-17 font-semibold">
                 Attempts <span className="font-normal text-text2">{detail.totalAttempts}</span>

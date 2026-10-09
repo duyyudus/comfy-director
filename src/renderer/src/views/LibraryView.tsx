@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import type { LibraryPrompt, PrompterRecord } from '@shared/types'
-import type { PrompterConfig, PrompterType, SlotMode, TemplateConfig } from '@core/prompter/types'
+import type { LibraryPrompt, PrompterRecord, PromptSkill } from '@shared/types'
+import type { LlmConfig, PrompterConfig, PrompterType, SlotMode, TemplateConfig } from '@core/prompter/types'
 import { DEFAULT_LLM, DEFAULT_SCRIPT, DEFAULT_TEMPLATE } from '@core/prompter/types'
 import { templateSlots } from '@core/prompter/template'
 import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
 import { pad2, timeAgo } from '../lib/format'
-import { Button, Card, Checkbox, Empty, Input, Label, Segmented, Select, Spinner, Textarea } from '../components/ui'
+import { Button, Card, Checkbox, Dialog, Empty, Input, Label, Segmented, Select, Spinner, Textarea } from '../components/ui'
 
 export function LibraryView({ tab }: { tab: 'prompts' | 'prompters' }): ReactNode {
   const go = useStore((s) => s.go)
@@ -314,7 +314,8 @@ function PromptersTab(): ReactNode {
           )}
           {config.type === 'llm' && (
             <div className="mt-5">
-              <Label>Instruction</Label>
+              <SkillPicker cfg={config.llm} onChange={(llm) => setConfig({ type: 'llm', llm })} />
+              <Label className="mt-4">Instruction{config.llm.skill && <span className="ml-1 text-muted">sent after the skill; can be empty</span>}</Label>
               <Textarea rows={3} value={config.llm.instruction} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, instruction: e.target.value } })} />
               <Label className="mt-4">Input</Label>
               <Select className="w-full" value={config.llm.inputMode} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, inputMode: e.target.value as 'lines' | 'shot-prompt' } })}>
@@ -338,7 +339,9 @@ function PromptersTab(): ReactNode {
               </div>
               <Label className="mt-4">API key <span className="text-muted">optional, for hosted endpoints</span></Label>
               <Input type="password" value={config.llm.apiKey ?? ''} onChange={(e) => setConfig({ type: 'llm', llm: { ...config.llm, apiKey: e.target.value || undefined } })} />
-              <div className="mt-4 rounded-md bg-tint px-3 py-2.5 text-13">Your ideas are sent to this endpoint (an OpenAI-compatible chat API). It is not the ComfyUI server.</div>
+              <div className="mt-4 rounded-md bg-tint px-3 py-2.5 text-13">
+                Your ideas are sent to this endpoint (an OpenAI-compatible chat API). It is not the ComfyUI server. An LLM prompter can also be talked to per shot, in the shot's Prompt chat; attached images need a model that reads images.
+              </div>
               <div className="mt-4 flex gap-2">
                 <Input className="max-w-md" value={idea} placeholder="One idea to test with" onChange={(e) => setIdea(e.target.value)} />
                 <Button disabled={busy || !idea.trim()} onClick={async () => {
@@ -398,6 +401,90 @@ function PromptersTab(): ReactNode {
         </Card>
       )}
     </div>
+  )
+}
+
+/** The prompting skill of an LLM prompter: one Markdown guide per workflow type, kept in the workspace. */
+function SkillPicker({ cfg, onChange }: { cfg: LlmConfig; onChange: (c: LlmConfig) => void }): ReactNode {
+  const toast = useStore((s) => s.toast)
+  const [skills, setSkills] = useState<PromptSkill[] | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const load = async (): Promise<void> => setSkills(await api.listSkills())
+  useEffect(() => {
+    void load()
+  }, [])
+  const current = skills?.find((s) => s.type === cfg.skill)
+  const add = async (type: string): Promise<void> => {
+    try {
+      const s = await api.addSkill(type)
+      if (!s) return
+      await load()
+      onChange({ ...cfg, skill: s.type })
+      setAddOpen(false)
+      toast(`Skill saved for ${s.type}. Save the prompter to keep using it.`)
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    }
+  }
+  return (
+    <div>
+      <Label>Prompting skill <span className="text-muted">a guide for one class of workflows, sent whole before the instruction</span></Label>
+      <div className="flex gap-2">
+        <Select className="min-w-0 flex-1" value={cfg.skill ?? ''} onChange={(e) => onChange({ ...cfg, skill: e.target.value || undefined })}>
+          <option value="">No skill</option>
+          {cfg.skill && !current && <option value={cfg.skill}>{cfg.skill} (file missing)</option>}
+          {(skills ?? []).map((s) => <option key={s.type} value={s.type}>{s.type}{s.name ? ` · ${s.name}` : ''}</option>)}
+        </Select>
+        <Button onClick={() => setAddOpen(true)}>Add skill file…</Button>
+      </div>
+      {current && (
+        <div className="mt-1.5 text-13 text-text2">
+          {current.description && <div className="line-clamp-2">{current.description}</div>}
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>{current.size.toLocaleString()} characters, roughly {Math.ceil(current.size / 4000)}k tokens with every request. The model's context must fit it.</span>
+            <Button variant="link" className="text-13" onClick={() => void api.revealSkill(current.type)}>Show file</Button>
+            <Button variant="link" className="text-13" onClick={() => void add(current.type)}>Replace file…</Button>
+            <Button variant="link" className="text-13" onClick={async () => {
+              if (!confirm(`Move the ${current.type} skill to the trash? Prompters that use it stop working until it is added again.`)) return
+              await api.deleteSkill(current.type)
+              await load()
+              onChange({ ...cfg, skill: undefined })
+            }}>Delete skill</Button>
+          </div>
+        </div>
+      )}
+      {cfg.skill && !current && skills && <div className="mt-1.5 text-13 text-danger">The skill file for {cfg.skill} is missing from the workspace.</div>}
+      {addOpen && <AddSkillDialog skills={skills ?? []} onClose={() => setAddOpen(false)} onAdd={add} />}
+    </div>
+  )
+}
+
+function AddSkillDialog({ skills, onClose, onAdd }: { skills: PromptSkill[]; onClose: () => void; onAdd: (type: string) => Promise<void> }): ReactNode {
+  const workflows = useStore((s) => s.workflows)
+  const [type, setType] = useState('')
+  const id = type.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '')
+  const exists = skills.some((s) => s.type === id)
+  return (
+    <Dialog open onClose={onClose} title="Add a skill file" width={560}
+      footer={<><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!id} onClick={() => void onAdd(id)}>Choose file…</Button></>}>
+      <Label>Workflow type</Label>
+      <Input autoFocus list="skill-types" value={type} placeholder="minimax_h3" onChange={(e) => setType(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && id) void onAdd(id)
+        }} />
+      <datalist id="skill-types">
+        {skills.map((s) => <option key={s.type} value={s.type} />)}
+      </datalist>
+      <div className="mt-2 text-13 text-text2">
+        The class of workflows the guide is written for. One skill covers every workflow of that type
+        {workflows.length > 0 && <> (yours: <span className="font-mono">{workflows.map((w) => w.id).join(', ')}</span>)</>}.
+        A type that starts a workflow's id, like <span className="font-mono">minimax_h3</span> for <span className="font-mono">minimax_h3_r2v</span>, makes its prompter the default in that workflow's Prompt chat.
+      </div>
+      <div className="mt-3 text-13 text-text2">
+        Next you choose a Markdown file from anywhere. It is copied to <span className="font-mono">prompter/skills/{id || '<type>'}/skill.md</span> in the workspace
+        {exists ? <span className="text-danger">, replacing the skill already there.</span> : '.'}
+      </div>
+    </Dialog>
   )
 }
 
