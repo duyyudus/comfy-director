@@ -7,6 +7,7 @@ import { JobManager } from './jobs'
 import { createApi } from './api'
 import { handleMedia, registerMediaScheme } from './media'
 import { loadWindowState, saveWindowState } from './windowState'
+import icon from '../../resources/icon.png?asset'
 import type { AppEvent } from '@shared/types'
 import type { ApiMethod, ToolkitApi } from '@shared/api'
 
@@ -33,6 +34,7 @@ function createWindow(): void {
     minWidth: min.width,
     minHeight: min.height,
     title: 'Comfy Toolkit',
+    icon,
     show: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1C1A17' : '#F5F2EC',
     autoHideMenuBar: true,

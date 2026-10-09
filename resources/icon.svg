@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3155dc"/>
+      <stop offset="1" stop-color="#1f3cb0"/>
+    </linearGradient>
+  </defs>
+  <!-- Accent tile -->
+  <rect x="32" y="32" width="960" height="960" rx="216" fill="url(#tile)"/>
+  <!-- A batch of frames: two behind, the keeper in front -->
+  <rect x="296" y="216" width="560" height="400" rx="60" fill="#7189ea"/>
+  <rect x="232" y="312" width="560" height="400" rx="60" fill="#b4c0f6"/>
+  <rect x="168" y="408" width="560" height="400" rx="60" fill="#fffdf9"/>
+  <!-- The workflow: one link between two node ports -->
+  <path d="M288 688C448 688 448 528 608 528" fill="none" stroke="#2447c9" stroke-width="48" stroke-linecap="round"/>
+  <circle cx="288" cy="688" r="52" fill="#2447c9"/>
+  <circle cx="608" cy="528" r="52" fill="#2447c9"/>
+</svg>

@@ -15,6 +15,7 @@ npm run typecheck     # tsc for node (main/preload/core) and web (renderer) proj
 npm test              # vitest: core unit tests + client integration test (spawns the fake server)
 npm run fake-server   # fake ComfyUI on http://127.0.0.1:8188 (PORT, FAKE_TOKEN, STEP_MS)
 npm run rebuild       # rebuild better-sqlite3 if the native module fails to load
+npm run icon          # re-render resources/icon.png and icon.ico from resources/icon.svg
 ```
 
 Run `npm run typecheck` and `npm test` before finishing a change. There is no linter or formatter config; match the surrounding style (2 spaces, single quotes, no semicolons, explicit return types).
@@ -34,7 +35,8 @@ src/main/      Electron main: api.ts (IPC handlers), jobs.ts (queue, progress, d
 src/preload/   Builds window.toolkit from API_METHODS
 src/shared/    types.ts and api.ts (the IPC contract)
 src/renderer/  React 19 + Tailwind 4 + Zustand; views/ per screen, components/ui.tsx for primitives
-scripts/       fake-comfy.mjs
+scripts/       fake-comfy.mjs, make-icon.mjs
+resources/     App icon (icon.svg is the source); also electron-builder's buildResources
 tests/         vitest; fixtures.ts loads the example workflows in docs/
 ```
 

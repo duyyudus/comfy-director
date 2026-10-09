@@ -6,6 +6,8 @@ This document describes the app as it behaves today. A change that alters behavi
 
 The app is called **Comfy Toolkit**. Use that name for the window title, the installer, the app data folder (`Comfy Toolkit`), the package name (`comfy-toolkit`) and the default output folder.
 
+The **app icon** is a blue accent tile holding a stack of three frames (a batch of takes); the front, paper-coloured frame carries one link between two node ports (the workflow). The source is `resources/icon.svg`; `npm run icon` renders `icon.png` and `icon.ico` from it. It is used for the window, the installer, and as the logo beside the app name in the sidebar and on first launch (`Logo` in `components/ui.tsx`, the same in both themes).
+
 A desktop app that acts as a custom client for a ComfyUI instance running on a remote server. The ComfyUI node graph is used to design workflows; this app is used to run them (batch rendering, input swapping, custom prompts, output management) without repeating manual work in the graph UI.
 
 This document covers the stack, the architecture, how workflows are handled, local storage, and the features and screens (see "Features and UI"). Wireframes for the screens are in `docs/wireframes/`: use the PNGs for layout and this document for behavior.
@@ -274,7 +276,7 @@ Rules:
 ### App shell (on every screen)
 
 - **Sidebar:**
-  - App name (Comfy Toolkit) and server status (dot plus server name; "connected" or offline).
+  - Logo and app name (Comfy Toolkit), and server status (dot plus server name; "connected" or offline).
   - **Project switcher** under the app name: the current project with a menu (see Projects). Everything below it belongs to that project.
   - **Sequences:** a **+** button in the header row creates a new sequence (see Projects). Each sequence expands to its shots, one row per shot (`NN Name`). A filled dot means the shot has a keeper, a ring means none yet. The current shot is highlighted.
   - **Loose shots:** same rows, no numbering. A **+** button in the header row creates a new loose shot (New shot dialog, preset to Loose shot).

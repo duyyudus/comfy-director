@@ -332,3 +332,18 @@ export function Grip(): ReactNode {
 export function Spinner({ className }: { className?: string }): ReactNode {
   return <span className={cn('inline-block size-4 animate-spin rounded-full border-2 border-fill border-t-accent', className)} />
 }
+
+/** The app icon (resources/icon.svg). Brand art: same colours in both themes. */
+export function Logo({ className }: { className?: string }): ReactNode {
+  return (
+    <svg viewBox="0 0 1024 1024" className={cn('size-7 shrink-0', className)} aria-hidden>
+      <rect x="32" y="32" width="960" height="960" rx="216" fill="#2447c9" />
+      <rect x="296" y="216" width="560" height="400" rx="60" fill="#7189ea" />
+      <rect x="232" y="312" width="560" height="400" rx="60" fill="#b4c0f6" />
+      <rect x="168" y="408" width="560" height="400" rx="60" fill="#fffdf9" />
+      <path d="M288 688C448 688 448 528 608 528" fill="none" stroke="#2447c9" strokeWidth="48" strokeLinecap="round" />
+      <circle cx="288" cy="688" r="52" fill="#2447c9" />
+      <circle cx="608" cy="528" r="52" fill="#2447c9" />
+    </svg>
+  )
+}

@@ -3,7 +3,7 @@ import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
 import { pad2 } from '../lib/format'
-import { Menu, MenuItem, Segmented } from './ui'
+import { Logo, Menu, MenuItem, Segmented } from './ui'
 import type { ThemeMode } from '@shared/types'
 
 export function Sidebar(): ReactNode {
@@ -35,7 +35,10 @@ export function Sidebar(): ReactNode {
   return (
     <aside className="flex w-[232px] shrink-0 flex-col border-r border-border bg-panel">
       <div className="px-5 pt-5 pb-4">
-        <div className="text-17 font-semibold">Comfy Toolkit</div>
+        <div className="flex items-center gap-2 text-17 font-semibold">
+          <Logo className="size-6" />
+          Comfy Toolkit
+        </div>
         <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
           <span className={cn('size-1.5 rounded-full', server.state === 'connected' ? 'bg-accent' : server.state === 'connecting' ? 'bg-control' : 'bg-danger')} />
           <span className="truncate">{server.serverName ? `${server.serverName} · ` : ''}{statusText}</span>

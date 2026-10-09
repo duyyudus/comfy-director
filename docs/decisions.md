@@ -81,3 +81,9 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 - **The prompt library and prompters survive both choices.** They belong to neither projects nor workflows, and the request was for those two. Deleting `app.db` outright would have taken them along.
 - **Projects outside the workspace are only forgotten.** Reset is about the workspace folder; deleting a folder somewhere else on disk from a button named "Reset workspace" would be a surprise.
 - **Refused while jobs are queued or running**, like Rename project: a download finishing during the reset would write into a folder that is being removed.
+
+## 2026-10-09 (app icon)
+
+- **The icon shows what the app does, not ComfyUI's graph editor:** a stack of frames (many takes of a shot) with one link between two ports on the front frame (the workflow that made them). It uses the accent blue and the paper `panel` colour so it matches the app in both themes.
+- **Icon files live in `resources/`, not electron-builder's default `build/`,** because `.gitignore` ignores `build/`. `buildResources` points there, and `resources/icon.png` is also shipped in the package because the window loads it at run time.
+- **`icon.svg` is the source; the PNG and ICO are rendered from it by Electron** (`npm run icon`), so no image library was added.

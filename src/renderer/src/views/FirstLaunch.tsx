@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
-import { Button, Card } from '../components/ui'
+import { Button, Card, Logo } from '../components/ui'
 import { ServerForm } from './SettingsView'
 import { ImportView } from './ImportView'
 import { ProjectNameField } from '../components/Dialogs'
@@ -22,6 +22,7 @@ export function FirstLaunch(): ReactNode {
   return (
     <div className="h-full overflow-y-auto bg-bg scroll-thin">
       <div className="mx-auto max-w-[1180px] px-6 py-10">
+        <Logo className="mx-auto mb-3 size-14" />
         <div className="mb-2 text-center text-24 font-semibold">Comfy Toolkit</div>
         <div className="mb-8 flex items-center justify-center gap-6">
           {STEPS.map((s, i) => (

@@ -1,11 +1,12 @@
 appId: com.comfytoolkit.app
 productName: Comfy Toolkit
 directories:
-  buildResources: build
+  buildResources: resources
   output: release
 files:
   - out/**
   - package.json
+  - resources/icon.png
 asarUnpack:
   - node_modules/better-sqlite3/**
 win:
