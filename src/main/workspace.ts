@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto'
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { AppDb, ProjectDb, type WorkflowRow } from './db'
 import { buildSchema } from '@core/workflow/schema'
 import { detectFormat } from '@core/workflow/format'
 import type { ApiWorkflow, Overrides } from '@core/workflow/types'
 import type { ObjectInfo } from '@core/workflow/objectInfo'
 import { safeName } from '@core/output/naming'
-import type { ImportCommit, ProjectInfo, WorkflowInfo } from '@shared/types'
+import type { ImportCommit, ProjectInfo, ResetScope, WorkflowInfo } from '@shared/types'
 
 const GITIGNORE = `# Comfy Toolkit workspace: only workflows/ is meant for git.
 app.db
@@ -290,5 +290,48 @@ export class Workspace {
   /** Every registered project folder that still exists. */
   projectPaths(): string[] {
     return this.app.projects().map((p) => resolve(p.path)).filter((p) => existsSync(join(p, 'project.db')))
+  }
+
+  /* ---------------------------------------------------------------- reset */
+
+  /** Registered projects whose folder is not inside `projects/` (added with Open existing project). */
+  externalProjects(): { path: string; name: string }[] {
+    return this.app.projects().filter((p) => {
+      const rel = relative(this.projectsDir(), resolve(p.path))
+      return !rel || rel.startsWith('..') || isAbsolute(rel)
+    })
+  }
+
+  /** The first project that still has queued or running attempts, if any. */
+  projectWithActiveJobs(): string | null {
+    for (const p of this.projectPaths()) {
+      try {
+        if (this.project(p).activeAttempts().length) return this.projectName(p)
+      } catch {
+        /* unreadable */
+      }
+    }
+    return null
+  }
+
+  /**
+   * Empties `projects/` (and `workflows/` for 'all') and clears their records in app.db.
+   * `remove` takes a folder off the disk. Projects outside the workspace are only forgotten.
+   * Records are cleared after their folder is gone, so a failed removal leaves that part as it was.
+   */
+  async reset(scope: ResetScope, remove: (dir: string) => Promise<void>): Promise<void> {
+    const empty = async (dir: string): Promise<void> => {
+      if (existsSync(dir) && readdirSync(dir).length) await remove(dir)
+      mkdirSync(dir, { recursive: true })
+    }
+    // Open databases hold file handles, which block removing their folder on Windows.
+    for (const db of this.projectDbs.values()) db.close()
+    this.projectDbs.clear()
+    await empty(this.projectsDir())
+    this.app.clearProjects()
+    if (scope === 'all') {
+      await empty(join(this.root, 'workflows'))
+      this.app.clearWorkflows()
+    }
   }
 }

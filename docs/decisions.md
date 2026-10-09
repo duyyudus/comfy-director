@@ -73,3 +73,11 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 
 - **Text size scales text only, not the whole window.** The setting drives one CSS variable, `--font-scale` (body size / 14), and every text size is a Tailwind token multiplied by it (`text-13`, `text-xs`... in `styles.css`). Electron's zoom factor was the smaller change but also grows spacing, panels and thumbnails, which costs room for media. Components must use the tokens, not `text-[13px]`, or that text will not scale.
 - **Default is 15 px**, up from the fixed 14 px the wireframes use. Existing installs get 15 too, since nothing was stored before.
+
+## 2026-10-09 (reset workspace)
+
+- **Reset moves folders to the system trash, it does not erase them.** Same as deleting a workflow: one wrong click on gigabytes of renders stays recoverable. Disk space is freed when the user empties the trash.
+- **The confirmation is asked by the main process** (a native message box, Cancel as default), not by the Settings screen, so no caller of `resetWorkspace` can delete without it.
+- **The prompt library and prompters survive both choices.** They belong to neither projects nor workflows, and the request was for those two. Deleting `app.db` outright would have taken them along.
+- **Projects outside the workspace are only forgotten.** Reset is about the workspace folder; deleting a folder somewhere else on disk from a button named "Reset workspace" would be a surprise.
+- **Refused while jobs are queued or running**, like Rename project: a download finishing during the reset would write into a folder that is being removed.

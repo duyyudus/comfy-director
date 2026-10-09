@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { DEFAULT_FONT_SIZE, FONT_SIZES, type TestResult, type WorkflowInfo } from '@shared/types'
+import { DEFAULT_FONT_SIZE, FONT_SIZES, type ResetScope, type TestResult, type WorkflowInfo } from '@shared/types'
 import { useStore, type Route } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { plural } from '../lib/format'
-import { Button, Card, Input, Label, Segmented } from '../components/ui'
+import { Button, Card, Dialog, Input, Label, Segmented } from '../components/ui'
 
 /** Server address + token + Test connection. Same form as the first-launch connect step. */
 export function ServerForm({ onSaved, saveLabel = 'Save' }: { onSaved?: () => void; saveLabel?: string }): ReactNode {
@@ -49,9 +49,81 @@ export function ServerForm({ onSaved, saveLabel = 'Save' }: { onSaved?: () => vo
   )
 }
 
+const RESET_OPTIONS: { scope: ResetScope; label: string; text: string }[] = [
+  {
+    scope: 'projects',
+    label: 'Projects only',
+    text: 'Deletes every project folder in projects/: shots, attempts, input images and rendered files. Workflows are kept.'
+  },
+  {
+    scope: 'all',
+    label: 'Projects and workflows',
+    text: 'Also deletes the imported workflows in workflows/ and their version history.'
+  }
+]
+
+/** Picks what to delete. The main process asks for the final confirmation before anything is removed. */
+function ResetWorkspaceDialog({ onClose }: { onClose: () => void }): ReactNode {
+  const { setSettings, loadWorkflows, loadProjects, openProject, toast } = useStore()
+  const [scope, setScope] = useState<ResetScope>('projects')
+  const [busy, setBusy] = useState(false)
+  const reset = async (): Promise<void> => {
+    setBusy(true)
+    let changed = false
+    try {
+      changed = await api.resetWorkspace(scope)
+      if (changed) toast('Workspace reset. The deleted folders are in the system trash.')
+    } catch (e) {
+      // A removal can fail part-way (a file in use), so the lists are reloaded either way.
+      changed = true
+      toast(errorMessage(e), 'error')
+    }
+    if (!changed) {
+      setBusy(false)
+      return
+    }
+    setSettings(await api.getSettings())
+    await Promise.all([loadWorkflows(), loadProjects()])
+    const p = useStore.getState().projects.find((x) => !x.missing)
+    await openProject(p?.path ?? null)
+    onClose()
+  }
+  return (
+    <Dialog
+      open
+      onClose={() => !busy && onClose()}
+      title="Reset workspace"
+      footer={
+        <>
+          <Button disabled={busy} onClick={onClose}>Cancel</Button>
+          <Button variant="danger" disabled={busy} onClick={() => void reset()}>Continue…</Button>
+        </>
+      }
+    >
+      <div className="mb-4 text-13 text-text2">Choose what to delete. You are asked to confirm before anything is removed.</div>
+      <div className="flex flex-col gap-3">
+        {RESET_OPTIONS.map((o) => (
+          <label key={o.scope} className="flex items-start gap-2.5">
+            <input type="radio" className="mt-1 size-4 accent-[var(--accent)]" checked={scope === o.scope} disabled={busy} onChange={() => setScope(o.scope)} />
+            <span>
+              <span className="font-semibold">{o.label}</span>
+              <span className="block text-13 text-text2">{o.text}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <div className="mt-4 rounded-md bg-stripe px-3 py-2.5 text-13 text-text2">
+        Deleted folders are moved to the system trash. The prompt library, prompters and server settings are kept.
+        Projects stored outside the workspace are only removed from the list.
+      </div>
+    </Dialog>
+  )
+}
+
 export function SettingsView(): ReactNode {
   const { settings, setSettings, server, workflows, go, loadWorkflows, loadProjects, openProject, toast } = useStore()
   const [warning, setWarning] = useState<string | null>(null)
+  const [resetOpen, setResetOpen] = useState(false)
   useEffect(() => {
     if (settings) void api.syncedWarning(settings.workspacePath).then(setWarning)
   }, [settings])
@@ -143,7 +215,15 @@ export function SettingsView(): ReactNode {
             {warning ?? 'Do not put the workspace in a synced folder (Dropbox, iCloud, OneDrive): sync tools can corrupt the SQLite files. Changing the folder moves nothing; pick an existing workspace or an empty folder.'}
           </div>
         </Card>
+        <Card className="p-5">
+          <div className="mb-1 text-17 font-semibold">Reset workspace</div>
+          <div className="mb-4 text-13 text-text2">
+            Delete every project, or every project and every workflow, from this workspace folder and its databases. Not possible while jobs are queued or running.
+          </div>
+          <Button variant="danger" onClick={() => setResetOpen(true)}>Reset workspace…</Button>
+        </Card>
       </div>
+      {resetOpen && <ResetWorkspaceDialog onClose={() => setResetOpen(false)} />}
     </div>
   )
 }

@@ -438,11 +438,16 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
 
 ### Settings and first launch (wireframes 08, 13)
 
-- **Settings screen (wireframe 13)**, opened from the sidebar, has four cards:
+- **Settings screen (wireframe 13)**, opened from the sidebar, has five cards:
   - **Server:** server address, access token (optional, for a reverse proxy; sent as `Authorization: Bearer`), **Test connection** ("Connected. 142 node types found", from `GET /object_info`). This is the same form as the first-launch connect step. The token is stored encrypted in the app data folder, not in the settings file (see Local Storage).
   - **Workflows:** the imported workflows, each with **Edit** and **Delete** (see Import workflow).
   - **Text size:** the size of body text in pixels: 13, 14, 15 (default), 16 or 18. Every other text size scales with it; spacing, control heights and thumbnails do not change. It applies at once and is stored in the app settings. (The wireframes are drawn at 14.)
   - **Workspace folder:** its location with **Change folder** and **Open folder**, a one-line description of what it holds, and the warning not to use a synced folder (see Local Storage). Changing it moves nothing: the user picks an existing workspace or creates a new one.
+  - **Reset workspace:** a **Reset workspace…** button opens a dialog with two choices, then a native confirmation that lists what will go (Cancel is the default button). Nothing is deleted without that confirmation; it is asked by the main process, not the screen.
+    - **Projects only:** moves everything in `projects/` to the system trash and clears the project list in `app.db`. Workflows are kept.
+    - **Projects and workflows:** also moves everything in `workflows/` to the system trash and clears the workflow index, the version history (numbering starts again at 1) and the last used workflow.
+    - Kept in both cases: the prompt library, prompters, and everything in the app data folder (server, token, theme, text size). Projects stored outside the workspace (added with **Open existing project...**) are removed from the list but their folders are not touched.
+    - Refused while any project has queued or running jobs, because their downloads write into the project folder. Afterwards no project is open and the Queue's finished list is empty.
 - **First launch:** three steps shown as a bar: Connect, Import a workflow (the Import screen, with "Skip for now"), First project (name it; the folder preview shows where it will live). The workspace folder is created silently at the default location and can be changed in Settings. The import step is also what the app shows any time it has no workflows.
 
 ### Theme and colours (wireframe 14)

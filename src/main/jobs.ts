@@ -78,6 +78,12 @@ export class JobManager {
     server.on('disconnected', () => this.stopPolling())
   }
 
+  /** Drops the finished list, whose entries point at projects that a workspace reset removed. */
+  forgetFinished(): void {
+    this.finished = []
+    this.emitQueue()
+  }
+
   /* --------------------------------------------------------------- loading */
 
   /** Rebuilds the in-memory list of active jobs from every project's database. */

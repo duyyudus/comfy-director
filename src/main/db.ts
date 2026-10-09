@@ -82,6 +82,14 @@ export class AppDb {
   deleteWorkflow(id: string): void {
     this.db.prepare('DELETE FROM workflows WHERE id=?').run(id)
   }
+  /** Unlike deleteWorkflow, this drops the version history too: numbering starts again at 1. */
+  clearWorkflows(): void {
+    this.db.transaction(() => {
+      this.db.prepare('DELETE FROM workflows').run()
+      this.db.prepare('DELETE FROM workflow_versions').run()
+      this.db.prepare("DELETE FROM meta WHERE key='last_workflow'").run()
+    })()
+  }
   nextWorkflowVersion(id: string): number {
     return (this.db.prepare('SELECT COALESCE(MAX(version),0)+1 AS v FROM workflow_versions WHERE workflow_id=?').get(id) as { v: number }).v
   }
@@ -95,6 +103,9 @@ export class AppDb {
   }
   removeProject(path: string): void {
     this.db.prepare('DELETE FROM projects WHERE path=?').run(path)
+  }
+  clearProjects(): void {
+    this.db.prepare('DELETE FROM projects').run()
   }
   renameProject(oldPath: string, newPath: string, name: string): void {
     this.db.prepare('UPDATE projects SET path=?, name=? WHERE path=?').run(newPath, name, oldPath)

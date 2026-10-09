@@ -31,6 +31,7 @@ export interface Context {
 }
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'bmp']
+const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
 export function createApi(ctx: Context): ToolkitApi {
   const ws = ctx.ws
@@ -102,6 +103,47 @@ export function createApi(ctx: Context): ToolkitApi {
     },
     async openWorkspaceFolder() {
       await shell.openPath(ws().root)
+    },
+    async resetWorkspace(scope) {
+      if (scope !== 'projects' && scope !== 'all') throw new Error(`Unknown reset scope: ${String(scope)}`)
+      const refuseIfBusy = (): void => {
+        const busy = ws().projectWithActiveJobs()
+        if (busy) throw new Error(`"${busy}" still has queued or running jobs. Cancel them or wait until they finish, then reset the workspace.`)
+      }
+      refuseIfBusy()
+      const external = ws().externalProjects().length
+      const inside = ws().app.projects().length - external
+      const detail = [
+        `Everything in ${ws().projectsDir()} (${count(inside, 'project')}) is moved to the system trash: shots, attempts, input images and rendered files.`
+      ]
+      if (external) {
+        detail.push(`${count(external, 'project')} stored outside the workspace ${external === 1 ? 'is' : 'are'} removed from the list. ${external === 1 ? 'Its folder is' : 'Their folders are'} not touched.`)
+      }
+      if (scope === 'all') {
+        detail.push(`Everything in ${join(ws().root, 'workflows')} (${count(ws().app.workflows().length, 'workflow')}) is moved to the system trash too, and the version history is cleared.`)
+      } else detail.push('Workflows are kept.')
+      detail.push('The prompt library, prompters and server settings are kept.')
+      const r = await dialog.showMessageBox(win()!, {
+        type: 'warning',
+        title: 'Reset workspace',
+        message: scope === 'all' ? 'Delete all projects and workflows?' : 'Delete all projects?',
+        detail: detail.join('\n\n'),
+        buttons: ['Cancel', scope === 'all' ? 'Delete projects and workflows' : 'Delete projects'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true
+      })
+      if (r.response !== 1) return false
+      refuseIfBusy() // a Run may have been queued while the dialog was open
+      try {
+        await ws().reset(scope, (dir) => shell.trashItem(dir))
+      } finally {
+        // Also after a failure part-way: the projects may be gone while the workflows are not.
+        updateSettings({ currentProject: null })
+        ctx.jobs.forgetFinished()
+        ctx.emit({ type: 'workflows-changed' })
+      }
+      return true
     },
     async finishSetup() {
       updateSettings({ setupDone: true })

@@ -1,6 +1,6 @@
 import type {
   AppSettings, Attempt, GalleryFilter, GalleryPage, GenerateOptions, ImportAnalysis, ImportCommit, ImportPreview,
-  InputFile, LibraryPrompt, ProjectInfo, ProjectTree, PrompterRecord, QueueSnapshot, ReconcileSummary, RunRequest, RunResult,
+  InputFile, LibraryPrompt, ProjectInfo, ProjectTree, PrompterRecord, QueueSnapshot, ReconcileSummary, ResetScope, RunRequest, RunResult,
   Sequence, ServerStatus, Shot, ShotDetail, TestResult, ThemeMode, ThumbnailJob, WorkflowInfo
 } from './types'
 import type { Overrides } from '../core/workflow/types'
@@ -18,6 +18,8 @@ export interface ToolkitApi {
   retryConnection(): Promise<void>
   chooseWorkspace(): Promise<AppSettings | null>
   openWorkspaceFolder(): Promise<void>
+  /** Asks for confirmation in a native dialog first. Resolves false if the user cancelled. */
+  resetWorkspace(scope: ResetScope): Promise<boolean>
   finishSetup(): Promise<void>
   syncedWarning(path: string): Promise<string | null>
 
@@ -105,7 +107,7 @@ export type ApiMethod = keyof ToolkitApi
 
 export const API_METHODS: ApiMethod[] = [
   'getSettings', 'setTheme', 'setFontSize','saveServer', 'testConnection', 'getServerStatus', 'retryConnection', 'chooseWorkspace',
-  'openWorkspaceFolder', 'finishSetup', 'syncedWarning',
+  'openWorkspaceFolder', 'resetWorkspace', 'finishSetup', 'syncedWarning',
   'listWorkflows', 'pickWorkflowFile', 'analyzeWorkflow', 'previewImport', 'commitImport', 'getWorkflowOverrides',
   'getWorkflowFile', 'updateWorkflow', 'workflowShotCount', 'deleteWorkflow',
   'listProjects', 'createProject', 'openProject', 'openExistingProject', 'renameProject', 'removeProject', 'revealProject',

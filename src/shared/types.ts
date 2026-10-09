@@ -6,6 +6,8 @@ import type { PrompterConfig, PrompterType } from '../core/prompter/types'
 import type { MediaKind } from '../core/output/naming'
 
 export type ThemeMode = 'auto' | 'light' | 'dark'
+/** What Reset workspace deletes: every project, or every project and every workflow. */
+export type ResetScope = 'projects' | 'all'
 
 /** Body text size in px; every other text size scales with it. */
 export const FONT_SIZES = [13, 14, 15, 16, 18] as const
