@@ -315,7 +315,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   | toggle | Checkbox with label and short help text |
   | select | Dropdown; options from `GET /object_info` |
   | file | One slot with Replace, showing the image, the video (plays muted while hovered) or a play button for audio. An optional file input can be empty and shows "Add" and, when filled, "Remove"; a hint says what an empty slot means (for example "Leave both frames empty for text-to-video") |
-  | file group | Slots as thumbnails with remove (x), add (+), drag to reorder, and a "n of max slots" count. Slots are numbered "ref N" for images, "video N" and "audio N", the way a prompt refers to them |
+  | file group | Slots as thumbnails with remove (x), add (+), drag to reorder, a "n of max slots" count, and a **Clear** button that empties the whole group (disabled while the group is empty). Slots are numbered "ref N" for images, "video N" and "audio N", the way a prompt refers to them |
 
   A file group control enforces the minimum and maximum slot counts from the schema. Unused slots are removed from the workflow before sending (see Variable-count inputs).
 - **Prompt: "single" / "list" toggle.** Only the prompt can be switched to list mode (see Prompt list mode below). Every other input stays a single value. To try another duration, aspect ratio, turbo setting, workflow or set of reference images, change it and press Run again: the queue holds the jobs, and Compare shows what differs. There is no separate batch screen and no lists for numbers or choices. A **Save to Library** link on the prompt box stores the prompt in the Library.

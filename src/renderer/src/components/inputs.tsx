@@ -302,8 +302,9 @@ function FileGroupControl({ input, value, onChange, error, projectPath, files, o
     <div className="w-full">
       <div className="mb-1.5 flex items-baseline justify-between">
         <span className="text-13">{input.label}</span>
-        <span className="text-13 text-text2">
+        <span className="flex items-baseline gap-2 text-13 text-text2">
           {list.length} of {max ?? '?'} slots{input.constraints.minCount ? ` · at least ${input.constraints.minCount}` : ''}
+          <Button size="sm" variant="ghost" disabled={!list.length} aria-label={`Clear ${fileNoun(input, 2)}`} onClick={() => onChange([])}>Clear</Button>
         </span>
       </div>
       <div className="flex flex-wrap gap-3" {...drop.handlers}>
