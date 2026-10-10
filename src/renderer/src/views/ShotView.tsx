@@ -274,7 +274,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
           <Menu open={moreOpen} onClose={() => setMoreOpen(false)} className="top-11 right-0">
             <MenuItem danger onClick={async () => {
               setMoreOpen(false)
-              if (!confirm(`Delete "${shot.name}" and its ${detail.totalAttempts} attempt records? Rendered files stay in the project folder.`)) return
+              if (!(await api.confirm(`Delete "${shot.name}" and its ${detail.totalAttempts} attempt records? Rendered files stay in the project folder.`, 'Delete'))) return
               // The delete refreshes the tree while this view is still mounted; don't refetch the shot.
               deleting.current = true
               // Land on the neighbour in the sidebar's order: next shot, else previous, else the sequence itself.
@@ -508,7 +508,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                     }}
                     onDelete={async () => {
                       const isKeeper = shot.keeperAttemptId === a.id
-                      if (!confirm(isKeeper ? `#${a.num} is the keeper. Delete it and clear the keeper?` : `Delete attempt #${a.num}? Its file stays in the project folder.`)) return
+                      if (!(await api.confirm(isKeeper ? `#${a.num} is the keeper. Delete it and clear the keeper?` : `Delete attempt #${a.num}? Its file stays in the project folder.`, 'Delete'))) return
                       try {
                         await api.deleteAttempt(projectPath, a.id)
                         await load()

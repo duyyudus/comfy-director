@@ -186,6 +186,18 @@ export function createApi(ctx: Context): ToolkitApi {
       }
       return true
     },
+    async confirm(message, action) {
+      const r = await dialog.showMessageBox(win()!, {
+        type: 'warning',
+        title: 'Comfy Director',
+        message,
+        buttons: ['Cancel', action],
+        defaultId: 1,
+        cancelId: 0,
+        noLink: true
+      })
+      return r.response === 1
+    },
     async finishSetup() {
       updateSettings({ setupDone: true })
     },

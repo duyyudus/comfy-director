@@ -137,7 +137,7 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
           ))}
         </Select>
         <Button size="sm" variant="ghost" disabled={!messages.length || busy} onClick={async () => {
-          if (!confirm('Clear this shot\'s chat? The messages are deleted; attached images stay in the project.')) return
+          if (!(await api.confirm('Clear this shot\'s chat? The messages are deleted; attached images stay in the project.', 'Clear chat'))) return
           await api.clearChat(projectPath, shotId)
           setError(null)
           setChat({ messages: [], files: {} })

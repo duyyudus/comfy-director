@@ -199,7 +199,7 @@ function PromptsTab(): ReactNode {
               }}>Duplicate</Button>
               <span className="flex-1" />
               <Button variant="danger" onClick={async () => {
-                if (!confirm(`Delete "${draft.name}"?`)) return
+                if (!(await api.confirm(`Delete "${draft.name}"?`, 'Delete'))) return
                 await api.deletePrompt(draft.id)
                 setSelId(null)
                 await load()
@@ -392,7 +392,7 @@ function PromptersTab(): ReactNode {
               setSelId(p.id)
             }}>Duplicate</Button>
             <Button variant="danger" onClick={async () => {
-              if (!confirm(`Delete "${name}"?`)) return
+              if (!(await api.confirm(`Delete "${name}"?`, 'Delete'))) return
               await api.deletePrompter(selId)
               const l = await load()
               setSelId(l[0]?.id ?? null)
@@ -445,7 +445,7 @@ function SkillPicker({ cfg, onChange }: { cfg: LlmConfig; onChange: (c: LlmConfi
             <Button variant="link" className="text-13" onClick={() => void api.revealSkill(current.type)}>Show file</Button>
             <Button variant="link" className="text-13" onClick={() => void add(current.type)}>Replace file…</Button>
             <Button variant="link" className="text-13" onClick={async () => {
-              if (!confirm(`Move the ${current.type} skill to the trash? Prompters that use it stop working until it is added again.`)) return
+              if (!(await api.confirm(`Move the ${current.type} skill to the trash? Prompters that use it stop working until it is added again.`, 'Move to trash'))) return
               await api.deleteSkill(current.type)
               await load()
               onChange({ ...cfg, skill: undefined })

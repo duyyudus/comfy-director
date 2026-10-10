@@ -22,6 +22,8 @@ export interface ToolkitApi {
   resetWorkspace(scope: ResetScope): Promise<boolean>
   finishSetup(): Promise<void>
   syncedWarning(path: string): Promise<string | null>
+  /** Asks in a native dialog; `action` labels the confirming button. Use this, not window.confirm, which leaves text fields unable to take focus on Windows. */
+  confirm(message: string, action: string): Promise<boolean>
 
   // workflows
   listWorkflows(): Promise<WorkflowInfo[]>
@@ -125,7 +127,7 @@ export type ApiMethod = keyof ToolkitApi
 
 export const API_METHODS: ApiMethod[] = [
   'getSettings', 'setTheme', 'setFontSize','saveServer', 'testConnection', 'getServerStatus', 'retryConnection', 'chooseWorkspace',
-  'openWorkspaceFolder', 'resetWorkspace', 'finishSetup', 'syncedWarning',
+  'openWorkspaceFolder', 'resetWorkspace', 'finishSetup', 'syncedWarning', 'confirm',
   'listWorkflows', 'pickWorkflowFile', 'analyzeWorkflow', 'previewImport', 'commitImport', 'getWorkflowOverrides',
   'getWorkflowFile', 'updateWorkflow', 'workflowShotCount', 'deleteWorkflow',
   'listProjects', 'createProject', 'openProject', 'openExistingProject', 'renameProject', 'removeProject', 'revealProject',

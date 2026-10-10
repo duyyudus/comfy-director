@@ -140,7 +140,7 @@ export function SettingsView(): ReactNode {
     try {
       const shots = await api.workflowShotCount(w.id)
       const used = shots ? ` ${plural(shots, 'shot')} use${shots === 1 ? 's' : ''} it and will fall back to another workflow, keeping the values.` : ''
-      if (!confirm(`Delete "${w.name}"?${used} Past attempts and rendered files are kept. Its folder is moved to the system trash.`)) return
+      if (!(await api.confirm(`Delete "${w.name}"?${used} Past attempts and rendered files are kept. Its folder is moved to the system trash.`, 'Delete'))) return
       await api.deleteWorkflow(w.id)
       await loadWorkflows()
       toast(`Deleted ${w.name}.`)

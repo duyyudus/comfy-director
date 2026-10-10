@@ -339,12 +339,13 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
 
 Purpose: see the shots of a sequence in order, each represented by its keeper, and jump into any shot to revise it.
 
-- **Header:** sequence name, counts ("4 shots, 3 keepers"), **Add shot** (opens the New shot dialog preset to this sequence), **Play keepers in order**, **Export keepers** (see Output rules), and **Delete sequence** (its shots become loose shots).
+- **Header:** sequence name, counts ("4 shots, 3 keepers"), **Add shot** (opens the New shot dialog preset to this sequence), **Delete shot** (see below), **Play keepers in order**, **Export keepers** (see Output rules), and **Delete sequence** (its shots become loose shots).
 - **Shot cards**, in sequence order, drag to reorder (grip handle). Each card shows:
   - Number and name.
   - The keeper preview with play, or an empty state ("No keeper yet, 0 attempts") with a "Start shot" button.
   - Workflow chip, duration, and attempt count.
   - **Open shot**, which goes to the Shot view.
+- **Selecting and deleting shots:** a click on a card (outside its buttons) selects or deselects it; any number can be selected. **Delete shot** in the header, or the Del key, asks first, then removes the selected shots and their attempt records (rendered files stay in the project folder) and renumbers the rest. The button is off with nothing selected; Del is ignored while typing in a field or while a dialog is open.
 - **Add shot tile** at the end of the row (same as the header button).
 - **Keeper timeline:** one segment per shot, width proportional to the keeper's duration, with a dashed segment for shots without a keeper, and the total length of the keepers so far.
 - **Play keepers in order:** plays the keepers one after another as a preview, skipping shots without a keeper. It does not stitch or export a video.

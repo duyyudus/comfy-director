@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Attempt, Sequence, Shot } from '@shared/types'
 import { useStore } from '../lib/store'
 import { api, errorMessage, media } from '../lib/api'
@@ -22,6 +22,7 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
   const [playAll, setPlayAll] = useState(false)
   const [playing, setPlaying] = useState<Row | null>(null)
   const [menu, setMenu] = useState(false)
+  const [selected, setSelected] = useState<number[]>([])
 
   const load = useCallback(async () => {
     if (!projectPath) return
@@ -36,6 +37,37 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
   useEffect(() => {
     void load()
   }, [load, projectVersion])
+  useEffect(() => setSelected([]), [sequenceId])
+
+  const picked = rows.filter((r) => selected.includes(r.shot.id))
+  const deleteSelected = async (): Promise<void> => {
+    if (!picked.length) return
+    const attempts = picked.reduce((n, r) => n + r.attemptCount, 0)
+    const what = picked.length === 1
+      ? `"${picked[0].shot.name}" and its ${attempts} attempt records`
+      : `${picked.length} shots and their ${attempts} attempt records`
+    if (!(await api.confirm(`Delete ${what}? Rendered files stay in the project folder.`, 'Delete'))) return
+    try {
+      for (const r of picked) await api.deleteShot(projectPath, r.shot.id)
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    }
+    setSelected([])
+    await refreshTree()
+    await load()
+  }
+  const deleteRef = useRef(deleteSelected)
+  deleteRef.current = deleteSelected
+  useEffect(() => {
+    const h = (e: KeyboardEvent): void => {
+      // Del deletes the selected shots, unless the key belongs to a text field or an open dialog.
+      if (e.key !== 'Delete' || e.repeat) return
+      if ((e.target as HTMLElement).closest?.('input, textarea, select, [contenteditable]') || document.querySelector('[role="dialog"]')) return
+      void deleteRef.current()
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [])
 
   if (!seq) return <div className="p-8 text-text2">Loading…</div>
 
@@ -73,6 +105,9 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
           }} />
         </div>
         <Button onClick={() => setDialog({ kind: 'new-shot', sequenceId })}>Add shot</Button>
+        <Button variant="danger" disabled={!picked.length} title="Click shot cards to select them (Del)" onClick={() => void deleteSelected()}>
+          {picked.length > 1 ? `Delete ${picked.length} shots` : 'Delete shot'}
+        </Button>
         <Button
           disabled={!keepers.length}
           onClick={async () => {
@@ -92,7 +127,7 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
           <Menu open={menu} onClose={() => setMenu(false)} className="top-11 right-0">
             <MenuItem danger onClick={async () => {
               setMenu(false)
-              if (!confirm(`Delete the sequence "${seq.name}"? Its ${rows.length} shots become loose shots.`)) return
+              if (!(await api.confirm(`Delete the sequence "${seq.name}"? Its ${rows.length} shots become loose shots.`, 'Delete'))) return
               await api.deleteSequence(projectPath, seq.id)
               await refreshTree()
               go({ name: 'home' })
@@ -120,7 +155,16 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
                   setDragFrom(null)
                 }}
                 onDragEnd={() => setDragFrom(null)}
-                className={cn('flex w-[236px] flex-col p-3', dragFrom === i && 'opacity-40')}
+                onClick={(e) => {
+                  // A click on the card selects it; its buttons keep their own clicks.
+                  if ((e.target as HTMLElement).closest('button')) return
+                  setSelected((s) => (s.includes(r.shot.id) ? s.filter((id) => id !== r.shot.id) : [...s, r.shot.id]))
+                }}
+                className={cn(
+                  'flex w-[236px] cursor-pointer flex-col p-3 transition-colors',
+                  selected.includes(r.shot.id) ? 'border-accent bg-tint' : 'hover:border-control',
+                  dragFrom === i && 'opacity-40'
+                )}
               >
                 <div className="mb-2 flex items-center justify-between">
                   <span className="truncate font-semibold">{pad2(r.shot.position)} {r.shot.name}</span>
@@ -134,12 +178,12 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
                     <div className="mt-1 text-xs text-muted">{plural(r.attemptCount, 'attempt')}</div>
                   </div>
                 )}
-                <div className="mt-2.5 flex items-center gap-2 text-13 whitespace-nowrap text-text2">
+                <div className="mt-2.5 mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-13 whitespace-nowrap text-text2">
                   {r.keeper ? <Chip>{r.keeper.workflowName}</Chip> : <Chip>none yet</Chip>}
                   {r.keeper && lengthOf(r) > 0 && <span>{Math.round(lengthOf(r) * 10) / 10} s</span>}
                   {r.attemptCount > 0 && <span>{plural(r.attemptCount, 'attempt')}</span>}
                 </div>
-                <Button className="mt-3" onClick={() => go({ name: 'shot', shotId: r.shot.id })}>
+                <Button className="mt-auto" onClick={() => go({ name: 'shot', shotId: r.shot.id })}>
                   {r.attemptCount ? 'Open shot' : 'Start shot'}
                 </Button>
               </Card>

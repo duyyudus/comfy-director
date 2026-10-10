@@ -219,7 +219,7 @@ function ProjectSwitcher(): ReactNode {
           onClick={async () => {
             close()
             if (!tree) return
-            if (!confirm(`Remove "${tree.project.name}" from the list? The folder and its files are not deleted.`)) return
+            if (!(await api.confirm(`Remove "${tree.project.name}" from the list? The folder and its files are not deleted.`, 'Remove'))) return
             await api.removeProject(tree.project.path)
             await loadProjects()
             const next = useStore.getState().projects.find((p) => !p.missing)
