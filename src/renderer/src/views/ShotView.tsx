@@ -149,6 +149,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
   const promptCount = listMode ? form.promptList.filter((p) => p.trim()).length : 1
   const jobs = promptCount * Math.max(1, form.runs || 1)
   const keeper = detail.attempts.find((a) => a.id === shot.keeperAttemptId)
+  const latestIds = detail.attempts.filter((a) => a.status === 'done' || a.status === 'cached').slice(0, 4).map((a) => a.id)
   const offline = server.state !== 'connected'
   const shotImages = (activeWf?.inputs ?? [])
     .filter((i) => (i.type === 'file' || i.type === 'file-group') && (i.constraints.media ?? 'image') === 'image')
@@ -470,9 +471,15 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
               <div className="text-17 font-semibold">
                 Attempts <span className="font-normal text-text2">{detail.totalAttempts}</span>
               </div>
-              <Button disabled={selected.length < 2 || selected.length > 4} onClick={() => go({ name: 'compare', shotId, attemptIds: selected })}>
-                Compare selected{selected.length ? ` (${selected.length})` : ''}
-              </Button>
+              {selected.length > 0 ? (
+                <Button disabled={selected.length < 2 || selected.length > 4} onClick={() => go({ name: 'compare', shotId, attemptIds: selected })}>
+                  Compare selected ({selected.length})
+                </Button>
+              ) : (
+                <Button disabled={latestIds.length < 2} onClick={() => go({ name: 'compare', shotId, attemptIds: latestIds })}>
+                  Compare latest{latestIds.length >= 2 ? ` (${latestIds.length})` : ''}
+                </Button>
+              )}
             </div>
             {detail.attempts.length === 0 ? (
               <Empty title="No attempts yet">Fill in the inputs and press Run.</Empty>

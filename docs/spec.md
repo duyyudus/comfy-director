@@ -333,7 +333,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   - A one-line summary (turbo or full, duration, seed, age) and a compare checkbox. Clicking a finished card anywhere outside its buttons ticks or unticks it too, and ticked cards are tinted.
   - Actions: **Load settings**, **Set keeper**, **Delete**, and while running a progress bar with **Cancel**.
   - **Load settings** copies this attempt's workflow and values into the form and puts its seed in the seed field without changing Random/Fixed. If the attempt came from a list run, the Prompt row switches to single with that prompt.
-  - "Compare selected" opens the Compare view (wireframe 09) for the 2 to 4 ticked attempts. "Show older attempts" loads the rest of the list.
+  - One compare button opens the Compare view (wireframe 09). With nothing ticked it reads "Compare latest" and compares the newest 2 to 4 finished attempts (disabled with fewer than 2). With attempts ticked it reads "Compare selected" and compares the 2 to 4 ticked ones. "Show older attempts" loads the rest of the list.
   - Failed, cancelled and cached attempts have their own card states (see Attempt states).
 
 ### Sequence view (wireframe 03)
@@ -442,7 +442,7 @@ Purpose: judge 2 to 4 attempts of one shot side by side and pick the keeper.
   - **Swap:** replace this attempt with another from the same shot.
   - **Set as keeper** (disabled and labelled "Current keeper" on the keeper).
   - **Load settings:** copies the attempt's workflow and values into the Shot view form.
-- **Shared controls:** play/pause, seek bar and time, **Speed** (1x, 0.5x, 0.25x), **Sound from** (one attempt or none), **Loop**, and a **Play together** switch in the header that keeps all players on the same time.
+- **Shared controls:** play/pause, seek bar and time, **Speed** (1x, 0.5x, 0.25x), **Sound from** (one attempt or none; none by default, so the view opens silent), **Loop**, and a **Play together** switch in the header that keeps all players on the same time.
 - **What differs:** a table with one row per input whose value differs between the attempts, one column per attempt. Cells that differ from the first column are shaded. Inputs identical in all attempts are listed on one line ("Same in all: Prompt, Duration, ..."). Reference images and frame images compare by file.
 
 ### Library (wireframes 10, 11)

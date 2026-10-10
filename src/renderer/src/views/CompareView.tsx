@@ -18,7 +18,7 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
   const [time, setTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [speed, setSpeed] = useState(1)
-  const [soundFrom, setSoundFrom] = useState<number | null>(attemptIds[0] ?? null)
+  const [soundFrom, setSoundFrom] = useState<number | null>(null)
   const [loop, setLoop] = useState(true)
   const [swapOpen, setSwapOpen] = useState<number | null>(null)
   const vids = useRef<(HTMLVideoElement | null)[]>([])
