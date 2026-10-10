@@ -38,6 +38,7 @@ src/preload/   Builds window.toolkit from API_METHODS
 src/shared/    types.ts and api.ts (the IPC contract)
 src/renderer/  React 19 + Tailwind 4 + Zustand; views/ per screen, components/ui.tsx for primitives
 scripts/       fake-comfy.mjs, make-icon.mjs
+comfyui-node/  comfy_director_files: the companion ComfyUI custom node (Python) behind the Server files screen
 resources/     App icon (icon.svg is the source); also electron-builder's buildResources
 tests/         vitest; fixtures.ts loads the example workflows in docs/
 ```
@@ -52,5 +53,6 @@ Import aliases: `@core`, `@shared`, and `@renderer` (renderer only).
 - **The workflow schema is derived on every read** from `workflow.json` + `overrides.json` + cached `object_info`; never store it. Exposed fields are matched by node class and title, never by node id.
 - **Storage:** `app.db` (workspace-wide) and `project.db` (per project) are defined in `src/main/db.ts`. The access token lives only in the app data folder, never in the workspace.
 - **Renderer UI:** use the components in `components/ui.tsx` and the colour tokens in `styles.css` (`bg-panel`, `text-muted`, `bg-accent`...). No shadcn CLI or Radix. Text sizes are the tokens there too (`text-13`, `text-xs`...), never `text-[13px]`, so they follow the Text size setting.
+- **The companion node is optional.** Only the Server files screen may depend on its routes; a change to them goes into the node, `ComfyClient`, the fake server and the spec together.
 - **Local media** is shown through `ctmedia://` URLs (`media()` in `lib/api.ts`), which only serve the workspace and known project folders.
 - The main process and preload build as CommonJS; `better-sqlite3` and `ws` stay external.

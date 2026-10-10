@@ -52,6 +52,46 @@ describe('ComfyClient against the fake server', () => {
     client.disconnect()
   }, 30_000)
 
+  it('lists and deletes server files through the companion node routes', async () => {
+    const client = new ComfyClient({ baseUrl: `127.0.0.1:${PORT}`, clientId: 'files' })
+    await client.uploadImage('to-delete.png', new Uint8Array([1, 2, 3, 4]))
+    const before = await client.listFiles('input')
+    const file = before.find((f) => f.filename === 'to-delete.png')
+    expect(file).toMatchObject({ subfolder: '', type: 'input', size: 4 })
+    expect(Math.abs(Date.now() - file!.modified)).toBeLessThan(60_000)
+    const thumb = await client.thumbResponse(file!, 160)
+    expect(thumb.status).toBe(200)
+    expect(thumb.headers.get('content-type')).toBe('image/png')
+    await client.uploadImage('notes.txt', new Uint8Array([1]))
+    expect((await client.thumbResponse({ filename: 'notes.txt', subfolder: '', type: 'input' }, 160)).status).toBe(404)
+
+    const res = await client.deleteFiles([file!, { filename: 'fake-comfy.mjs', subfolder: '../../..', type: 'input' }])
+    expect(res.deleted).toEqual([{ filename: 'to-delete.png', subfolder: '', type: 'input' }])
+    expect(res.errors).toHaveLength(1)
+    expect((await client.listFiles('input')).some((f) => f.filename === 'to-delete.png')).toBe(false)
+  })
+
+  it('renders again after its cached output was deleted', async () => {
+    const client = new ComfyClient({ baseUrl: `127.0.0.1:${PORT}`, clientId: 'recache' })
+    const schema = buildSchema(r2v(), null, await client.objectInfo())
+    await client.uploadImage('recache.png', new Uint8Array([1]))
+    client.connect()
+    await new Promise((ok) => client.once('open', ok))
+    const final = applyValues(r2v(), schema, { prompt: 'delete then rerun', ref_images: ['recache.png'] }, { seed: 11 })
+    const first = await client.queuePrompt(final)
+    await waitFor(client, first.prompt_id, 'execution_success')
+    const [file] = historyFiles((await client.getHistory(first.prompt_id))!)
+    const res = await client.deleteFiles([{ ...file, type: 'output' }])
+    expect(res.deleted).toHaveLength(1)
+
+    const again = await client.queuePrompt(final)
+    const msgs = await waitFor(client, again.prompt_id, 'execution_success')
+    expect(msgs.find((m) => m.type === 'execution_cached')!.data.nodes).toEqual([])
+    const [fresh] = historyFiles((await client.getHistory(again.prompt_id))!)
+    expect((await client.view(fresh)).byteLength).toBeGreaterThan(0)
+    client.disconnect()
+  }, 30_000)
+
   it('reports rejected prompts with node errors', async () => {
     const client = new ComfyClient({ baseUrl: `http://127.0.0.1:${PORT}`, clientId: 'x' })
     const wf = fl2v()

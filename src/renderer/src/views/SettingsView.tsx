@@ -162,6 +162,10 @@ export function SettingsView(): ReactNode {
             The token is kept in the system keychain, never in the workspace.
           </div>
           <ServerForm onSaved={() => toast('Server saved. Connecting…')} />
+          <div className="mt-4 flex items-center gap-3 border-t border-border pt-4">
+            <div className="flex-1 text-13 text-text2">Browse and delete uploaded refs and rendered files that are taking up space on the server.</div>
+            <Button size="sm" onClick={() => go({ name: 'server-files' })}>Server files</Button>
+          </div>
         </Card>
         <Card className="p-5">
           <div className="mb-1 flex items-center">

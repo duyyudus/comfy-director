@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events'
 import WebSocket from 'ws'
 import type { ApiWorkflow } from '../workflow/types'
 import type { ObjectInfo } from '../workflow/objectInfo'
+import type { ServerDeleteResult, ServerFile, ServerFileRef, ServerFolder } from './files'
 
 /** ComfyUI HTTP + WebSocket client. Plain TypeScript; usable outside Electron. */
 
@@ -22,6 +23,10 @@ export class ComfyError extends Error {
   }
   get unauthorized(): boolean {
     return this.status === 401 || this.status === 403
+  }
+  /** A route the server does not have: how a missing companion node shows up. */
+  get notInstalled(): boolean {
+    return this.status === 404 || this.status === 405
   }
 }
 
@@ -134,10 +139,40 @@ export class ComfyClient extends EventEmitter {
   }
 
   async view(file: OutputFileRef): Promise<ArrayBuffer> {
-    const q = new URLSearchParams({ filename: file.filename, subfolder: file.subfolder ?? '', type: file.type ?? 'output' })
-    const res = await this.request(`/view?${q}`, {}, 10 * 60_000)
+    const res = await this.viewResponse(file)
     if (!res.ok) throw new ComfyError(`Download of ${file.filename} failed (${res.status}).`, res.status)
     return res.arrayBuffer()
+  }
+
+  /** The raw `/view` response, for streaming a file. `range` is passed on as the Range header. */
+  viewResponse(file: OutputFileRef, range?: string | null): Promise<Response> {
+    const q = new URLSearchParams({ filename: file.filename, subfolder: file.subfolder ?? '', type: file.type ?? 'output' })
+    return this.request(`/view?${q}`, range ? { headers: { Range: range } } : {}, 10 * 60_000)
+  }
+
+  /** Files in one of the server's folders. Needs the companion node: without it the error has `notInstalled` set. */
+  async listFiles(type: ServerFolder): Promise<ServerFile[]> {
+    const r = await this.json<{ files?: { filename: string; subfolder?: string; size: number; modified: number }[] }>(
+      `/comfy_director/files?type=${type}`, undefined, 60_000
+    )
+    if (!Array.isArray(r?.files)) throw new ComfyError('The server did not answer with a file list.', 404, r)
+    return r.files.map((f) => ({ filename: f.filename, subfolder: f.subfolder ?? '', type, size: f.size, modified: Math.round(f.modified * 1000) }))
+  }
+
+  /** A small JPEG of an image or of a video's first frame (companion node). 404 when the file has no picture. */
+  thumbResponse(file: ServerFileRef, size: number): Promise<Response> {
+    const q = new URLSearchParams({ filename: file.filename, subfolder: file.subfolder, type: file.type, size: String(size) })
+    return this.request(`/comfy_director/thumb?${q}`, {}, 60_000)
+  }
+
+  /** Deletes files from the server's input, output and temp folders (companion node). */
+  async deleteFiles(files: ServerFileRef[]): Promise<ServerDeleteResult> {
+    const r = await this.json<Partial<ServerDeleteResult>>('/comfy_director/files/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: files.map((f) => ({ filename: f.filename, subfolder: f.subfolder, type: f.type })) })
+    }, 5 * 60_000)
+    return { deleted: r?.deleted ?? [], errors: r?.errors ?? [] }
   }
 
   async uploadImage(name: string, data: Uint8Array, mime = 'application/octet-stream'): Promise<{ name: string; subfolder: string; type: string }> {

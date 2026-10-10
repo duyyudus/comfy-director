@@ -162,7 +162,7 @@ export function Sidebar(): ReactNode {
         <div className="mx-2 my-4 h-px bg-border" />
         <NavLink active={route.name === 'gallery'} onClick={() => go({ name: 'gallery' })}>Gallery</NavLink>
         <NavLink active={route.name === 'library'} onClick={() => go({ name: 'library', tab: 'prompts' })}>Library</NavLink>
-        <NavLink active={route.name === 'settings'} onClick={() => go({ name: 'settings' })}>Settings</NavLink>
+        <NavLink active={route.name === 'settings' || route.name === 'server-files'} onClick={() => go({ name: 'settings' })}>Settings</NavLink>
       </div>
 
       <div className="px-5 pt-3 pb-5">

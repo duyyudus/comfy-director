@@ -1,4 +1,4 @@
-import { BrowserWindow, clipboard, dialog, nativeImage, nativeTheme, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, nativeImage, nativeTheme, shell } from 'electron'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, extname, join, resolve } from 'node:path'
 import { settings, updateSettings, publicSettings, getToken, setToken } from './settings'
@@ -22,6 +22,8 @@ import type { ChatPart, ChatTurn, LlmConfig } from '@core/prompter'
 import { randomSeed } from '@core/planner'
 import { titleOf } from '@core/workflow/graph'
 import type { FileMedia } from '@core/workflow/types'
+import { ComfyClient, ComfyError } from '@core/comfy/client'
+import { SERVER_FOLDERS, serverFilePath } from '@core/comfy/files'
 
 export interface Context {
   ws: () => Workspace
@@ -59,6 +61,10 @@ export function createApi(ctx: Context): ToolkitApi {
   const ws = ctx.ws
   const oi = (): ReturnType<() => ServerManager['objectInfo']> => ctx.server.objectInfo
   const win = (): BrowserWindow | undefined => ctx.window() ?? undefined
+  const serverClient = (): ComfyClient => {
+    if (!ctx.server.connected || !ctx.server.client) throw new Error('The server is not connected.')
+    return ctx.server.client
+  }
 
   const tree = (path: string): ProjectTree => {
     const pdb = ws().project(path)
@@ -724,6 +730,43 @@ export function createApi(ctx: Context): ToolkitApi {
     },
     async clearChat(projectPath, shotId) {
       ws().project(projectPath).clearChat(shotId)
+    },
+
+    /* --------------------------------------------------- server files */
+    async listServerFiles(folder) {
+      try {
+        return { installed: true, files: await serverClient().listFiles(folder) }
+      } catch (e) {
+        if (e instanceof ComfyError && e.notInstalled) return { installed: false, files: [] }
+        throw e
+      }
+    },
+    async deleteServerFiles(files) {
+      const refs = files.filter((f) => SERVER_FOLDERS.includes(f.type))
+      if (!refs.length) return { deleted: 0, errors: [] }
+      // Taken before the request: the server or workspace in Settings can change while it is pending.
+      const client = serverClient()
+      const server = ctx.server.url_
+      const workspace = ws()
+      const res = await client.deleteFiles(refs)
+      // A deleted ref must be uploaded again by the next Run that uses it, in whichever project.
+      const inputs = res.deleted.filter((f) => f.type === 'input').map(serverFilePath)
+      if (inputs.length) {
+        for (const p of workspace.app.projects()) {
+          try {
+            const pdb = workspace.project(p.path)
+            for (const name of inputs) pdb.forgetServerFile(server, name)
+          } catch {
+            /* project folder missing */
+          }
+        }
+      }
+      return { deleted: res.deleted.length, errors: res.errors.map((e) => `${serverFilePath(e)}: ${e.message}`) }
+    },
+    async revealServerNode() {
+      const dir = join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'comfyui-node')
+      const err = await shell.openPath(dir)
+      if (err) throw new Error(`Can't open ${dir}: ${err}`)
     },
 
     /* ----------------------------------------------------------- misc */

@@ -5,6 +5,7 @@ import type {
 } from './types'
 import type { FileMedia, Overrides } from '../core/workflow/types'
 import type { PrompterConfig } from '../core/prompter/types'
+import type { ServerFile, ServerFileRef, ServerFolder } from '../core/comfy/files'
 
 /** Everything the renderer can ask the main process. Each method maps to one IPC call. */
 export interface ToolkitApi {
@@ -121,6 +122,14 @@ export interface ToolkitApi {
   stopChat(projectPath: string, shotId: number): Promise<void>
   clearChat(projectPath: string, shotId: number): Promise<void>
 
+  // server files (needs the companion node on the server)
+  /** `installed` is false when the server lacks the companion node; the list is then empty. */
+  listServerFiles(folder: ServerFolder): Promise<{ installed: boolean; files: ServerFile[] }>
+  /** Deletes without asking: confirm first. `errors` has one line per file the server kept. */
+  deleteServerFiles(files: ServerFileRef[]): Promise<{ deleted: number; errors: string[] }>
+  /** Opens the folder that holds the companion node, to copy to the server. */
+  revealServerNode(): Promise<void>
+
   // misc
   mediaUrl(absPath: string): Promise<string>
   copyText(text: string): Promise<void>
@@ -145,6 +154,7 @@ export const API_METHODS: ApiMethod[] = [
   'listPrompts', 'savePrompt', 'deletePrompt', 'usePrompt', 'markPromptsUsed', 'listPrompters', 'savePrompter',
   'deletePrompter', 'generatePrompts', 'pickScriptFile', 'listSkills', 'addSkill', 'revealSkill', 'deleteSkill',
   'getChat', 'sendChat', 'stopChat', 'clearChat',
+  'listServerFiles', 'deleteServerFiles', 'revealServerNode',
   'mediaUrl', 'copyText'
 ]
 
@@ -153,6 +163,16 @@ export const MEDIA_SCHEME = 'ctmedia'
 /** URL for a local file, served by the main process (restricted to the workspace and known projects). */
 export function mediaUrlFor(absPath: string, version?: string | number): string {
   return `${MEDIA_SCHEME}://f/?p=${encodeURIComponent(absPath)}${version !== undefined ? `&v=${version}` : ''}`
+}
+
+/** URL for a file on the ComfyUI server, fetched by the main process (which holds the token). */
+export function serverMediaUrlFor(f: ServerFileRef): string {
+  return `${MEDIA_SCHEME}://server/?${new URLSearchParams({ filename: f.filename, subfolder: f.subfolder, type: f.type })}`
+}
+
+/** URL for a thumbnail of a file on the server, `size` pixels on its long side. `version` changes when the file does. */
+export function serverThumbUrlFor(f: ServerFileRef, size: number, version: string | number): string {
+  return `${serverMediaUrlFor(f)}&thumb=${size}&v=${version}`
 }
 
 export function joinPath(dir: string, rel: string): string {

@@ -12,6 +12,7 @@ import { ImportView } from './views/ImportView'
 import { CompareView } from './views/CompareView'
 import { LibraryView } from './views/LibraryView'
 import { SettingsView } from './views/SettingsView'
+import { ServerFilesView } from './views/ServerFilesView'
 import { FirstLaunch } from './views/FirstLaunch'
 import { HomeView } from './views/HomeView'
 
@@ -65,6 +66,8 @@ function View(): ReactNode {
       return <LibraryView tab={route.tab} />
     case 'settings':
       return <SettingsView />
+    case 'server-files':
+      return <ServerFilesView />
     case 'import':
       return <ImportView key={route.editId ?? ''} back={route.back} replaceId={route.replaceId} editId={route.editId} />
     case 'compare':

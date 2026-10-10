@@ -8,13 +8,16 @@
  * Upload a file whose name contains "reject" to make the upload fail.
  * Extra routes: POST /_fake/other-client (queue a job from another client),
  *               POST /_fake/offline?seconds=10 (drop connections and refuse requests).
- * Env: PORT (8188), FAKE_TOKEN (require "Authorization: Bearer <token>"), STEP_MS (400).
+ * It also answers the companion node's routes (GET /comfy_director/files, GET /comfy_director/thumb,
+ * POST /comfy_director/files/delete). A thumbnail is the image itself, or a video frame cut with ffmpeg.
+ * Env: PORT (8188), FAKE_TOKEN (require "Authorization: Bearer <token>"), STEP_MS (400),
+ *      NO_FILES_NODE=1 (answer like a server without the companion node).
  */
 import http from 'node:http'
 import { randomUUID, createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { join, dirname, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { WebSocketServer } from 'ws'
@@ -22,11 +25,15 @@ import { WebSocketServer } from 'ws'
 const PORT = Number(process.env.PORT || 8188)
 const TOKEN = process.env.FAKE_TOKEN || ''
 const STEP_MS = Number(process.env.STEP_MS || 400)
+const FILES_NODE = process.env.NO_FILES_NODE !== '1'
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(tmpdir(), 'fake-comfy')
 const inputDir = join(root, 'input')
 const outputDir = join(root, 'output')
+const tempDir = join(root, 'temp')
+const DIRS = { input: inputDir, output: outputDir, temp: tempDir }
 mkdirSync(inputDir, { recursive: true })
+mkdirSync(tempDir, { recursive: true })
 mkdirSync(join(outputDir, 'video'), { recursive: true })
 
 /* ------------------------------------------------------------- object_info */
@@ -217,6 +224,18 @@ const readBody = (req) => new Promise((r) => {
   req.on('data', (c) => chunks.push(c))
   req.on('end', () => r(Buffer.concat(chunks)))
 })
+/** Path of a file inside the input, output or temp folder, or null if it would be outside. */
+const fileIn = (type, subfolder, filename) => {
+  const dir = DIRS[type]
+  if (!dir || !filename) return null
+  const file = resolve(dir, subfolder || '', filename)
+  return file.startsWith(dir + sep) ? file : null
+}
+const listDir = (dir) =>
+  readdirSync(dir, { withFileTypes: true, recursive: true }).filter((e) => e.isFile()).map((e) => {
+    const st = statSync(join(e.parentPath, e.name))
+    return { filename: e.name, subfolder: relative(dir, e.parentPath).split(sep).join('/'), size: st.size, modified: st.mtimeMs / 1000 }
+  })
 const authorized = (req) => !TOKEN || req.headers.authorization === `Bearer ${TOKEN}`
 
 function validate(prompt) {
@@ -291,10 +310,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/history' && req.method === 'GET') return json(res, 200, history)
     if (p === '/view' && req.method === 'GET') {
-      const type = url.searchParams.get('type') || 'output'
-      const dir = type === 'input' ? inputDir : outputDir
-      const file = join(dir, url.searchParams.get('subfolder') || '', url.searchParams.get('filename') || '')
-      if (!file.startsWith(dir) || !existsSync(file)) return json(res, 404, { error: 'not found' })
+      const file = fileIn(url.searchParams.get('type') || 'output', url.searchParams.get('subfolder'), url.searchParams.get('filename'))
+      if (!file || !existsSync(file)) return json(res, 404, { error: 'not found' })
       res.writeHead(200, { 'Content-Type': 'application/octet-stream' })
       return res.end(readFileSync(file))
     }
@@ -306,6 +323,50 @@ const server = http.createServer(async (req, res) => {
       if (image.name.includes('reject')) return json(res, 500, { error: 'disk full' })
       writeFileSync(join(inputDir, image.name), Buffer.from(await image.arrayBuffer()))
       return json(res, 200, { name: image.name, subfolder: '', type: 'input' })
+    }
+    if (FILES_NODE && p === '/comfy_director/files' && req.method === 'GET') {
+      const dir = DIRS[url.searchParams.get('type')]
+      if (!dir) return json(res, 400, { error: 'type must be input, output or temp.' })
+      return json(res, 200, { version: 2, files: listDir(dir) })
+    }
+    if (FILES_NODE && p === '/comfy_director/thumb' && req.method === 'GET') {
+      const q = url.searchParams
+      const file = fileIn(q.get('type'), q.get('subfolder'), q.get('filename'))
+      const ext = (file?.match(/\.([a-z0-9]+)$/i)?.[1] ?? '').toLowerCase()
+      if (!file || !existsSync(file)) return json(res, 404, { error: 'not found' })
+      let data = null
+      let type = 'image/jpeg'
+      if (['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'].includes(ext)) {
+        data = readFileSync(file)
+        type = `image/${ext === 'jpg' ? 'jpeg' : ext}`
+      } else if (['mp4', 'webm', 'mov', 'mkv'].includes(ext)) {
+        try {
+          data = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', file, '-frames:v', '1', '-vf', `scale=${Number(q.get('size')) || 160}:-2`, '-f', 'image2', '-c:v', 'mjpeg', 'pipe:1'])
+        } catch {
+          /* no ffmpeg, or not a video */
+        }
+      }
+      if (!data?.length) return json(res, 404, { error: 'no thumbnail' })
+      res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'private, max-age=86400' })
+      return res.end(data)
+    }
+    if (FILES_NODE && p === '/comfy_director/files/delete' && req.method === 'POST') {
+      const body = JSON.parse((await readBody(req)).toString() || '{}')
+      const deleted = []
+      const errors = []
+      for (const f of body.files ?? []) {
+        const ref = { filename: String(f.filename ?? ''), subfolder: String(f.subfolder ?? ''), type: String(f.type ?? '') }
+        const file = fileIn(ref.type, ref.subfolder, ref.filename)
+        if (!file || (existsSync(file) && !statSync(file).isFile())) {
+          errors.push({ ...ref, message: 'Not a file in the input, output or temp folder.' })
+          continue
+        }
+        rmSync(file, { force: true })
+        deleted.push(ref)
+      }
+      // Like the node: cached results would name the deleted files.
+      if (deleted.some((f) => f.type !== 'input')) seenHashes.clear()
+      return json(res, 200, { deleted, errors })
     }
     if (p === '/_fake/other-client' && req.method === 'POST') {
       const prompt = JSON.parse(readFileSync(join(examples, 'video_minimax_h3_t2v.json'), 'utf8'))

@@ -87,7 +87,10 @@ app.whenReady().then(() => {
     }
   })
 
-  handleMedia(() => [workspace.root, ...workspace.app.projects().map((p) => resolve(p.path))])
+  handleMedia(
+    () => [workspace.root, ...workspace.app.projects().map((p) => resolve(p.path))],
+    (file, range, thumb) => (thumb ? server.client?.thumbResponse(file, thumb) : server.client?.viewResponse(file, range)) ?? null
+  )
 
   jobs.loadActive()
   server.configure(s.serverUrl, getToken(), s.clientId)

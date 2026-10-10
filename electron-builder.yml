@@ -7,6 +7,9 @@ files:
   - out/**
   - package.json
   - resources/icon.png
+extraResources:
+  - from: comfyui-node
+    to: comfyui-node
 asarUnpack:
   - node_modules/better-sqlite3/**
 win:

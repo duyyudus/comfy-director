@@ -522,6 +522,10 @@ export class ProjectDb {
   forgetUpload(name: string, server: string): void {
     this.db.prepare('DELETE FROM uploads WHERE name=? AND server=?').run(name, server)
   }
+  /** Forgets every upload stored on a server under this name (the file was deleted there). */
+  forgetServerFile(server: string, serverName: string): void {
+    this.db.prepare('DELETE FROM uploads WHERE server=? AND server_name=?').run(server, serverName)
+  }
   serverOf(attemptId: number): string | null {
     return (this.db.prepare('SELECT server_url FROM attempts WHERE id=?').get(attemptId) as { server_url: string | null } | undefined)?.server_url ?? null
   }

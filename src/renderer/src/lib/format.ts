@@ -78,3 +78,15 @@ export function formatValue(input: SchemaInput | undefined, v: unknown, inputNam
 export function plural(n: number, word: string, pluralWord = `${word}s`): string {
   return `${n} ${n === 1 ? word : pluralWord}`
 }
+
+/** File size: "812 KB", "1.4 GB". */
+export function bytes(n: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let i = 0
+  let v = n
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024
+    i++
+  }
+  return `${i === 0 || v >= 100 ? Math.round(v) : v.toFixed(1)} ${units[i]}`
+}

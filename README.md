@@ -37,7 +37,10 @@ src/preload/   the explicit API exposed to the renderer
 src/shared/    types and the IPC contract
 src/renderer/  React UI (Zustand store, views per screen)
 scripts/       fake ComfyUI server
+comfyui-node/  optional ComfyUI custom node, needed only for the Server files screen
 tests/         vitest
 ```
+
+To browse and delete files on the server (Settings, Server files), copy `comfyui-node/comfy_director_files` into `ComfyUI/custom_nodes/` on the server and restart ComfyUI.
 
 Export workflows from ComfyUI with **Save (API Format)** (turn on Dev mode options first).

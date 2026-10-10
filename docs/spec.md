@@ -481,7 +481,7 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
 ### Settings and first launch (wireframes 08, 13)
 
 - **Settings screen (wireframe 13)**, opened from the sidebar, has five cards:
-  - **Server:** server address, access token (optional, for a reverse proxy; sent as `Authorization: Bearer`), **Test connection** ("Connected. 142 node types found", from `GET /object_info`). This is the same form as the first-launch connect step. The token is stored encrypted in the app data folder, not in the settings file (see Local Storage).
+  - **Server:** server address, access token (optional, for a reverse proxy; sent as `Authorization: Bearer`), **Test connection** ("Connected. 142 node types found", from `GET /object_info`). This is the same form as the first-launch connect step. The token is stored encrypted in the app data folder, not in the settings file (see Local Storage). A **Server files** button opens the Server files screen.
   - **Workflows:** the imported workflows, each with **Edit** and **Delete** (see Import workflow).
   - **Text size:** the size of body text in pixels: 13, 14, 15 (default), 16 or 18. Every other text size scales with it; spacing, control heights and thumbnails do not change. It applies at once and is stored in the app settings. (The wireframes are drawn at 14.)
   - **Workspace folder:** its location with **Change folder** and **Open folder**, a one-line description of what it holds, and the warning not to use a synced folder (see Local Storage). Changing it moves nothing: the user picks an existing workspace or creates a new one.
@@ -491,6 +491,21 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
     - Kept in both cases: the prompt library, prompters, and everything in the app data folder (server, token, theme, text size). Projects stored outside the workspace (added with **Open existing project...**) are removed from the list but their folders are not touched.
     - Refused while any project has queued or running jobs, because their downloads write into the project folder. Afterwards no project is open and the Queue's finished list is empty.
 - **First launch:** three steps shown as a bar: Connect, Import a workflow (the Import screen, with "Skip for now"), First project (name it; the folder preview shows where it will live). The workspace folder is created silently at the default location and can be changed in Settings. The import step is also what the app shows any time it has no workflows.
+
+### Server files
+
+Opened from the Server card in Settings. Lists the files on the ComfyUI server and deletes the ones selected, to free disk space there. It never touches files in the projects.
+
+- **Needs the companion node.** ComfyUI has no route for listing a folder or deleting a file, so the server must have the `comfy_director_files` node installed (see Companion node). Without it the screen explains this, with **Open the node folder** (the folder to copy to the server) and **Check again**. While the server is not connected the screen says so.
+- **Three folders**, one at a time: **Uploaded refs** (`input/`), **Rendered files** (`output/`) and **Temp** (`temp/`), each listed with its subfolders. A line under the switch says what the folder holds.
+- **List:** one row per file with a thumbnail, name, subfolder, size and when it was last modified. **Filter by name** narrows it. The rows are grouped by the day the file was last modified, latest first: one group for each day of the current week (weeks start on Monday) headed **Today**, **Yesterday** or the weekday with its date, then **Before this week** for everything older. Each heading shows the group's file count and size, and its checkbox selects the whole group. Inside a group the order is **Newest** (default), **Largest** or **Name**. 300 rows are drawn at a time, with **Show more**. The header shows the file count and total size, or the count and size of the selection. **Refresh** reads the folder again.
+- **Thumbnails** are made by the server: the image itself, or the first frame of a video, at most 256 pixels on its long side, shown cropped to a square. They load as their rows scroll into view. Audio and other files show their file extension instead, as does a picture the server could not make (an unreadable file, or a companion node from before thumbnails). Clicking a thumbnail opens the preview.
+- **Preview** opens an image, video or audio file in a dialog. The file is streamed from the server through the main process (`ctmedia://server/`), so the token never reaches the screen.
+- **Delete from server**, or the Delete key, removes the selected files after a native confirmation that names the count, the size and the server. Clicking a row selects or deselects it; Shift+click does the same to every row from the last clicked one to this one. The header checkbox selects every file that matches the filter. Deletion is permanent: the server has no trash. Files the server could not delete are named in an error message.
+- **Deleted refs are uploaded again.** The app forgets the upload of every deleted input file, in every project, so the next Run that uses the ref uploads it from the project's `inputs/` folder.
+- **Deleting rendered or temp files clears the server's cache of node results** (loaded models stay loaded). Otherwise a job identical to an earlier one would be answered from the cache with the name of a deleted file, and its download would fail. The next job on the server therefore runs every node again.
+- While a folder is loading its list is empty and Delete is off, so a selection can only ever hold files of the folder on screen.
+- Nothing checks whether a file is still needed by a job in the queue. A waiting job whose ref is deleted fails when it starts.
 
 ### Theme and colours (wireframe 14)
 
@@ -563,14 +578,14 @@ Empty states (wireframe 08), each pointing to the next step:
 
 ### Output rules
 
-- **Where:** inside the project folder, `<workspace>/projects/<Project>/outputs/`. Files are downloaded automatically when a job finishes (`GET /view`), never on demand later. Nothing is deleted from the server.
+- **Where:** inside the project folder, `<workspace>/projects/<Project>/outputs/`. Files are downloaded automatically when a job finishes (`GET /view`), never on demand later. Nothing is deleted from the server unless the user does it on the Server files screen.
 - **Which files:** every `{filename, subfolder, type: output}` entry of the job in `GET /history`, under any key.
 - **Layout:** `outputs/<Sequence name>/<NN Shot name>/attempt-<id>-<workflow>.<ext>`. Loose shots go under `outputs/_loose/<Shot name>/`. Names are made safe for the file system (illegal characters replaced, length limited).
 - **File names** use the project-wide attempt id, not the per-shot `#N` shown in the UI, because shot names are not unique and two shots can share a folder. If the name is still taken, ` (2)`, ` (3)`... is added: a rendered file is never overwritten.
 - **Renaming:** each attempt's file path is stored in `project.db`, relative to the project folder. Renaming or moving a shot does not move existing files. New attempts use the current names.
 - **Export keepers:** an action on the Sequence view that copies each shot's keeper to `outputs/_keepers/<Sequence name>/<NN Shot name>.<ext>`, numbered in sequence order, replacing earlier exports. It never moves or deletes the originals.
 - **Thumbnails:** one still frame per attempt, made in the renderer when the file is downloaded (`<video>` to canvas to JPEG, 480 px at most, no ffmpeg) and stored at `thumbs/attempt-<id>.jpg` in the project. The video duration is recorded at the same time for the keeper timeline. Gallery sort order is newest first by default.
-- **Local media** is shown through `ctmedia://` URLs, which serve only the workspace and known project folders, with HTTP Range support for seeking.
+- **Local media** is shown through `ctmedia://` URLs, which serve only the workspace and known project folders, with HTTP Range support for seeking. `ctmedia://server/` URLs are the exception: they pass a file from the server's input, output or temp folder through (`GET /view`, with the Range header), or its thumbnail when the URL has `thumb=<pixels>`, for the Server files screen.
 
 ## ComfyUI API Endpoints Used
 
@@ -585,9 +600,25 @@ Empty states (wireframe 08), each pointing to the next step:
 | `GET /queue` | Queue inspection, including jobs from other clients |
 | `POST /queue` (`delete` list of prompt ids) | Cancel waiting jobs |
 | `POST /interrupt` (`prompt_id`) | Stop the running job, if it is ours |
+| `GET /comfy_director/files?type=` | List the input, output or temp folder (companion node) |
+| `GET /comfy_director/thumb` | Thumbnail of an image or video in those folders (companion node) |
+| `POST /comfy_director/files/delete` | Delete files from those folders (companion node) |
 
 When a token is set, every request and the WebSocket carry it as `Authorization: Bearer`.
 
 Checked on the real server (2026-10-08): cancelling a waiting job, interrupting a running job, finding and downloading `SaveVideo` outputs, and the WebSocket on a direct connection. The WebSocket through a reverse proxy with a token has not been confirmed separately.
 
-For development, `npm run fake-server` runs a fake ComfyUI that answers these routes with scripted scenarios (`#fail`, `#oom`, `#reject`, `#slow` in a prompt).
+For development, `npm run fake-server` runs a fake ComfyUI that answers these routes with scripted scenarios (`#fail`, `#oom`, `#reject`, `#slow` in a prompt). `NO_FILES_NODE=1` makes it answer like a server without the companion node.
+
+### Companion node
+
+`comfyui-node/comfy_director_files/` is a ComfyUI custom node kept in this repository and shipped with the installer (in the app's resources folder). It is installed by copying the folder into `ComfyUI/custom_nodes/` on the server and restarting ComfyUI. It adds no graph nodes, only the three routes above.
+
+- `GET /comfy_director/files?type=input|output|temp` answers `{version, files: [{filename, subfolder, size, modified}]}`, walking subfolders. `modified` is in seconds.
+- `GET /comfy_director/thumb?type=&subfolder=&filename=&size=` answers a JPEG at most `size` pixels (32 to 512, 160 if not given) on its long side: the image, or the first frame of a video, read with Pillow and PyAV, which ComfyUI already needs. Anything else, or a file that cannot be read, answers 404. The last 2000 thumbnails are kept in memory, keyed by the file's path, size and modified time.
+- `POST /comfy_director/files/delete` takes `{files: [{filename, subfolder, type}]}` and answers `{deleted, errors}`. A file that is already gone counts as deleted. Folders are never removed. When a file was deleted from `output/` or `temp/`, it sets the queue flags `free_memory` (with `unload_models` off), which makes ComfyUI's worker reset its node cache after the running job.
+- A path is resolved inside the folder named by `type` and refused if it would land outside it, so nothing else on the server (models, custom nodes, the ComfyUI install) can be listed or deleted.
+- The routes have no protection of their own. They are covered by whatever protects the server, such as the reverse proxy token.
+- The app treats a 404 or 405 answer from the list route as "node not installed".
+
+Not yet run on a real ComfyUI server: the node's logic is tested on its own and the app against the fake server.
