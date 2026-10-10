@@ -290,6 +290,7 @@ Rules:
   - **Project switcher** under the app name: the current project with a menu (see Projects). Everything below it belongs to that project.
   - **Sequences:** a **+** button in the header row creates a new sequence (see Projects). Each sequence expands to its shots, one row per shot (`NN Name`). A filled dot means the shot has a keeper, a ring means none yet. The current shot is highlighted.
   - **Loose shots:** same rows, no numbering. A **+** button in the header row creates a new loose shot (New shot dialog, preset to Loose shot).
+  - **Dragging a shot row** moves the shot, the same as Move to sequence in the Shot view. Dropped on a sequence's name it goes to the end of that sequence (which then expands); dropped on a shot in a sequence it goes to that shot's position (a line shows where it lands), which also reorders shots within one sequence; dropped anywhere on the Loose shots section it becomes a loose shot. The target is outlined while a shot is held over it. Loose shots have no order, so they cannot be rearranged among themselves.
   - Links to **Gallery**, **Library** and **Settings**.
   - **Theme switch** at the bottom: Auto / Light / Dark (see Theme and colours).
 - **Queue strip** (bottom of every screen): currently running job (shot name, percent), a progress bar, count of waiting jobs, and an "Open queue" button, which opens the Queue drawer (wireframe 06). When nothing is queued it reads "Idle".

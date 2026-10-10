@@ -1,14 +1,18 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type DragEvent, type HTMLAttributes, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
 import { pad2 } from '../lib/format'
 import { Logo, Menu, MenuItem, Segmented } from './ui'
-import type { ThemeMode } from '@shared/types'
+import type { Shot, ThemeMode } from '@shared/types'
+
+type DragProps = Pick<HTMLAttributes<HTMLElement>, 'draggable' | 'onDragStart' | 'onDragEnd' | 'onDragOver' | 'onDragLeave' | 'onDrop'>
 
 export function Sidebar(): ReactNode {
-  const { tree, route, go, server, setDialog, settings, setSettings } = useStore()
+  const { tree, route, go, server, setDialog, settings, setSettings, toast } = useStore()
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [drag, setDrag] = useState<Pick<Shot, 'id' | 'sequenceId' | 'position'> | null>(null)
+  const [over, setOver] = useState<string | null>(null)
   const currentShot = route.name === 'shot' ? route.shotId : null
   const currentSeq = route.name === 'sequence' ? route.sequenceId : null
 
@@ -31,6 +35,43 @@ export function Sidebar(): ReactNode {
   }
 
   const loose = tree?.shots.filter((s) => s.sequenceId === null) ?? []
+
+  const dragSource = (s: Pick<Shot, 'id' | 'sequenceId' | 'position'>): DragProps => ({
+    draggable: true,
+    onDragStart: (e) => {
+      e.dataTransfer.effectAllowed = 'move'
+      setDrag({ id: s.id, sequenceId: s.sequenceId, position: s.position })
+    },
+    onDragEnd: () => {
+      setDrag(null)
+      setOver(null)
+    }
+  })
+  // Dropping the dragged shot on a target moves it into that sequence (at a position, or the end if null) or to loose shots.
+  const dropTarget = (key: string, accepts: boolean, sequenceId: number | null, position: number | null): DragProps => ({
+    onDragOver: (e: DragEvent) => {
+      if (!drag || !accepts) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      if (over !== key) setOver(key)
+    },
+    onDragLeave: (e: DragEvent) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver((o) => (o === key ? null : o))
+    },
+    onDrop: async (e: DragEvent) => {
+      e.preventDefault()
+      const shot = drag
+      setDrag(null)
+      setOver(null)
+      if (!tree || !shot) return
+      try {
+        await api.moveShot(tree.project.path, shot.id, sequenceId, position)
+        if (sequenceId !== null) setExpanded((x) => (x.has(sequenceId) ? x : new Set(x).add(sequenceId)))
+      } catch (err) {
+        toast(errorMessage(err), 'error')
+      }
+    }
+  })
 
   return (
     <aside className="flex w-[232px] shrink-0 flex-col border-r border-border bg-panel">
@@ -60,7 +101,10 @@ export function Sidebar(): ReactNode {
               const open = expanded.has(seq.id)
               return (
                 <div key={seq.id}>
-                  <div className={cn('group flex items-center rounded-md', currentSeq === seq.id && 'bg-tint')}>
+                  <div
+                    className={cn('group flex items-center rounded-md', currentSeq === seq.id && 'bg-tint', over === `seq:${seq.id}` && 'ring-1 ring-accent ring-inset')}
+                    {...dropTarget(`seq:${seq.id}`, true, seq.id, null)}
+                  >
                     <button
                       className="w-5 shrink-0 py-2 text-center text-xs text-muted"
                       aria-label={open ? 'Collapse' : 'Expand'}
@@ -79,7 +123,17 @@ export function Sidebar(): ReactNode {
                   </div>
                   {open &&
                     shots.map((s) => (
-                      <ShotRow key={s.id} active={currentShot === s.id} hasKeeper={s.hasKeeper} onClick={() => go({ name: 'shot', shotId: s.id })}>
+                      <ShotRow
+                        key={s.id}
+                        active={currentShot === s.id}
+                        hasKeeper={s.hasKeeper}
+                        onClick={() => go({ name: 'shot', shotId: s.id })}
+                        dragging={drag?.id === s.id}
+                        // Within its own sequence a shot dragged down takes the target's place, so it lands below it.
+                        mark={over !== `shot:${s.id}` ? null : drag?.sequenceId === seq.id && (drag.position ?? 0) < (s.position ?? 0) ? 'below' : 'above'}
+                        {...dragSource(s)}
+                        {...dropTarget(`shot:${s.id}`, drag?.id !== s.id, seq.id, s.position)}
+                      >
                         {pad2(s.position)} {s.name}
                       </ShotRow>
                     ))}
@@ -87,11 +141,14 @@ export function Sidebar(): ReactNode {
               )
             })}
 
-            <div className="mt-4">
+            <div
+              className={cn('mt-4 rounded-md', over === 'loose' && 'ring-1 ring-accent ring-inset')}
+              {...dropTarget('loose', drag?.sequenceId != null, null, null)}
+            >
               <SectionHeader label="Loose shots" onAdd={() => setDialog({ kind: 'new-shot', sequenceId: null })} addLabel="New loose shot" />
               {loose.length === 0 && <div className="px-2 pb-2 text-13 text-muted">None.</div>}
               {loose.map((s) => (
-                <ShotRow key={s.id} active={currentShot === s.id} hasKeeper={s.hasKeeper} onClick={() => go({ name: 'shot', shotId: s.id })}>
+                <ShotRow key={s.id} active={currentShot === s.id} hasKeeper={s.hasKeeper} onClick={() => go({ name: 'shot', shotId: s.id })} dragging={drag?.id === s.id} {...dragSource(s)}>
                   {s.name}
                 </ShotRow>
               ))}
@@ -130,12 +187,22 @@ function Dot({ filled }: { filled?: boolean }): ReactNode {
   return <span className={cn('inline-block size-2 shrink-0 rounded-full', filled ? 'bg-accent' : 'border border-control')} />
 }
 
-function ShotRow({ active, hasKeeper, onClick, children }: { active: boolean; hasKeeper: boolean; onClick: () => void; children: ReactNode }): ReactNode {
+function ShotRow({ active, hasKeeper, onClick, dragging, mark, children, ...rest }: {
+  active: boolean
+  hasKeeper: boolean
+  onClick: () => void
+  dragging?: boolean
+  /** Where a dragged shot would land when dropped on this row. */
+  mark?: 'above' | 'below' | null
+  children: ReactNode
+} & DragProps): ReactNode {
   return (
     <button
+      {...rest}
       onClick={onClick}
-      className={cn('flex w-full items-center gap-2.5 rounded-md py-[7px] pr-2 pl-6 text-left hover:bg-stripe', active && 'bg-tint hover:bg-tint')}
+      className={cn('relative flex w-full items-center gap-2.5 rounded-md py-[7px] pr-2 pl-6 text-left hover:bg-stripe', active && 'bg-tint hover:bg-tint', dragging && 'opacity-40')}
     >
+      {mark && <span className={cn('pointer-events-none absolute inset-x-2 h-0.5 rounded-full bg-accent', mark === 'above' ? 'top-0' : 'bottom-0')} />}
       <Dot filled={hasKeeper} />
       <span className="truncate">{children}</span>
     </button>
