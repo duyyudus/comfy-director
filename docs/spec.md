@@ -339,7 +339,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
 
 Purpose: see the shots of a sequence in order, each represented by its keeper, and jump into any shot to revise it.
 
-- **Header:** sequence name, counts ("4 shots, 3 keepers"), **Add shot** (opens the New shot dialog preset to this sequence), **Delete shot** (see below), **Play keepers in order**, **Export keepers** (see Output rules), and **Delete sequence** (its shots become loose shots).
+- **Header:** sequence name, counts ("4 shots, 3 keepers"), **Add shot** (opens the New shot dialog preset to this sequence), **Delete shot** (see below), **Play keepers in order**, **Export keepers** (see Output rules), and **Delete sequence**. Delete sequence asks first: **Keep shots** (they become loose shots), **Delete shots too** (removes them and their attempt records; rendered files stay in the project folder) or Cancel. An empty sequence gets a plain confirmation.
 - **Shot cards**, in sequence order, drag to reorder (grip handle). Each card shows:
   - Number and name.
   - The keeper preview with play, or an empty state ("No keeper yet, 0 attempts") with a "Start shot" button.

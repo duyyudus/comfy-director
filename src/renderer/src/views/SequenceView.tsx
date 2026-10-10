@@ -127,8 +127,22 @@ export function SequenceView({ sequenceId }: { sequenceId: number }): ReactNode 
           <Menu open={menu} onClose={() => setMenu(false)} className="top-11 right-0">
             <MenuItem danger onClick={async () => {
               setMenu(false)
-              if (!(await api.confirm(`Delete the sequence "${seq.name}"? Its ${rows.length} shots become loose shots.`, 'Delete'))) return
-              await api.deleteSequence(projectPath, seq.id)
+              let deleteShots = false
+              if (rows.length) {
+                const attempts = rows.reduce((n, r) => n + r.attemptCount, 0)
+                const choice = await api.choose(
+                  `Delete the sequence "${seq.name}"? Its ${plural(rows.length, 'shot')} can become loose shots, or be deleted too with their ${attempts} attempt records. Rendered files stay in the project folder.`,
+                  ['Keep shots', 'Delete shots too']
+                )
+                if (choice === null) return
+                deleteShots = choice === 1
+              } else if (!(await api.confirm(`Delete the sequence "${seq.name}"?`, 'Delete'))) return
+              try {
+                await api.deleteSequence(projectPath, seq.id, deleteShots)
+              } catch (e) {
+                toast(errorMessage(e), 'error')
+                return
+              }
               await refreshTree()
               go({ name: 'home' })
             }}>Delete sequence</MenuItem>

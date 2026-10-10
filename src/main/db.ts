@@ -292,9 +292,10 @@ export class ProjectDb {
   renameSequence(id: number, name: string): void {
     this.db.prepare('UPDATE sequences SET name=? WHERE id=?').run(name, id)
   }
-  deleteSequence(id: number): void {
+  deleteSequence(id: number, deleteShots = false): void {
     this.db.transaction(() => {
-      this.db.prepare('UPDATE shots SET sequence_id=NULL, position=NULL WHERE sequence_id=?').run(id)
+      if (deleteShots) this.db.prepare('DELETE FROM shots WHERE sequence_id=?').run(id)
+      else this.db.prepare('UPDATE shots SET sequence_id=NULL, position=NULL WHERE sequence_id=?').run(id)
       this.db.prepare('DELETE FROM sequences WHERE id=?').run(id)
     })()
   }

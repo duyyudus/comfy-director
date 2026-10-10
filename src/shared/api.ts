@@ -24,6 +24,8 @@ export interface ToolkitApi {
   syncedWarning(path: string): Promise<string | null>
   /** Asks in a native dialog; `action` labels the confirming button. Use this, not window.confirm, which leaves text fields unable to take focus on Windows. */
   confirm(message: string, action: string): Promise<boolean>
+  /** Like `confirm`, with one button per entry of `actions`. Resolves the index of the one pressed, or null if the user cancelled. */
+  choose(message: string, actions: string[]): Promise<number | null>
 
   // workflows
   listWorkflows(): Promise<WorkflowInfo[]>
@@ -51,7 +53,8 @@ export interface ToolkitApi {
   // sequences & shots
   createSequence(projectPath: string, name: string): Promise<Sequence>
   renameSequence(projectPath: string, id: number, name: string): Promise<void>
-  deleteSequence(projectPath: string, id: number): Promise<void>
+  /** Its shots become loose shots, or are deleted with their attempt records when `deleteShots` is set. */
+  deleteSequence(projectPath: string, id: number, deleteShots?: boolean): Promise<void>
   reorderShots(projectPath: string, sequenceId: number, shotIds: number[]): Promise<void>
   createShot(projectPath: string, name: string, sequenceId: number | null, workflowId: string | null): Promise<Shot>
   getShot(projectPath: string, shotId: number, attemptLimit?: number): Promise<ShotDetail>
@@ -127,7 +130,7 @@ export type ApiMethod = keyof ToolkitApi
 
 export const API_METHODS: ApiMethod[] = [
   'getSettings', 'setTheme', 'setFontSize','saveServer', 'testConnection', 'getServerStatus', 'retryConnection', 'chooseWorkspace',
-  'openWorkspaceFolder', 'resetWorkspace', 'finishSetup', 'syncedWarning', 'confirm',
+  'openWorkspaceFolder', 'resetWorkspace', 'finishSetup', 'syncedWarning', 'confirm', 'choose',
   'listWorkflows', 'pickWorkflowFile', 'analyzeWorkflow', 'previewImport', 'commitImport', 'getWorkflowOverrides',
   'getWorkflowFile', 'updateWorkflow', 'workflowShotCount', 'deleteWorkflow',
   'listProjects', 'createProject', 'openProject', 'openExistingProject', 'renameProject', 'removeProject', 'revealProject',

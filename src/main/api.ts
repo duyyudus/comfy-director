@@ -198,6 +198,18 @@ export function createApi(ctx: Context): ToolkitApi {
       })
       return r.response === 1
     },
+    async choose(message, actions) {
+      const r = await dialog.showMessageBox(win()!, {
+        type: 'warning',
+        title: 'Comfy Director',
+        message,
+        buttons: ['Cancel', ...actions],
+        defaultId: 1,
+        cancelId: 0,
+        noLink: true
+      })
+      return r.response === 0 ? null : r.response - 1
+    },
     async finishSetup() {
       updateSettings({ setupDone: true })
     },
@@ -356,8 +368,8 @@ export function createApi(ctx: Context): ToolkitApi {
       ws().project(projectPath).renameSequence(id, name.trim() || 'Untitled sequence')
       ctx.emit({ type: 'project-changed', projectPath })
     },
-    async deleteSequence(projectPath, id) {
-      ws().project(projectPath).deleteSequence(id)
+    async deleteSequence(projectPath, id, deleteShots) {
+      ws().project(projectPath).deleteSequence(id, deleteShots)
       ctx.emit({ type: 'project-changed', projectPath })
     },
     async reorderShots(projectPath, sequenceId, shotIds) {

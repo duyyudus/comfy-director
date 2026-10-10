@@ -133,3 +133,4 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 ## 2026-10-10 (confirmations)
 
 - **Confirmations go through `api.confirm`, a native message box opened by the main process, not `window.confirm`.** On Windows, Electron leaves text fields unable to take keyboard focus after `window.confirm` closes, until the window loses and regains focus: after deleting a shot the Rename project field could not be typed in. A message box from the main process does not have this.
+- **Delete sequence asks what to do with its shots in the same dialog** (`api.choose`: Keep shots, Delete shots too, Cancel). Two dialogs in a row would leave it unclear whether cancelling the second still deletes the sequence. Keep shots is the default button, since it is the choice that loses nothing.
