@@ -61,7 +61,19 @@ export interface HistoryEntry {
   status?: { status_str?: string; completed?: boolean; messages?: [string, Record<string, unknown>][] }
 }
 
-export type WsMessage = { type: string; data: Record<string, unknown> }
+/** Execution time in ms as the server recorded it (execution_start to execution_success), or null if the history lacks it. */
+export function historyRenderMs(entry: HistoryEntry): number | null {
+  const msgs = entry.status?.messages ?? []
+  const at = (type: string): number | null => {
+    const v = msgs.find(([t]) => t === type)?.[1]?.timestamp
+    return typeof v === 'number' && Number.isFinite(v) ? v : null
+  }
+  const start = at('execution_start')
+  const end = at('execution_success')
+  return start !== null && end !== null && end >= start ? Math.round(end - start) : null
+}
+
+export type WsMessage ={ type: string; data: Record<string, unknown> }
 
 export class ComfyClient extends EventEmitter {
   readonly baseUrl: string

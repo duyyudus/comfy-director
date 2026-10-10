@@ -5,8 +5,9 @@ import type { Workspace } from './workspace'
 import type { ServerManager } from './server'
 import type { ProjectDb } from './db'
 import { now } from './db'
-import { ComfyError, describeExecutionError, historyFiles, type HistoryEntry, type PromptRejection, type QueueEntry, type QueueState, type WsMessage } from '@core/comfy/client'
+import { ComfyError, describeExecutionError, historyFiles, historyRenderMs, type HistoryEntry, type PromptRejection, type QueueEntry, type QueueState, type WsMessage } from '@core/comfy/client'
 import { applyValues, fileValues } from '@core/workflow/apply'
+import { graphSteps } from '@core/workflow/graph'
 import { buildSchema } from '@core/workflow/schema'
 import { validateValues } from '@core/workflow/validate'
 import type { SchemaInput, WorkflowSchema } from '@core/workflow/types'
@@ -60,6 +61,8 @@ export class JobManager {
   private reconcileTimer: NodeJS.Timeout | null = null
   private finalizing = new Set<string>()
   private downloadTries = new Map<string, number>()
+  /** When the app first moved to collect a job's result, so downloads and their retries stay out of the local render time. */
+  private resultSeenAt = new Map<string, number>()
   /** Kept until the renderer collects it: reconcile can finish before the window listens. */
   private lastSummary: ReconcileSummary | null = null
 
@@ -229,6 +232,7 @@ export class JobManager {
           runIndex: job.runIndex,
           runCount: Math.max(1, Math.floor(req.runs || 1)),
           finalJson: JSON.stringify(final),
+          steps: graphSteps(final),
           serverUrl: server
         })
         created.push(attempt)
@@ -447,6 +451,7 @@ export class JobManager {
     this.active.delete(pid)
     this.live.delete(pid)
     this.downloadTries.delete(pid)
+    this.resultSeenAt.delete(pid)
     this.finalCache.delete(job.attemptId)
     this.emit({ type: 'project-changed', projectPath: job.projectPath })
     this.refreshQueueSoon(50)
@@ -459,6 +464,7 @@ export class JobManager {
     const client = this.server.client
     if (!job || !client || this.finalizing.has(pid)) return null
     this.finalizing.add(pid)
+    if (!this.resultSeenAt.has(pid)) this.resultSeenAt.set(pid, Date.now())
     try {
       let h = history ?? null
       for (let i = 0; !h && i < 5; i++) {
@@ -499,10 +505,12 @@ export class JobManager {
       const cached = outputNodes.length > 0 && outputNodes.every((n) => live.cachedNodes.has(n))
       const status = cached ? 'cached' : 'done'
       const startedAt = attempt.startedAt ?? live.startedAt
-      this.update(job, { status, outputs, progress: 100, finishedAt: now(), error: null, startedAt })
+      // The server's own timestamps are the source of truth; the local stopwatch only fills in when the history lacks them.
+      const renderMs = historyRenderMs(h) ?? (startedAt ? Math.max(0, (this.resultSeenAt.get(pid) ?? Date.now()) - Date.parse(startedAt)) : null)
+      this.update(job, { status, outputs, progress: 100, finishedAt: now(), error: null, startedAt, renderMs })
       const media = outputs.find((o) => o.kind === 'video') ?? outputs.find((o) => o.kind === 'image')
       if (media) this.emit({ type: 'thumbnail', job: { projectPath: job.projectPath, attemptId: job.attemptId, file: media.path, kind: media.kind } })
-      const secs = startedAt ? Math.round((Date.now() - Date.parse(startedAt)) / 1000) : null
+      const secs = renderMs !== null ? Math.round(renderMs / 1000) : null
       const note = cached
         ? 'server reused an earlier result'
         : outputs.length

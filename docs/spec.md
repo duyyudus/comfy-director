@@ -357,7 +357,7 @@ Purpose: find any render across all sequences and loose shots.
 
 - **Filters:** project (default the current project, or All projects), search in prompt text, workflow, sequence (including "Loose shots"), and "Keepers only". **Group by:** Shot (default) or Time.
 - **Groups:** a header per shot ("Sequence / NN Name, n attempts") followed by a grid of thumbnails, each with id, workflow, and KEEPER tag where it applies. The grid loads 60 renders at a time as the user scrolls, with lazy thumbnails. Clicking a thumbnail selects it; double-clicking it opens the player.
-- **Detail panel** for the selected render: large preview, summary of its values (workflow, duration, turbo, aspect, seed, number of refs, prompt start), and actions:
+- **Detail panel** for the selected render: large preview, summary of its values (workflow, duration, turbo, aspect, seed, number of refs, prompt start) and, for a finished render, its **render time** (execution start to finish), and actions:
   - **Load into shot:** opens the Shot view for that attempt's shot with the attempt's workflow and values loaded.
   - **Reveal file:** shows the output file in the operating system's file manager.
 
@@ -425,8 +425,10 @@ Purpose: see and cancel what the server is running. The app does not reorder job
 
 ### Attempt states (wireframe 07, section 5)
 
-Attempt cards in the Shot view say what happened and offer the next step:
+Attempt cards in the Shot view say what happened and offer the next step. Under the workflow chip, a line of its own shows the full seed ("seed 123456788825"), then the summary line reads, for example, "turbo · 8 steps · 10 s · 0.4 MP": the settings the attempt was queued with. Turbo or full, duration and megapixels come from its stored values; **steps** is the count the submitted graph runs, worked out when the attempt is queued by following the sampler's `steps` input through value nodes and switches (so the turbo toggle picks the right branch) and stored with the attempt (`steps`; attempts from before it was added are filled in from their stored graph when the project opens). Each part is left out when the workflow has no such setting.
 
+- **Running:** a second line under the summary shows the stage and a live elapsed time since the server started the job ("Sampling · 1 min 12 s"), updating every second.
+- **Done:** the second line under the summary reads "3 min ago · rendered in 2 min 5 s", the server's own execution time (the `execution_start` and `execution_success` timestamps in `GET /history`, so queue wait and download are excluded and a job that finished while the app was closed still has it). If the server's history lacks those timestamps, the app's own stopwatch from the moment it saw the job start is used instead. Stored per attempt (`render_ms`). Not shown for cached, failed or cancelled attempts, or when neither source is available.
 - **Failed:** the server's reason in plain words, the node and error type, and **Retry**, **Load settings**, **Copy details**.
 - **Cancelled:** "Stopped at 40%. No video was saved." **Retry**, **Load settings**.
 - **Cached:** "Finished instantly. The server reused an earlier result because every input, including the seed, was identical." **Render again with a new seed**.
@@ -438,7 +440,7 @@ Attempt cards in the Shot view say what happened and offer the next step:
 Purpose: judge 2 to 4 attempts of one shot side by side and pick the keeper.
 
 - Opened from "Compare selected" in the Shot view. Full window, no sidebar. **Close** returns to the shot.
-- **Layout:** 2-up, 3-up or 4-up. Each player shows attempt id, workflow chip, a KEEPER tag if it is the keeper, a one-line summary (turbo or full, duration, seed, age), and:
+- **Layout:** 2-up, 3-up or 4-up. Each player shows attempt id, workflow chip, a KEEPER tag if it is the keeper, a one-line summary (turbo or full, steps, duration, megapixels, seed, age), and:
   - **Swap:** replace this attempt with another from the same shot.
   - **Set as keeper** (disabled and labelled "Current keeper" on the keeper).
   - **Load settings:** copies the attempt's workflow and values into the Shot view form.

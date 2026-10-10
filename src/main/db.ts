@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import type {
   Attempt, AttemptError, AttemptStatus, ChatMessage, InputFile, LibraryPrompt, OutputFile, PrompterRecord, Sequence, Shot, ShotSummary
 } from '@shared/types'
+import { graphSteps } from '@core/workflow/graph'
 import type { PrompterConfig, PrompterType } from '@core/prompter/types'
 
 export const now = (): string => new Date().toISOString()
@@ -196,7 +197,7 @@ interface AttemptRow {
   server_url: string | null; run_id: string; prompt_index: number; prompt_count: number; run_index: number
   run_count: number; final_json: string | null; outputs_json: string; thumb: string | null
   media_duration: number | null; error_json: string | null; progress: number; created_at: string
-  started_at: string | null; finished_at: string | null
+  started_at: string | null; finished_at: string | null; render_ms: number | null; steps: number | null
 }
 
 const shotFromRow = (r: ShotRow): Shot => ({
@@ -213,7 +214,8 @@ const attemptFromRow = (r: AttemptRow): Attempt => ({
   status: r.status as AttemptStatus, promptId: r.prompt_id, runId: r.run_id, promptIndex: r.prompt_index,
   promptCount: r.prompt_count, runIndex: r.run_index, runCount: r.run_count, outputs: parse<OutputFile[]>(r.outputs_json, []),
   thumb: r.thumb, mediaDuration: r.media_duration, error: parse<AttemptError | null>(r.error_json, null),
-  progress: r.progress, createdAt: r.created_at, startedAt: r.started_at, finishedAt: r.finished_at
+  progress: r.progress, createdAt: r.created_at, startedAt: r.started_at, finishedAt: r.finished_at,
+  renderMs: r.render_ms, steps: r.steps
 })
 
 export interface NewAttempt {
@@ -230,6 +232,7 @@ export interface NewAttempt {
   runIndex: number
   runCount: number
   finalJson: string
+  steps: number | null
   serverUrl: string
 }
 
@@ -271,6 +274,24 @@ export class ProjectDb {
         role TEXT NOT NULL, text TEXT NOT NULL, images_json TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL);
       CREATE INDEX IF NOT EXISTS chat_shot ON chat_messages(shot_id, id);
     `)
+    // Added after the first release: older project databases get the column here.
+    const cols = (this.db.prepare('PRAGMA table_info(attempts)').all() as { name: string }[]).map((c) => c.name)
+    if (!cols.includes('render_ms')) this.db.exec('ALTER TABLE attempts ADD COLUMN render_ms INTEGER')
+    if (!cols.includes('steps')) {
+      this.db.exec('ALTER TABLE attempts ADD COLUMN steps INTEGER')
+      // Earlier attempts keep the graph they sent, so their step count can be read back from it.
+      const set = this.db.prepare('UPDATE attempts SET steps=? WHERE id=?')
+      this.db.transaction(() => {
+        for (const r of this.db.prepare('SELECT id, final_json FROM attempts WHERE final_json IS NOT NULL').all() as { id: number; final_json: string }[]) {
+          try {
+            const n = graphSteps(JSON.parse(r.final_json))
+            if (n !== null) set.run(n, r.id)
+          } catch {
+            /* an unreadable graph has no step count */
+          }
+        }
+      })()
+    }
   }
 
   close(): void {
@@ -427,16 +448,17 @@ export class ProjectDb {
       this.db.prepare('UPDATE shots SET next_attempt_num=?, last_seed=? WHERE id=?').run(num + 1, a.seed, a.shotId)
       const r = this.db
         .prepare(`INSERT INTO attempts(shot_id,num,workflow_id,workflow_name,workflow_version,workflow_hash,values_json,seed,status,
-          server_url,run_id,prompt_index,prompt_count,run_index,run_count,final_json,created_at)
-          VALUES(?,?,?,?,?,?,?,?,'submitting',?,?,?,?,?,?,?,?)`)
+          server_url,run_id,prompt_index,prompt_count,run_index,run_count,final_json,steps,created_at)
+          VALUES(?,?,?,?,?,?,?,?,'submitting',?,?,?,?,?,?,?,?,?)`)
         .run(a.shotId, num, a.workflowId, a.workflowName, a.workflowVersion, a.workflowHash, JSON.stringify(a.values), a.seed,
-          a.serverUrl, a.runId, a.promptIndex, a.promptCount, a.runIndex, a.runCount, a.finalJson, now())
+          a.serverUrl, a.runId, a.promptIndex, a.promptCount, a.runIndex, a.runCount, a.finalJson, a.steps, now())
       return this.attempt(Number(r.lastInsertRowid))!
     })()
   }
   updateAttempt(id: number, patch: {
     status?: AttemptStatus; promptId?: string | null; outputs?: OutputFile[]; thumb?: string | null; mediaDuration?: number | null
     error?: AttemptError | null; progress?: number; startedAt?: string | null; finishedAt?: string | null
+    renderMs?: number | null
   }): Attempt | null {
     const cols: string[] = []
     const vals: unknown[] = []
@@ -453,6 +475,7 @@ export class ProjectDb {
     if (patch.progress !== undefined) set('progress', patch.progress)
     if (patch.startedAt !== undefined) set('started_at', patch.startedAt)
     if (patch.finishedAt !== undefined) set('finished_at', patch.finishedAt)
+    if (patch.renderMs !== undefined) set('render_ms', patch.renderMs)
     if (cols.length) this.db.prepare(`UPDATE attempts SET ${cols.join(', ')} WHERE id=?`).run(...vals, id)
     return this.attempt(id)
   }

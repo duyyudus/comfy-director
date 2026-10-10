@@ -43,3 +43,28 @@ export function trailingNumber(s: string): number {
   const m = s.match(/(\d+)$/)
   return m ? Number(m[1]) : Number.NaN
 }
+
+/** Follows an input through value nodes (a primitive's `value`, a switch's chosen branch) to a literal, or null. */
+function resolveLiteral(wf: ApiWorkflow, v: unknown, depth = 0): unknown {
+  if (!isLink(v)) return v
+  const node = wf[v[0]]
+  if (!node || depth > 20) return null
+  const inputs = node.inputs ?? {}
+  if (/Switch/.test(node.class_type) && 'switch' in inputs) {
+    const on = resolveLiteral(wf, inputs.switch, depth + 1)
+    if (on === null || on === undefined) return null // an unknown selector must not default to a branch
+    return resolveLiteral(wf, on ? inputs.on_true : inputs.on_false, depth + 1)
+  }
+  if ('value' in inputs) return resolveLiteral(wf, inputs.value, depth + 1)
+  return null
+}
+
+/** The sampling step count a graph will run: the first node with a `steps` input, resolved through switches and primitives. */
+export function graphSteps(wf: ApiWorkflow): number | null {
+  for (const node of Object.values(wf)) {
+    if (!node.inputs || !('steps' in node.inputs)) continue
+    const n = resolveLiteral(wf, node.inputs.steps)
+    if (typeof n === 'number' && Number.isFinite(n)) return n
+  }
+  return null
+}

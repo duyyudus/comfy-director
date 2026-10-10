@@ -4,7 +4,7 @@ import type { Attempt, InputFile, PromptMode, SeedMode, Shot, ShotDetail, Upload
 import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
-import { attemptSummary, pad2, plural, timeAgo } from '../lib/format'
+import { attemptSeed, attemptSummary, pad2, plural, renderTime, timeAgo } from '../lib/format'
 import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progress, SectionLabel, Segmented, Select, Tag } from '../components/ui'
 import { InputControl, PromptTextarea, fileHint } from '../components/inputs'
 import { PlayerDialog, Thumb } from '../components/Media'
@@ -589,6 +589,14 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
   const playable = finished && a.outputs.length > 0
   const clickTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(clickTimer.current), [])
+  const [now, setNow] = useState(Date.now())
+  const running = a.status === 'running'
+  useEffect(() => {
+    if (!running) return
+    setNow(Date.now())
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [running])
   return (
     <Card
       className={cn(
@@ -618,11 +626,10 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
         {a.status === 'cancelled' && <span className="text-xs text-text2">stopped</span>}
       </Thumb>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <input type="checkbox" aria-label={`Select #${a.num} to compare`} className="size-4 accent-[var(--accent)]" checked={selected} disabled={!finished}
             onChange={(e) => onSelect(e.target.checked)} />
           <span className="font-semibold">#{a.num}</span>
-          <Chip>{a.workflowName}</Chip>
           {keeper && <Tag kind="keeper">Keeper</Tag>}
           {a.status === 'cached' && <Tag kind="cached">Cached</Tag>}
           {a.status === 'failed' && <Tag kind="failed">Failed</Tag>}
@@ -632,11 +639,15 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
             <button className="text-xs text-muted hover:text-danger" onClick={onDelete} aria-label={`Delete #${a.num}`}>Delete</button>
           )}
         </div>
-        <div className="mt-1 truncate text-13 text-text2">
-          {attemptSummary(a)}
+        <div className="mt-1.5 flex"><Chip className="min-w-0"><span className="truncate">{a.workflowName}</span></Chip></div>
+        <div className="mt-1.5 truncate font-mono text-xs text-text2">{attemptSeed(a)}</div>
+        <div className="truncate text-13 text-text2">
+          {attemptSummary(a, false)}
           {a.promptCount > 1 && ` · prompt ${a.promptIndex + 1}/${a.promptCount}`}
-          {' · '}
-          {a.status === 'running' ? live?.stage ?? 'rendering' : a.status === 'queued' ? (queuePos === 0 ? 'next in queue' : queuePos > 0 ? `waiting, position ${queuePos + 1}` : 'waiting') : timeAgo(a.finishedAt ?? a.createdAt)}
+        </div>
+        <div className="truncate text-13 text-text2">
+          {a.status === 'running' ? `${live?.stage ?? 'rendering'}${renderTime(a, now) ? ` · ${renderTime(a, now)}` : ''}` : a.status === 'queued' ? (queuePos === 0 ? 'next in queue' : queuePos > 0 ? `waiting, position ${queuePos + 1}` : 'waiting') : timeAgo(a.finishedAt ?? a.createdAt)}
+          {a.status === 'done' && renderTime(a) && ` · rendered in ${renderTime(a)}`}
         </div>
 
         {a.status === 'running' && <Progress value={pct} className="mt-2.5" />}

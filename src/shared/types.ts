@@ -144,6 +144,10 @@ export interface Attempt {
   createdAt: string
   startedAt: string | null
   finishedAt: string | null
+  /** Execution time in ms: the server's own figure, else measured locally. Null while running or when unknown. */
+  renderMs: number | null
+  /** Sampling steps the submitted graph runs (after its switches), null if it could not be worked out. */
+  steps: number | null
 }
 
 export interface InputFile {

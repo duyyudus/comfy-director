@@ -3,7 +3,7 @@ import type { GalleryFilter, GalleryItem } from '@shared/types'
 import { useStore } from '../lib/store'
 import { api, errorMessage, media } from '../lib/api'
 import { cn } from '../lib/cn'
-import { formatValue, pad2, plural, timeAgo } from '../lib/format'
+import { formatValue, pad2, plural, renderTime, timeAgo } from '../lib/format'
 import { Button, Card, Checkbox, Empty, Input, Label, Segmented, Select, Tag } from '../components/ui'
 import { PlayerDialog, Thumb } from '../components/Media'
 
@@ -189,6 +189,12 @@ export function GalleryView(): ReactNode {
               <dd className="font-mono">{sel.attempt.seed}</dd>
               <dt className="text-text2">Rendered</dt>
               <dd>{timeAgo(sel.attempt.finishedAt)}{sel.attempt.status === 'cached' && ' (cached)'}</dd>
+              {sel.attempt.status === 'done' && renderTime(sel.attempt) && (
+                <>
+                  <dt className="text-text2">Render time</dt>
+                  <dd>{renderTime(sel.attempt)}</dd>
+                </>
+              )}
               {'prompt' in sel.attempt.values && (
                 <>
                   <dt className="text-text2">Prompt</dt>

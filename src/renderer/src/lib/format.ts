@@ -14,6 +14,21 @@ export function timeAgo(iso: string | null | undefined, nowMs = Date.now()): str
   return d === 1 ? 'yesterday' : `${d} days ago`
 }
 
+/**
+ * How long an attempt took to render ('' when unknown). A finished attempt uses the figure from the server;
+ * a running one counts up from when the app saw it start, given the current time `nowMs`.
+ */
+export function renderTime(a: Pick<Attempt, 'startedAt' | 'finishedAt' | 'renderMs'>, nowMs?: number): string {
+  // Attempts finished before render_ms existed fall back to the app's own stamps.
+  const end = a.finishedAt ? Date.parse(a.finishedAt) : nowMs
+  const ms = a.renderMs ?? (end !== undefined && a.startedAt ? end - Date.parse(a.startedAt) : null)
+  if (ms === null) return ''
+  const s = Math.round(ms / 1000)
+  if (!Number.isFinite(s) || s < 0) return ''
+  if (s < 60) return `${s} s`
+  return `${Math.floor(s / 60)} min ${s % 60} s`
+}
+
 export function seedTail(seed: number | null | undefined): string {
   if (seed === null || seed === undefined) return '—'
   return `…${String(seed).slice(-4)}`
@@ -44,19 +59,33 @@ export function turboOf(values: Record<string, unknown>): boolean | null {
   return null
 }
 
+export function megapixelsOf(values: Record<string, unknown>): number | null {
+  const v = values.megapixels
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() ? Number(v) : NaN
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
+}
+
 export function durationOf(values: Record<string, unknown>): number | null {
   const v = values.duration
   return typeof v === 'number' ? v : typeof v === 'string' && v && !Number.isNaN(Number(v)) ? Number(v) : null
 }
 
-/** One-line summary: "turbo · 15 s · seed …4924". */
-export function attemptSummary(a: Attempt): string {
+/** The full seed, for places with room for it (the shortened form is `seedTail`). */
+export function attemptSeed(a: Attempt): string {
+  return `seed ${a.seed}`
+}
+
+/** One-line summary: "turbo · 8 steps · 15 s · 0.4 MP · seed …4924". */
+export function attemptSummary(a: Attempt, withSeed = true): string {
   const parts: string[] = []
   const t = turboOf(a.values)
   if (t !== null) parts.push(t ? 'turbo' : 'full')
+  if (a.steps !== null) parts.push(`${a.steps} steps`)
   const d = durationOf(a.values)
   if (d !== null) parts.push(`${d} s`)
-  parts.push(`seed ${seedTail(a.seed)}`)
+  const mp = megapixelsOf(a.values)
+  if (mp !== null) parts.push(`${mp} MP`)
+  if (withSeed) parts.push(`seed ${seedTail(a.seed)}`)
   return parts.join(' · ')
 }
 

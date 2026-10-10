@@ -15,7 +15,7 @@ const IMAGE = 'aaaaaaaaaaaaaaaaaaaa.png'
 const attempt = (id: number, shotId: number, status: Attempt['status']): Attempt => ({
   id, shotId, num: id, workflowId: 'wf', workflowName: 'wf', workflowVersion: 1, workflowHash: 'h', values: {}, seed: 1,
   status, promptId: `p${id}`, runId: 'r', promptIndex: 0, promptCount: 1, runIndex: 0, runCount: 1, outputs: [], thumb: null,
-  mediaDuration: null, error: null, progress: 0, createdAt: new Date().toISOString(), startedAt: null, finishedAt: null
+  mediaDuration: null, error: null, progress: 0, createdAt: new Date().toISOString(), startedAt: null, finishedAt: null, renderMs: null, steps: null
 })
 
 const history = (file: string): HistoryEntry => ({
@@ -145,6 +145,44 @@ describe('JobManager.reconcile', () => {
     expect(readFileSync(join(out, 'attempt-1-wf.mp4'), 'utf8')).toBe('older render')
     expect(readFileSync(join(dir, rows.get(1)!.outputs[0].path), 'utf8')).toBe('p1.mp4')
     expect(existsSync(join(dir, rows.get(2)!.outputs[0].path))).toBe(true)
+  })
+
+  it("takes the render time from the server's timestamps", async () => {
+    const h = history('p1.mp4')
+    h.status!.messages = [['execution_start', { timestamp: 1_000_000 }], ['execution_success', { timestamp: 1_125_400 }]]
+    const { jobs, rows } = setup(dir, {
+      // a local start stamp far in the past must not win over the server's figure
+      attempts: [{ ...attempt(1, 1, 'running'), startedAt: new Date(Date.now() - 3_600_000).toISOString() }],
+      client: { getHistory: async () => h }
+    })
+    await jobs.reconcile()
+    expect(rows.get(1)!.renderMs).toBe(125_400)
+  })
+
+  it('measures the render time locally when the history has no timestamps', async () => {
+    const { jobs, rows } = setup(dir, {
+      attempts: [{ ...attempt(1, 1, 'running'), startedAt: new Date(Date.now() - 60_000).toISOString() }],
+      client: { getHistory: async () => history('p1.mp4') }
+    })
+    await jobs.reconcile()
+    expect(rows.get(1)!.renderMs).toBeGreaterThanOrEqual(60_000)
+    expect(rows.get(1)!.renderMs).toBeLessThan(70_000)
+  })
+
+  it('leaves the download out of the locally measured render time', async () => {
+    const { jobs, rows } = setup(dir, {
+      attempts: [{ ...attempt(1, 1, 'running'), startedAt: new Date(Date.now() - 1000).toISOString() }],
+      client: {
+        getHistory: async () => history('p1.mp4'),
+        view: async () => {
+          await new Promise((r) => setTimeout(r, 600))
+          return new ArrayBuffer(1)
+        }
+      }
+    })
+    await jobs.reconcile()
+    expect(rows.get(1)!.renderMs).toBeGreaterThanOrEqual(1000)
+    expect(rows.get(1)!.renderMs).toBeLessThan(1500)
   })
 
   it('tries a failed download again, then gives up', async () => {

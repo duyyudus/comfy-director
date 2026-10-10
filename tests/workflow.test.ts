@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyValues, buildSchema, checkWorkflow, detectFormat, diffSchemas, keyFromTitle, validateValues } from '../src/core/workflow'
+import { applyValues, buildSchema, checkWorkflow, detectFormat, diffSchemas, graphSteps, keyFromTitle, validateValues } from '../src/core/workflow'
 import { fl2v, objectInfo, r2v, t2v } from './fixtures'
 
 describe('keys', () => {
@@ -190,5 +190,29 @@ describe('schema', () => {
     expect(c.missingNodeTypes.length).toBeGreaterThan(0)
     expect(c.models.length).toBe(5)
     expect(c.brokenLinks).toEqual([])
+  })
+})
+
+describe('graphSteps', () => {
+  it('follows the steps switch to the branch the turbo toggle selects', () => {
+    const wf = fl2v()
+    const sw = Object.values(wf).find((n) => n._meta?.title === 'Boolean (Enable Lightning LoRA)')!
+    sw.inputs.value = true
+    expect(graphSteps(wf)).toBe(8)
+    sw.inputs.value = false
+    expect(graphSteps(wf)).toBe(20)
+  })
+
+  it('gives up when a switch selector cannot be resolved', () => {
+    const wf = fl2v()
+    const sw = Object.values(wf).find((n) => n.class_type === 'ComfySwitchNode' && n._meta?.title === 'If/Else Switch (Steps)')!
+    sw.inputs.switch = ['unknown', 0]
+    expect(graphSteps(wf)).toBeNull()
+  })
+
+  it('reads a plain number and gives up on an unresolvable link', () => {
+    expect(graphSteps({ a: { class_type: 'KSampler', inputs: { steps: 12 } } })).toBe(12)
+    expect(graphSteps({ a: { class_type: 'KSampler', inputs: { steps: ['b', 0] } }, b: { class_type: 'Other', inputs: {} } })).toBeNull()
+    expect(graphSteps({})).toBeNull()
   })
 })
