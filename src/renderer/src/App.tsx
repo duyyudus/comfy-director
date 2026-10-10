@@ -16,7 +16,7 @@ import { FirstLaunch } from './views/FirstLaunch'
 import { HomeView } from './views/HomeView'
 
 export function App(): ReactNode {
-  const { ready, init, settings, route, queueOpen } = useStore()
+  const { ready, init, settings, route } = useStore()
   useEffect(() => {
     void init()
   }, [init])
@@ -41,7 +41,7 @@ export function App(): ReactNode {
             <View />
           </ErrorBoundary>
         </main>
-        {queueOpen && !full && <QueueDrawer />}
+        {!full && <QueueDrawer />}
         {!full && <QueueStrip />}
       </div>
       <GlobalDialogs />

@@ -293,7 +293,7 @@ Rules:
   - **Dragging a shot row** moves the shot, the same as Move to sequence in the Shot view. Dropped on a sequence's name it goes to the end of that sequence (which then expands); dropped on a shot in a sequence it goes to that shot's position (a line shows where it lands), which also reorders shots within one sequence; dropped anywhere on the Loose shots section it becomes a loose shot. The target is outlined while a shot is held over it. Loose shots have no order, so they cannot be rearranged among themselves.
   - Links to **Gallery**, **Library** and **Settings**.
   - **Theme switch** at the bottom: Auto / Light / Dark (see Theme and colours).
-- **Queue strip** (bottom of every screen): currently running job (shot name, percent), a progress bar, count of waiting jobs, and an "Open queue" button, which opens the Queue drawer (wireframe 06). When nothing is queued it reads "Idle".
+- **Queue strip** (bottom of every screen): currently running job (shot name, percent), a progress bar, count of waiting jobs, and an arrow showing whether the Queue drawer (wireframe 06) is open. Clicking anywhere on the strip opens or closes the drawer; there is no separate button. When nothing is queued it reads "Idle".
 - **Connection banner** at the top of every screen when the server cannot be reached (see States).
 - The sidebar's Sequences, Loose shots, the Gallery and Compare show the current project. The queue strip and Queue drawer show jobs from every project, each labelled with its project when it is not the current one.
 - Clicking a sequence name opens the Sequence view. Clicking a shot opens the Shot view.
@@ -412,7 +412,7 @@ Purpose: work out one shot's prompt with an LLM, back and forth: describe the sh
 
 Purpose: see and cancel what the server is running. The app does not reorder jobs: **the queue order is ComfyUI's own (first in, first out).**
 
-- Opened from "Open queue" in the queue strip. **Collapse** closes it.
+- Opened by clicking the queue strip. Clicking the strip again, or anywhere on the drawer's header other than **Cancel all waiting**, closes it; there is no separate Collapse button. The drawer rises out of the strip when it opens (170 ms) and sinks back when it closes (120 ms); with the system's reduced-motion setting on it appears and disappears at once.
 - **Header:** "1 running, 10 waiting", the note that the server runs jobs in the order it received them, and **Cancel all waiting (n)**. n counts only jobs started from this app. Jobs started from other clients are never cancelled in bulk.
 - **Running:** shot name, attempt id, workflow chip, a progress bar with percent, the current stage ("Sampling, step 3 of 4"), elapsed time, and **Interrupt**. Interrupt follows the Interrupt rule below.
 - **Waiting:** in server order, with a position number (Next, 2, 3, ...).

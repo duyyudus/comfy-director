@@ -10,7 +10,19 @@ export function QueueStrip(): ReactNode {
   const { queue, queueOpen, setQueueOpen } = useStore()
   const r = queue.running
   return (
-    <div className="flex h-16 shrink-0 items-center gap-4 border-t border-border bg-panel px-6">
+    <div
+      role="button"
+      tabIndex={0}
+      aria-expanded={queueOpen}
+      title={queueOpen ? 'Collapse queue' : 'Open queue'}
+      className="flex h-16 shrink-0 cursor-pointer items-center gap-4 border-t border-border bg-panel px-6 select-none hover:bg-stripe"
+      onClick={() => setQueueOpen(!queueOpen)}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return
+        e.preventDefault()
+        setQueueOpen(!queueOpen)
+      }}
+    >
       <span className="font-semibold">Queue</span>
       {r ? (
         <>
@@ -24,7 +36,7 @@ export function QueueStrip(): ReactNode {
         <span className="flex-1 text-text2">{queue.waiting.length ? 'Starting…' : 'Idle'}</span>
       )}
       <span className="text-text2">{queue.waiting.length ? `${queue.waiting.length} waiting` : ''}</span>
-      <Button onClick={() => setQueueOpen(!queueOpen)}>{queueOpen ? 'Collapse' : 'Open queue'}</Button>
+      <span className="w-5 text-center text-sm text-text2">{queueOpen ? '▾' : '▴'}</span>
     </div>
   )
 }
@@ -34,7 +46,26 @@ interface Group {
   jobs: (QueueJob & { position: number })[]
 }
 
+const QUEUE_OUT_MS = 120
+
+/** Keeps the drawer mounted while it animates closed. */
 export function QueueDrawer(): ReactNode {
+  const { queueOpen } = useStore()
+  const [mounted, setMounted] = useState(queueOpen)
+  useEffect(() => {
+    if (queueOpen) {
+      setMounted(true)
+      return
+    }
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const t = setTimeout(() => setMounted(false), reduced ? 0 : QUEUE_OUT_MS)
+    return () => clearTimeout(t)
+  }, [queueOpen])
+  if (!mounted && !queueOpen) return null
+  return <DrawerPanel closing={!queueOpen} />
+}
+
+function DrawerPanel({ closing }: { closing: boolean }): ReactNode {
   const { queue, setQueueOpen, tree, go, toast } = useStore()
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [confirmOther, setConfirmOther] = useState<string | null>(null)
@@ -78,17 +109,35 @@ export function QueueDrawer(): ReactNode {
   const elapsed = r?.startedAt ? Math.max(0, Math.round((Date.now() - Date.parse(r.startedAt)) / 1000)) : null
 
   return (
-    <div className="absolute inset-x-0 bottom-16 top-[28%] z-30 flex flex-col border-t border-border bg-panel shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
-      <div className="flex items-center gap-4 border-b border-border px-6 py-4">
+    <div
+      className={cn(
+        'absolute inset-x-0 bottom-16 top-[28%] z-30 flex flex-col border-t border-border bg-panel shadow-[0_-8px_30px_rgba(0,0,0,0.12)]',
+        closing ? 'queue-out' : 'queue-in'
+      )}
+    >
+      <div
+        role="button"
+        tabIndex={0}
+        title="Collapse queue"
+        className="flex cursor-pointer items-center gap-4 border-b border-border px-6 py-4 select-none hover:bg-stripe"
+        onClick={() => setQueueOpen(false)}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
+          e.preventDefault()
+          setQueueOpen(false)
+        }}
+      >
         <span className="text-17 font-semibold">Queue</span>
         <span className="flex-1 text-text2">
           {r ? 1 : 0} running · {queue.waiting.length} waiting. The server runs jobs in the order it received them. Jobs from other clients are
           never cancelled in bulk.
         </span>
-        <Button disabled={!queue.ourWaitingCount} onClick={() => void act(() => api.cancelAllWaiting())}>
-          Cancel all waiting ({queue.ourWaitingCount})
-        </Button>
-        <Button onClick={() => setQueueOpen(false)}>Collapse</Button>
+        <span onClick={(e) => e.stopPropagation()}>
+          <Button disabled={!queue.ourWaitingCount} onClick={() => void act(() => api.cancelAllWaiting())}>
+            Cancel all waiting ({queue.ourWaitingCount})
+          </Button>
+        </span>
+        <span className="w-5 text-center text-sm text-text2">▾</span>
       </div>
       <div className="flex-1 overflow-y-auto px-6 pb-6 scroll-thin">
         {!r && !queue.waiting.length && !queue.finished.length && (
