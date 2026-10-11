@@ -65,6 +65,18 @@ export function megapixelsOf(values: Record<string, unknown>): number | null {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
 }
 
+/** Approximate dimensions before any server-side rounding or size constraints. */
+export function estimatedResolution(megapixels: unknown, aspectRatio: unknown): string | undefined {
+  const mp = typeof megapixels === 'number' || typeof megapixels === 'string' ? Number(megapixels) : NaN
+  const match = typeof aspectRatio === 'string' ? aspectRatio.match(/^\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)(?:\s|$)/) : null
+  if (!match || !Number.isFinite(mp) || mp <= 0) return undefined
+  const ratio = Number(match[1]) / Number(match[2])
+  const width = Math.round(Math.sqrt(mp * 1_000_000 * ratio))
+  const height = Math.round(Math.sqrt(mp * 1_000_000 / ratio))
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return undefined
+  return `Estimated resolution: ${width} × ${height} px (width × height)`
+}
+
 export function durationOf(values: Record<string, unknown>): number | null {
   const v = values.duration
   return typeof v === 'number' ? v : typeof v === 'string' && v && !Number.isNaN(Number(v)) ? Number(v) : null

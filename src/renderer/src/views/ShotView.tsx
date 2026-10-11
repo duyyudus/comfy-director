@@ -4,7 +4,7 @@ import type { Attempt, InputFile, PromptMode, SeedMode, Shot, ShotDetail, Upload
 import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
-import { attemptSeed, attemptSummary, pad2, plural, renderTime, timeAgo } from '../lib/format'
+import { attemptSeed, attemptSummary, estimatedResolution, pad2, plural, renderTime, timeAgo } from '../lib/format'
 import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progress, SectionLabel, Segmented, Select, Tag } from '../components/ui'
 import { InputControl, PromptTextarea, fileHint } from '../components/inputs'
 import { PlayerDialog, Thumb } from '../components/Media'
@@ -192,6 +192,20 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
     }
   }
 
+  const resolutionTitle = (i: SchemaInput): string | undefined => {
+    const target = i.target
+    if (i.key !== 'megapixels' && !(target.kind === 'field' && target.field === 'megapixels')) return undefined
+    const aspect = activeWf?.inputs.find((x) =>
+      x.target.kind === 'field' && x.target.field === 'aspect_ratio' &&
+      target.kind === 'field' && x.target.nodeId === target.nodeId
+    ) ?? activeWf?.inputs.find((x) => x.key === 'aspect_ratio')
+    if (!aspect) return undefined
+    return estimatedResolution(
+      i.key in form.values ? form.values[i.key] : i.default,
+      aspect.key in form.values ? form.values[aspect.key] : aspect.default
+    )
+  }
+
   const renderInput = (i: SchemaInput): ReactNode => (
     <InputControl
       key={i.key}
@@ -199,6 +213,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
       value={i.key in form.values ? form.values[i.key] : i.default}
       onChange={(v) => setValue(i.key, v)}
       error={errors[i.key]}
+      title={resolutionTitle(i)}
       projectPath={projectPath}
       files={files}
       onFiles={(f) => setFiles((x) => ({ ...x, ...Object.fromEntries(f.map((y) => [y.name, y])) }))}

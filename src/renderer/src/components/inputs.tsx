@@ -12,6 +12,7 @@ export interface InputProps {
   value: unknown
   onChange: (v: unknown) => void
   error?: string
+  title?: string
   projectPath: string
   files: Record<string, InputFile>
   onFiles: (f: InputFile[]) => void
@@ -53,7 +54,7 @@ function TextControl({ input, value, onChange, error }: InputProps): ReactNode {
   )
 }
 
-function NumberControl({ input, value, onChange, error }: InputProps): ReactNode {
+function NumberControl({ input, value, onChange, error, title }: InputProps): ReactNode {
   const c = input.constraints
   const [text, setText] = useState<string | null>(null)
   const shown = text ?? (value === undefined || value === null ? '' : String(value))
@@ -63,6 +64,7 @@ function NumberControl({ input, value, onChange, error }: InputProps): ReactNode
       <Input
         type="number"
         inputMode="decimal"
+        title={title}
         value={shown}
         min={c.min}
         max={c.max}
