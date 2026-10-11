@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyValues, buildSchema, checkWorkflow, detectFormat, diffSchemas, graphSteps, keyFromTitle, validateValues } from '../src/core/workflow'
-import { fl2v, objectInfo, r2v, t2v } from './fixtures'
+import { fl2v, numzUpscale, objectInfo, r2v, seedvr2Upscale, t2v } from './fixtures'
 
 describe('keys', () => {
   it('derives keys from titles', () => {
@@ -190,6 +190,77 @@ describe('schema', () => {
     expect(c.missingNodeTypes.length).toBeGreaterThan(0)
     expect(c.models.length).toBe(5)
     expect(c.brokenLinks).toEqual([])
+  })
+})
+
+describe('seedvr2 upscale', () => {
+  it('exposes the video, trim and scale by default and drives the seed', () => {
+    const s = buildSchema(seedvr2Upscale(), null, null)
+    expect(s.inputs.map((i) => i.key)).toEqual(['cfg', 'denoise', 'scale_multiplier', 'trim_video', 'split latent', 'video'])
+    const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
+    expect(byKey.trim_video).toMatchObject({ type: 'toggle', label: 'Trim video', default: false, target: { kind: 'field', nodeId: '66:81', field: 'switch' } })
+    expect(byKey.scale_multiplier).toMatchObject({ type: 'number', label: 'Scale multiplier', default: 1.5, target: { kind: 'field', nodeId: '66:57', field: 'resize_type.multiplier' } })
+    expect(byKey.denoise).toMatchObject({ type: 'number', default: 1, constraints: { min: 0, max: 1 }, target: { kind: 'field', nodeId: '66:54', field: 'denoise' } })
+    expect(byKey.cfg).toMatchObject({ type: 'number', default: 1, target: { kind: 'field', nodeId: '66:54', field: 'cfg' } })
+    expect(s.discovery.fields.map((f) => f.field)).not.toContain('denoise')
+    expect(byKey.video.type).toBe('file')
+    expect(byKey.video.constraints.media).toBe('video')
+    for (const k of ['scale_multiplier', 'trim_video', 'cfg', 'denoise']) expect(byKey[k].tooltip, k).toMatch(/\S/)
+    expect(s.seedTargets).toEqual([{ nodeId: '66:54', field: 'seed' }])
+    expect(s.duplicateKeys).toEqual([])
+    expect(byKey['split latent']).toMatchObject({ type: 'toggle', default: false })
+    expect(byKey['split latent'].tooltip).toMatch(/chunks/)
+  })
+
+  it('writes the trim switch, scale and seed into the graph', () => {
+    const wf = seedvr2Upscale()
+    const s = buildSchema(wf, null, null)
+    const out = applyValues(wf, s, { trim_video: true, scale_multiplier: 2, denoise: 0.6, cfg: 1.5, video: 'clip.mp4' }, { seed: 7 })
+    expect(out['66:81'].inputs.switch).toBe(true)
+    expect(out['66:57'].inputs['resize_type.multiplier']).toBe(2)
+    expect(out['73'].inputs.file).toBe('clip.mp4')
+    expect(out['66:54'].inputs).toMatchObject({ seed: 7, denoise: 0.6, cfg: 1.5 })
+  })
+})
+
+describe('seedvr2 upscale (numz nodes)', () => {
+  it('exposes the settings that shape the result, and the video as `video`', () => {
+    const s = buildSchema(numzUpscale(), null, null)
+    expect(s.inputs.map((i) => i.key)).toEqual([
+      'model', 'offload_device', 'resolution', 'batch_size', 'color_correction', 'temporal_overlap', 'input_noise_scale', 'latent_noise_scale',
+      'blocks_to_swap', 'encode_tiled', 'decode_tiled', 'video'
+    ])
+    const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
+    expect(byKey.color_correction).toMatchObject({ type: 'select', default: 'lab' })
+    expect(byKey.color_correction.constraints.options).toContain('wavelet')
+    expect(byKey.batch_size).toMatchObject({ type: 'number', default: 33, constraints: { min: 1, step: 4, integer: true } })
+    expect(byKey.video).toMatchObject({ type: 'file', constraints: { media: 'video' }, target: { kind: 'file', nodeId: '21', via: '22' } })
+    for (const k of ['model', 'resolution', 'batch_size', 'color_correction', 'temporal_overlap', 'input_noise_scale', 'latent_noise_scale', 'offload_device', 'blocks_to_swap', 'encode_tiled', 'decode_tiled']) expect(byKey[k].tooltip, k).toMatch(/Start with/)
+    expect(s.seedTargets).toEqual([{ nodeId: '10', field: 'seed' }])
+    expect(byKey.model.default).toBe('seedvr2_ema_7b_fp16.safetensors')
+    expect(byKey.blocks_to_swap).toMatchObject({ type: 'number', default: 32, constraints: { min: 0, max: 36, integer: true } })
+    expect(byKey.offload_device).toMatchObject({ default: 'none', target: { kind: 'field', nodeId: '14', field: 'offload_device' } })
+    expect(byKey.encode_tiled).toMatchObject({ type: 'toggle', default: true })
+    expect(byKey.decode_tiled).toMatchObject({ type: 'toggle', default: true })
+    // The VAE's own `model` is not an input, and the other memory and speed settings stay fields to expose by hand.
+    expect(s.inputs.filter((i) => i.key.startsWith('model'))).toHaveLength(1)
+    expect(s.discovery.fields.map((f) => f.field)).toEqual(expect.arrayContaining(['max_resolution', 'attention_mode']))
+    expect(s.duplicateKeys).toEqual([])
+  })
+
+  it('shares the video key with the built-in nodes workflow, so a chosen video carries over', () => {
+    const a = buildSchema(seedvr2Upscale(), null, null).inputs.find((i) => i.type === 'file')
+    const b = buildSchema(numzUpscale(), null, null).inputs.find((i) => i.type === 'file')
+    expect(a?.key).toBe('video')
+    expect(b?.key).toBe('video')
+  })
+
+  it('writes the values into the graph', () => {
+    const wf = numzUpscale()
+    const s = buildSchema(wf, null, null)
+    const out = applyValues(wf, s, { resolution: 1440, batch_size: 5, color_correction: 'wavelet', video: 'clip.mp4' }, { seed: 9 })
+    expect(out['10'].inputs).toMatchObject({ resolution: 1440, batch_size: 5, color_correction: 'wavelet', seed: 9, temporal_overlap: 3 })
+    expect(out['21'].inputs.file).toBe('clip.mp4')
   })
 })
 

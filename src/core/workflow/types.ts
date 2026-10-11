@@ -53,6 +53,8 @@ export interface SchemaInput {
   type: InputType
   label: string
   help?: string
+  /** Shown when hovering the input: what to start with and why. Only recognised inputs have one. */
+  tooltip?: string
   default: unknown
   constraints: InputConstraints
   target: InputTarget

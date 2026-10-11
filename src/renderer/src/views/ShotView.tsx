@@ -146,6 +146,8 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
   if (!tree || !detail || !form) return <div className="p-8 text-text2">Loading…</div>
   const shot = detail.shot
   const listMode = form.promptMode === 'list' && !!prompt
+  // The chat writes the prompt input, so it only exists for workflows that have one. Whether it was open is remembered meanwhile.
+  const chatShown = chatOpen && !!prompt
   const promptCount = listMode ? form.promptList.filter((p) => p.trim()).length : 1
   const jobs = promptCount * Math.max(1, form.runs || 1)
   const keeper = detail.attempts.find((a) => a.id === shot.keeperAttemptId)
@@ -351,7 +353,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
       ) : (
         <div className="flex flex-1 items-start gap-6 p-6">
           {/* Input form */}
-          <Card className={cn('flex-[1.25] p-5', chatOpen ? 'min-w-[320px]' : 'min-w-0')}>
+          <Card className={cn('flex-[1.25] p-5', chatShown ? 'min-w-[320px]' : 'min-w-0')}>
             <div className="flex flex-col gap-6">
               {prompt && (
                 <div>
@@ -461,7 +463,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
           </Card>
 
           {/* Prompt chat */}
-          {chatOpen && (
+          {chatShown && (
             <div className="sticky top-6 max-w-[560px] min-w-[360px] flex-1">
               <PromptChat
                 projectPath={projectPath}
@@ -481,7 +483,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
           )}
 
           {/* Attempts */}
-          <div className={cn('shrink-0', chatOpen ? 'w-[380px]' : 'w-[460px]')}>
+          <div className={cn('shrink-0', chatShown ? 'w-[380px]' : 'w-[460px]')}>
             <div className="mb-3 flex items-center justify-between">
               <div className="text-17 font-semibold">
                 Attempts <span className="font-normal text-text2">{detail.totalAttempts}</span>

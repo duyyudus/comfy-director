@@ -22,6 +22,12 @@ export interface InputProps {
 
 /** One small component per input type. A new input kind means adding one component here. */
 export function InputControl(p: InputProps): ReactNode {
+  const control = controlFor(p)
+  // `contents` keeps each control's own layout; a tooltip on it still shows over its children.
+  return p.input.tooltip ? <div className="contents" title={p.input.tooltip}>{control}</div> : control
+}
+
+function controlFor(p: InputProps): ReactNode {
   switch (p.input.type) {
     case 'text':
       return <TextControl {...p} />

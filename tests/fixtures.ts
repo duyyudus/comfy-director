@@ -8,6 +8,13 @@ export const r2v = (): ApiWorkflow => JSON.parse(readFileSync(resolve(dir, 'vide
 export const fl2v = (): ApiWorkflow => JSON.parse(readFileSync(resolve(dir, 'video_minimax_h3_i2v_continuation.json'), 'utf8'))
 export const t2v = (): ApiWorkflow => JSON.parse(readFileSync(resolve(dir, 'video_minimax_h3_t2v.json'), 'utf8'))
 
+const seedvr2Dir = resolve(__dirname, '../docs/seedvr2-workflow-examples')
+export const seedvr2Upscale = (): ApiWorkflow =>
+  JSON.parse(readFileSync(resolve(seedvr2Dir, 'utility_seedvr2_7b_int8_upscale_video.json'), 'utf8'))
+
+export const numzUpscale = (): ApiWorkflow =>
+  JSON.parse(readFileSync(resolve(seedvr2Dir, 'numz_SeedVR2_HD_video_upscale.json'), 'utf8'))
+
 /** Minimal object_info for the MiniMax H3 nodes (shapes as the server sends them). */
 export const objectInfo: ObjectInfo = {
   MiniMaxH3ImageToVideo: {

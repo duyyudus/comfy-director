@@ -29,6 +29,7 @@ export function buildSchema(wf: ApiWorkflow, overrides: Overrides | null | undef
       type: c.type,
       label: ov?.label?.trim() || c.label,
       help: ov?.help,
+      tooltip: c.tooltip,
       default: ov?.default !== undefined ? ov.default : c.default,
       constraints: {
         ...c.constraints,

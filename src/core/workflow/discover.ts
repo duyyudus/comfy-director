@@ -16,6 +16,8 @@ export interface Candidate {
   target: InputTarget
   constraints: InputConstraints
   nodeClass: string
+  /** Hover text for the input (see `SchemaInput.tooltip`). */
+  tooltip?: string
 }
 
 /** A literal field on a regular node that can be exposed through overrides. */
@@ -65,12 +67,113 @@ const SUGGESTED_FIELDS = new Set([
 /** Literal string fields discovered as inputs (exposed by default). */
 const PROMPT_FIELDS = new Set(['prompt'])
 
+interface StandardField {
+  /** Key and label when the field name alone would say too little (`switch`). */
+  key?: string
+  label?: string
+  /** Hover text: what to start with and why. */
+  tip?: string
+  /** Bounds to use when the server's node info gives none. */
+  constraints?: InputConstraints
+  /** Narrows the rule to nodes that play the role the key names. */
+  when?: (wf: ApiWorkflow, nodeId: string) => boolean
+}
+
 /** Literal fields on known node classes discovered as inputs (exposed by default). */
-const STANDARD_FIELDS: Record<string, Set<string>> = {
-  ResolutionSelector: new Set(['aspect_ratio', 'megapixels'])
+const STANDARD_FIELDS: Record<string, Record<string, StandardField>> = {
+  ResolutionSelector: { aspect_ratio: {}, megapixels: {} },
+  // SeedVR2 upscale: the factor of the resize step in front of the model.
+  ResizeImageMaskNode: {
+    'resize_type.multiplier': {
+      key: 'scale_multiplier',
+      label: 'Scale multiplier',
+      tip: 'How much to enlarge the video before SeedVR2 runs. Start with 1.5. A larger factor makes the model invent more detail, and artifacts show up mostly at large output sizes.'
+    }
+  },
+  // SeedVR2 upscale: the only sampler settings that could change how much the model invents. Other KSamplers are left alone.
+  KSampler: {
+    cfg: {
+      tip: 'Guidance strength. Start with 1, the value of the SeedVR2 template: this one-step model is meant to run without guidance. Experimental, its effect here is not documented.',
+      when: isSeedVr2Sampler
+    },
+    denoise: {
+      tip: 'Start with 1 (full). Lower values start the sampler from less noise, and on this one-step model that may soften the result instead of keeping it closer to the source. Experimental: compare on a fixed seed.',
+      constraints: { min: 0, max: 1, step: 0.01 },
+      when: isSeedVr2Sampler
+    }
+  },
+  // SeedVR2 upscale (numz's custom nodes): what sets the scale, the look and the batch seams. Model and memory settings stay fixed.
+  SeedVR2VideoUpscaler: {
+    resolution: {
+      tip: 'Size of the shorter edge of the result; the aspect ratio is kept. Start with 1080. The more it enlarges, the more detail the model invents, and artifacts show up mostly at large output sizes.'
+    },
+    batch_size: {
+      tip: 'Frames processed together; must be 4n+1 (1, 5, 9, 13...). Start with 5, the least that gives temporal consistency, or match the clip length. Higher is more consistent but needs much more VRAM. Use 1 only for single images.',
+      constraints: { min: 1, step: 4, integer: true }
+    },
+    color_correction: {
+      tip: 'How the colours of the result are matched to the source. Start with lab, the most faithful. Try wavelet if lab looks off. none keeps the colours the model produced.',
+      constraints: { options: ['lab', 'wavelet', 'wavelet_adaptive', 'hsv', 'adain', 'none'] }
+    },
+    temporal_overlap: {
+      tip: 'Frames shared between batches and blended. Start with 0. Raise it to 2 or 3 if the joins between batches flicker or cut. It only matters when the clip takes more than one batch.',
+      constraints: { min: 0, max: 16, step: 1, integer: true }
+    },
+    input_noise_scale: {
+      tip: 'Noise added to the input, 0 to 1. Start with 0. Try 0.1 to 0.3 if large output sizes show artifacts. Guides disagree on whether more or less helps over-sharpening on clean footage, so compare on a fixed seed.',
+      constraints: { min: 0, max: 1, step: 0.01 }
+    },
+    latent_noise_scale: {
+      tip: 'Noise added while the model works, 0 to 1. Start with 0. A small value (about 0.05 to 0.15) softens excess detail: the nearest thing to a "less AI look" control.',
+      constraints: { min: 0, max: 1, step: 0.01 }
+    }
+  },
+  // SeedVR2 upscale (numz): the model, and the memory settings that decide whether and how fast a clip fits on the GPU.
+  SeedVR2LoadDiTModel: {
+    model: {
+      tip: 'The upscaling model. Start with seedvr2_ema_7b_fp16, the best quality offered. 3B is faster and lighter. fp8 and GGUF Q8 save VRAM for a small quality cost, Q4 for more. The "sharp" 7B variants add more detail.'
+    },
+    offload_device: {
+      tip: 'Where the model waits while it is not running. none keeps it on the GPU: fastest, most VRAM. cpu frees VRAM, which long or large clips may need. Start with none, and set cpu when you use blocks_to_swap or run out of memory.'
+    },
+    blocks_to_swap: {
+      tip: 'Transformer blocks moved to the CPU to save VRAM: 0 is off, up to 36 on 7B (32 on 3B). Start with 0 and raise it (try 16) only on out-of-memory errors, since more swapping is slower. It only works when offload_device is not none.',
+      constraints: { min: 0, max: 36, step: 1, integer: true }
+    }
+  },
+  SeedVR2LoadVAEModel: {
+    encode_tiled: {
+      tip: 'Encode the video in tiles. Start with it off, which is faster, and turn it on if you run out of memory while encoding. Tile seams are possible; the tile size and overlap are set in the workflow.'
+    },
+    decode_tiled: {
+      tip: 'Decode the result in tiles. Start with it off, which is faster, and turn it on if you run out of memory while decoding. Tile seams are possible; the tile size and overlap are set in the workflow.'
+    }
+  },
+  // SeedVR2 upscale: an if/else switch that picks the trimmed clip (a `Video Slice` on `on_true`) over the whole video.
+  ComfySwitchNode: {
+    switch: {
+      key: 'trim_video',
+      label: 'Trim video',
+      tip: 'Off upscales the whole video. On upscales only the clip cut by the Video Slice node of the workflow. Its start time and duration are not inputs here, so they stay as in the workflow file.',
+      when: (wf, nodeId) => {
+        const on = wf[nodeId].inputs.on_true
+        return isLink(on) && wf[on[0]]?.class_type === 'Video Slice'
+      }
+    }
+  }
+}
+
+function isSeedVr2Sampler(wf: ApiWorkflow, nodeId: string): boolean {
+  const positive = wf[nodeId].inputs.positive
+  return isLink(positive) && wf[positive[0]]?.class_type === 'SeedVR2Conditioning'
 }
 
 const SWITCH_BRANCH_INPUTS = new Set(['on_true', 'on_false'])
+
+/** Hover text for primitive inputs, by key. */
+const PRIMITIVE_TIPS: Record<string, string> = {
+  'split latent': 'Off upscales the whole clip in one go. On cuts the video into chunks (sized from the free VRAM) and merges them back, which uses less VRAM and may be much faster on long or large clips. The chunks are not overlapped, so a seam between them is possible.'
+}
 
 export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
   const candidates: Candidate[] = []
@@ -83,6 +186,7 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
     const prim = PRIMITIVES[node.class_type]
     if (prim) {
       const consumers = consumersOf(wf, nodeId)
+      const key = keyFromTitle(title)
       const internal = consumers.length > 0 && consumers.every((c) => SWITCH_BRANCH_INPUTS.has(c.input))
       const constraints: InputConstraints = { integer: prim.integer, multiline: prim.multiline }
       // Numeric bounds: the consumer's input spec is more meaningful than the primitive's huge range.
@@ -95,7 +199,6 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
         if (s) Object.assign(constraints, { min: s.min, max: s.max, step: s.step })
         if (prim.integer) constraints.step = constraints.step ?? 1
       }
-      const key = keyFromTitle(title)
       candidates.push({
         id: key,
         key,
@@ -106,7 +209,8 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
         defaultExposed: !internal,
         target: { kind: 'field', nodeId, field: 'value' },
         constraints,
-        nodeClass: node.class_type
+        nodeClass: node.class_type,
+        ...(PRIMITIVE_TIPS[key] && { tooltip: PRIMITIVE_TIPS[key] })
       })
       continue
     }
@@ -127,11 +231,13 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
       }
       const consumerNode = wf[consumer.nodeId]
       const spec = inputSpec(oi, consumerNode.class_type, consumer.input)
+      // A video feeding `image` (frames from a Get Video Components node) is still a video: same key in every workflow.
+      const key = loader.media !== 'image' && /^images?$/.test(consumer.input) ? loader.media : consumer.input
       candidates.push({
-        id: consumer.input,
-        key: consumer.input,
+        id: key,
+        key,
         type: 'file',
-        label: humanize(consumer.input),
+        label: humanize(key),
         source: `${title} into ${consumer.input} on ${titleOf(consumerNode)}`,
         default: null,
         defaultExposed: true,
@@ -170,18 +276,21 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
         })
         continue
       }
-      if (STANDARD_FIELDS[node.class_type]?.has(field)) {
+      const std = STANDARD_FIELDS[node.class_type]?.[field]
+      if (std && (!std.when || std.when(wf, nodeId))) {
+        const key = std.key ?? field
         candidates.push({
-          id: field,
-          key: field,
-          type: f.type,
-          label: f.label,
+          id: key,
+          key,
+          type: std.constraints?.options && f.type === 'text' ? 'select' : f.type,
+          label: std.label ?? f.label,
           source: `${title} · ${node.class_type}.${field}`,
           default: value,
           defaultExposed: true,
           target: { kind: 'field', nodeId, field },
-          constraints: f.constraints,
-          nodeClass: node.class_type
+          constraints: { ...std.constraints, ...f.constraints },
+          nodeClass: node.class_type,
+          ...(std.tip && { tooltip: std.tip })
         })
         continue
       }
