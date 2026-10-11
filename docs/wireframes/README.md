@@ -31,7 +31,7 @@ Low-fidelity wireframes for Comfy Director, a desktop client for ComfyUI. They a
 
 ## Caveats
 
-- Sample data (names, seeds, counts, diffs) is made up. The workflow numbers (30 nodes, 22 node types, 5 models, 6 ref images) come from `video_minimax_h3_r2v.json`.
+- Sample data (names, seeds, counts, diffs) is made up. The workflow numbers (30 nodes, 22 node types, 5 models, 6 ref images) come from `video_minimax_h3_r2v.api_format.json`.
 - The PNGs were rendered with a fallback font because IBM Plex Sans was not available, so text widths differ slightly from the original design.
 - All screens are drawn in the light theme. The dark tokens are in `png/14-theme.png` and the spec.
 - The wireframes were drawn before the app was built and are not kept in step with it. Where they disagree with the spec, the spec wins. Not drawn, but in the app and described in the spec: the "Save to Library" link on the prompt box, Export keepers, the delete actions (shot, sequence, attempt, workflow), Edit workflow and the Workflows card in Settings, Open existing project, the Model and API key fields and the prompting skill of the LLM prompter, and the Prompt chat panel of the Shot view. Drawn but different: Seed is not offered under "Not found automatically".

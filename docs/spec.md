@@ -85,16 +85,16 @@ Reference workflows used for design (all MiniMax H3):
 
 | File | What it is | Notes |
 |---|---|---|
-| `video_minimax_h3_r2v.json` | Reference-to-video (ref2vid): 4 ref images, 1 ref video, 1 ref audio | Flat node ids. Prompt comes from an `Input Text (Prompt)` node. The video goes through a `Get Video Components` node, which feeds both `ref_videos.ref_video_0` (frames) and `ref_video_audios.ref_video_audio_0` (its audio track). |
-| `video_minimax_h3_i2v_continuation.json` | First and last frame to video (fl2vid) | Node ids carry a subgraph prefix (`105:...`). Prompt is typed directly on the `MiniMaxH3ImageToVideo` node. Two `LoadImage` nodes, both titled "Load Image". |
-| `video_minimax_h3_t2v.json` | Text to video (t2v) | Identical to fl2vid except: no `LoadImage` nodes, no `first_frame` / `last_frame` links, different default values, and subgraph prefix `140:`. |
+| `video_minimax_h3_r2v.api_format.json` | Reference-to-video (ref2vid): 4 ref images, 1 ref video, 1 ref audio | Flat node ids. Prompt comes from an `Input Text (Prompt)` node. The video goes through a `Get Video Components` node, which feeds both `ref_videos.ref_video_0` (frames) and `ref_video_audios.ref_video_audio_0` (its audio track). |
+| `video_minimax_h3_i2v_continuation.api_format.json` | First and last frame to video (fl2vid) | Node ids carry a subgraph prefix (`105:...`). Prompt is typed directly on the `MiniMaxH3ImageToVideo` node. Two `LoadImage` nodes, both titled "Load Image". |
+| `video_minimax_h3_t2v.api_format.json` | Text to video (t2v) | Identical to fl2vid except: no `LoadImage` nodes, no `first_frame` / `last_frame` links, different default values, and subgraph prefix `140:`. |
 
 Two further workflows, not used for the design but supported by it:
 
 | File | What it is | Notes |
 |---|---|---|
-| `docs/seedvr2-workflow-examples/utility_seedvr2_7b_int8_upscale_video.json` | SeedVR2 7B video upscale | Subgraph prefix `66:`. One `LoadVideo` feeds a `Video Slice` and an if/else switch that chooses the trimmed or the whole clip. Inputs: **Video** (file), **Trim video** (toggle, off), **Scale multiplier** (1.5), **cfg** and **denoise** (both 1, from the `KSampler`), **Split latent**, and the Seed control (`KSampler.seed`). **Split latent** (the chunking toggle, off) is an input too. |
-| `docs/seedvr2-workflow-examples/numz_SeedVR2_HD_video_upscale.json` | SeedVR2 video upscale with the community pack `numz/ComfyUI-SeedVR2_VideoUpscaler` | Flat node ids. `LoadVideo` into `Get Video Components` into `SeedVR2VideoUpscaler.image`. Inputs: **Video** (file), **resolution** (shorter edge, 1080), **batch_size** (33, 4n+1), **color_correction** (`lab`), **temporal_overlap** (3), **input_noise_scale** and **latent_noise_scale** (0), the Seed control, and the memory and model settings **model** (the DiT model, `seedvr2_ema_7b_fp16.safetensors` in the example), **offload_device** (the DiT loader's), **blocks_to_swap**, **encode_tiled** and **decode_tiled**. Attention mode, the other offload devices, tile sizes and `max_resolution` are found but not exposed. |
+| `docs/workflow-examples/seedvr2/utility_seedvr2_7b_int8_upscale_video.api_format.json` | SeedVR2 7B video upscale | Subgraph prefix `66:`. One `LoadVideo` feeds a `Video Slice` and an if/else switch that chooses the trimmed or the whole clip. Inputs: **Video** (file), **Trim video** (toggle, off), **Scale multiplier** (1.5), **cfg** and **denoise** (both 1, from the `KSampler`), **Split latent**, and the Seed control (`KSampler.seed`). **Split latent** (the chunking toggle, off) is an input too. |
+| `docs/workflow-examples/seedvr2/numz_SeedVR2_HD_video_upscale.api_format.json` | SeedVR2 video upscale with the community pack `numz/ComfyUI-SeedVR2_VideoUpscaler` | Flat node ids. `LoadVideo` into `Get Video Components` into `SeedVR2VideoUpscaler.image`. Inputs: **Video** (file), **resolution** (shorter edge, 1080), **batch_size** (33, 4n+1), **color_correction** (`lab`), **temporal_overlap** (3), **input_noise_scale** and **latent_noise_scale** (0), the Seed control, and the memory and model settings **model** (the DiT model, `seedvr2_ema_7b_fp16.safetensors` in the example), **offload_device** (the DiT loader's), **blocks_to_swap**, **encode_tiled** and **decode_tiled**. Attention mode, the other offload devices, tile sizes and `max_resolution` are found but not exposed. |
 
 What these three files teach (each rule is written into the sections below):
 
@@ -165,7 +165,7 @@ Values are matched across workflows and across re-imports by key, so keys must c
 - **File inputs start empty**, not with the filename baked into the export (that file lives only on the server).
 - **Empty optional input:** before sending, the app deletes that loader node, its unpack node if it has one, and the links on the consumer node. The result is a valid workflow that simply has no file there. This is the same mechanism as unused ref slots.
 - **Required input empty:** Run is blocked with a message on that field.
-- In `MiniMaxH3ImageToVideo`, `first_frame` and `last_frame` are optional. With both empty the result matches `video_minimax_h3_t2v.json` (checked by comparing the two files). With only a first frame it is image-to-video. Both cases were run on the real server (2026-10-08).
+- In `MiniMaxH3ImageToVideo`, `first_frame` and `last_frame` are optional. With both empty the result matches `video_minimax_h3_t2v.api_format.json` (checked by comparing the two files). With only a first frame it is image-to-video. Both cases were run on the real server (2026-10-08).
 - Because of this, importing only the fl2vid file covers t2v, i2v and fl2v. Importing the t2v file as well is optional: it is the same graph with different defaults (16:9, 1 megapixel, 5 s, turbo off), so it would only add a tab.
 
 ### Variable-count inputs (ref images, videos and audio)

@@ -37,7 +37,7 @@ mkdirSync(tempDir, { recursive: true })
 mkdirSync(join(outputDir, 'video'), { recursive: true })
 
 /* ------------------------------------------------------------- object_info */
-const examples = join(here, '../docs/minimax-h3-workflow-examples')
+const examples = join(here, '../docs/workflow-examples/minimax-h3')
 const objectInfo = {}
 const generic = (v) =>
   typeof v === 'number' ? (Number.isInteger(v) ? ['INT', { default: v, min: 0, max: 2 ** 53 }] : ['FLOAT', { default: v, min: 0, max: 1e6, step: 0.01 }])
@@ -369,7 +369,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { deleted, errors })
     }
     if (p === '/_fake/other-client' && req.method === 'POST') {
-      const prompt = JSON.parse(readFileSync(join(examples, 'video_minimax_h3_t2v.json'), 'utf8'))
+      const prompt = JSON.parse(readFileSync(join(examples, 'video_minimax_h3_t2v.api_format.json'), 'utf8'))
       queue.push({ id: randomUUID(), number: ++counter, prompt, clientId: 'someone-else' })
       broadcastStatus()
       return json(res, 200, {})
