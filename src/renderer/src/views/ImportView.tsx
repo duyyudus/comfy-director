@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { ExposeEntry, InputConstraints, InputOverride, InputType, Overrides } from '@core/workflow/types'
 import type { Candidate, FieldCandidate } from '@core/workflow/discover'
 import type { ImportAnalysis, ImportPreview } from '@shared/types'
@@ -59,6 +59,21 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
     }).catch((e) => toast(errorMessage(e), 'error'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId])
+
+  // Esc leaves the edit view without saving, unless a dialog or menu is open and handles it first.
+  const goBack = useRef<() => void>(() => {})
+  goBack.current = () => {
+    if (!busy && back) go(back)
+  }
+  useEffect(() => {
+    if (!editId || embedded) return
+    const h = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('[role=dialog]')) return
+      goBack.current()
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [editId, embedded])
 
   const initState = (a: ImportAnalysis, ov: Overrides): void => {
     setBaseOverrides(ov)

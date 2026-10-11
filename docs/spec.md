@@ -388,7 +388,7 @@ Purpose: add a workflow, or replace an existing one with a new version, and deci
 
 **Import as version N** stores the new `workflow.json`, the hash and timestamp, and the updated overrides. The previous version is kept in `workflows/<id>/versions/<N>/` so attempts can still reference it. Cancel returns to the previous screen.
 
-**Edit workflow** (from Settings, or from a shot) reuses this screen on the stored file. It changes the name and `overrides.json` only, so the version and hash stay the same. To update the graph, import the new export and choose Replace.
+**Edit workflow** (from Settings, or from a shot) reuses this screen on the stored file. It changes the name and `overrides.json` only, so the version and hash stay the same. To update the graph, import the new export and choose Replace. **Esc** leaves the screen without saving, like Back.
 
 **Delete** (in Settings) asks first, then moves `workflows/<id>/` to the system trash and drops it from the index. Its version records stay, so a later import under the same id continues the numbering. Shots that used it fall back to the first workflow; attempts keep their record and their files.
 
