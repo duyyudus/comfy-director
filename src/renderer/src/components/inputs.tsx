@@ -115,6 +115,14 @@ function SelectControl({ input, value, onChange, error }: InputProps): ReactNode
   )
 }
 
+const OUTPUT_DRAG = 'application/x-comfy-output-'
+
+/** Starts a drag of an attempt's rendered file. The kind is part of the type so inputs can tell, while hovering, whether they accept it. */
+export function dragOutput(e: DragEvent, out: { path: string; kind: string }): void {
+  e.dataTransfer.effectAllowed = 'copy'
+  e.dataTransfer.setData(OUTPUT_DRAG + out.kind, out.path)
+}
+
 function useDropFiles(projectPath: string, kind: FileMedia, onAdd: (f: InputFile[]) => void): { over: boolean; handlers: Record<string, (e: DragEvent) => void> } {
   const [over, setOver] = useState(false)
   const toast = useStore((s) => s.toast)
@@ -122,19 +130,21 @@ function useDropFiles(projectPath: string, kind: FileMedia, onAdd: (f: InputFile
     over,
     handlers: {
       onDragOver: (e: DragEvent) => {
-        if (e.dataTransfer.types.includes('Files')) {
+        if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes(OUTPUT_DRAG + kind)) {
           e.preventDefault()
           setOver(true)
         }
       },
       onDragLeave: () => setOver(false),
       onDrop: async (e: DragEvent) => {
-        if (!e.dataTransfer.files.length) return
+        const render = e.dataTransfer.getData(OUTPUT_DRAG + kind)
+        if (!render && !e.dataTransfer.files.length) return
         e.preventDefault()
         setOver(false)
         try {
           const added: InputFile[] = []
-          for (const f of Array.from(e.dataTransfer.files)) added.push(await api.addInputFromPath(projectPath, window.toolkit.pathForFile(f), kind))
+          if (render) added.push(await api.addInputFromOutput(projectPath, render, kind))
+          else for (const f of Array.from(e.dataTransfer.files)) added.push(await api.addInputFromPath(projectPath, window.toolkit.pathForFile(f), kind))
           onAdd(added)
         } catch (err) {
           toast(errorMessage(err), 'error')

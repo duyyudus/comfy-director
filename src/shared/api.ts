@@ -70,6 +70,8 @@ export interface ToolkitApi {
   /** Opens a file dialog for one kind of input file (images unless `media` says otherwise) and copies the choice into the project. */
   pickInputs(projectPath: string, multiple: boolean, media?: FileMedia): Promise<InputFile[]>
   addInputFromPath(projectPath: string, filePath: string, media?: FileMedia): Promise<InputFile>
+  /** Copies a rendered file of this project (an attempt's output path, relative to the project) into its inputs. */
+  addInputFromOutput(projectPath: string, outputPath: string, media?: FileMedia): Promise<InputFile>
 
   // attempts & runs
   run(projectPath: string, shotId: number, req: RunRequest): Promise<RunResult>
@@ -146,7 +148,7 @@ export const API_METHODS: ApiMethod[] = [
   'projectFolderPreview', 'getProjectTree',
   'createSequence', 'renameSequence', 'deleteSequence', 'reorderShots', 'createShot', 'getShot', 'updateShot',
   'duplicateShot', 'moveShot', 'deleteShot', 'getSequenceShots', 'exportKeepers',
-  'pickInputs', 'addInputFromPath',
+  'pickInputs', 'addInputFromPath', 'addInputFromOutput',
   'run', 'retryAttempt', 'setKeeper', 'deleteAttempt', 'getAttempts', 'cancelAttempt', 'revealFile', 'saveThumbnail',
   'pendingThumbnails',
   'getQueue', 'cancelJobs', 'cancelOtherClientJob', 'interrupt', 'cancelAllWaiting', 'takeReconcileSummary',

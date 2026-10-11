@@ -1,6 +1,6 @@
 import { app, BrowserWindow, clipboard, dialog, nativeImage, nativeTheme, shell } from 'electron'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { basename, extname, join, resolve } from 'node:path'
+import { basename, extname, isAbsolute, join, relative, resolve } from 'node:path'
 import { settings, updateSettings, publicSettings, getToken, setToken } from './settings'
 import { Workspace, sha256, workflowIdFromName } from './workspace'
 import { ServerManager } from './server'
@@ -490,6 +490,15 @@ export function createApi(ctx: Context): ToolkitApi {
       const kind = INPUT_FILES[media]
       if (!kind.extensions.includes(extOf(filePath))) throw new Error(kind.error)
       return copyInput(projectPath, filePath)
+    },
+    async addInputFromOutput(projectPath, outputPath, media = 'image') {
+      const kind = INPUT_FILES[media]
+      const root = resolve(projectPath, 'outputs')
+      const src = resolve(projectPath, outputPath)
+      if (relative(root, src).startsWith('..') || isAbsolute(relative(root, src))) throw new Error('That file is not a render of this project.')
+      if (!existsSync(src)) throw new Error('That render is no longer on disk.')
+      if (!kind.extensions.includes(extOf(src))) throw new Error(kind.error)
+      return copyInput(projectPath, src)
     },
 
     /* ------------------------------------------------------- attempts */

@@ -6,7 +6,7 @@ import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
 import { attemptSeed, attemptSummary, estimatedResolution, pad2, plural, renderTime, timeAgo } from '../lib/format'
 import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progress, SectionLabel, Segmented, Select, Tag } from '../components/ui'
-import { InputControl, PromptTextarea, fileHint } from '../components/inputs'
+import { InputControl, PromptTextarea, dragOutput, fileHint } from '../components/inputs'
 import { PlayerDialog, Thumb } from '../components/Media'
 import { PromptListEditor } from './PromptList'
 import { PromptChat } from './PromptChat'
@@ -604,6 +604,7 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
   const active = a.status === 'running' || a.status === 'queued' || a.status === 'submitting'
   const finished = a.status === 'done' || a.status === 'cached'
   const playable = finished && a.outputs.length > 0
+  const dragOut = playable ? (a.outputs.find((o) => o.kind === 'video') ?? a.outputs[0]) : null
   const clickTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(clickTimer.current), [])
   const [now, setNow] = useState(Date.now())
@@ -622,7 +623,9 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
         selected && 'bg-tint',
         finished && 'cursor-pointer'
       )}
-      title={playable ? 'Double-click to play' : undefined}
+      title={playable ? 'Double-click to play. Drag onto a file input to use it as input.' : undefined}
+      draggable={!!dragOut}
+      onDragStart={(e) => dragOut && dragOutput(e, dragOut)}
       onClick={(e) => {
         // A click on the card ticks it for compare, after a short wait so a double-click only plays.
         if (!finished || (e.target as HTMLElement).closest('button, input')) return
