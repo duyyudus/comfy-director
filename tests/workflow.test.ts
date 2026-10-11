@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyValues, buildSchema, checkWorkflow, detectFormat, diffSchemas, graphSteps, keyFromTitle, validateValues } from '../src/core/workflow'
+import type { ApiWorkflow } from '../src/core/workflow/types'
 import { fl2v, numzUpscale, objectInfo, r2v, seedvr2Upscale, t2v } from './fixtures'
 
 describe('keys', () => {
@@ -38,7 +39,11 @@ describe('schema', () => {
     expect(group.constraints.minCount).toBe(1)
     if (group.target.kind === 'file-group') expect(group.target.slots.map((x) => x.nodeId)).toEqual(['137', '149', '147', '148'])
     // Steps primitives only feed switches: discovered but hidden by default
-    expect(s.discovery.candidates.filter((c) => !c.defaultExposed).map((c) => c.id)).toEqual(['full', 'lightning lora'])
+    expect(s.discovery.candidates.filter((c) => !c.defaultExposed && c.nodeClass.startsWith('Primitive')).map((c) => c.id)).toEqual(['full', 'lightning lora'])
+    // Model, sampler and scheduler are recognised but start unticked; the LoRA strength is the toggle's business, and so is fps.
+    expect(s.discovery.candidates.filter((c) => !c.defaultExposed && !c.nodeClass.startsWith('Primitive')).map((c) => c.id).sort()).toEqual(
+      ['denoise', 'fps', 'lora', 'lora_strength', 'sampler', 'scheduler', 'unet', 'vae', 'vae#2', 'clip'].sort()
+    )
     expect(s.seedTargets).toEqual([{ nodeId: '129', field: 'noise_seed', max: 18446744073709551615 }])
     // Resolution fields are standard inputs, so they are no longer left as fields to expose by hand.
     expect(s.discovery.fields.filter((f) => f.suggested).map((f) => f.field)).toEqual([])
@@ -288,5 +293,101 @@ describe('graphSteps', () => {
     expect(graphSteps({ a: { class_type: 'KSampler', inputs: { steps: 12 } } })).toBe(12)
     expect(graphSteps({ a: { class_type: 'KSampler', inputs: { steps: ['b', 0] } }, b: { class_type: 'Other', inputs: {} } })).toBeNull()
     expect(graphSteps({})).toBeNull()
+  })
+})
+
+const sdWorkflow = (): ApiWorkflow => ({
+  '1': { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: 'sd15.safetensors' } },
+  '2': { class_type: 'CLIPTextEncode', inputs: { text: 'a cat', clip: ['1', 1] } },
+  '3': { class_type: 'CLIPTextEncode', inputs: { text: 'blurry', clip: ['1', 1] } },
+  '4': { class_type: 'LoadImage', _meta: { title: 'Load Image' }, inputs: { image: 'in.png' } },
+  '5': { class_type: 'VAEEncode', inputs: { pixels: ['4', 0], vae: ['1', 2] } },
+  '6': { class_type: 'SetLatentNoiseMask', inputs: { samples: ['5', 0], mask: ['4', 1] } },
+  '7': { class_type: 'LoraLoader', inputs: { lora_name: 'a.safetensors', strength_model: 0.8, strength_clip: 0.8, model: ['1', 0], clip: ['1', 1] } },
+  '8': { class_type: 'ControlNetApplyAdvanced', inputs: { positive: ['2', 0], negative: ['3', 0], strength: 1, start_percent: 0, end_percent: 1 } },
+  '9': {
+    class_type: 'KSampler',
+    inputs: { seed: 1, steps: 20, cfg: 7, sampler_name: 'euler', scheduler: 'normal', denoise: 0.75, model: ['7', 0], positive: ['8', 0], negative: ['8', 1], latent_image: ['6', 0] }
+  },
+  '10': { class_type: 'EmptyLatentImage', inputs: { width: 512, height: 768, batch_size: 1 } },
+  '11': { class_type: 'SaveImage', inputs: { filename_prefix: 'out', images: ['9', 0] } }
+})
+
+describe('core nodes', () => {
+  it('exposes the creative fields of standard nodes with keys from their role in the graph', () => {
+    const s = buildSchema(sdWorkflow(), null, null)
+    const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
+    expect(Object.keys(byKey).sort()).toEqual(
+      ['cfg', 'controlnet_strength', 'denoise', 'height', 'image', 'latent_batch', 'lora_strength', 'negative prompt', 'prompt', 'steps', 'width'].sort()
+    )
+    expect(byKey.prompt).toMatchObject({ type: 'text', label: 'Prompt', default: 'a cat', constraints: { multiline: true }, target: { kind: 'field', nodeId: '2', field: 'text' } })
+    expect(byKey['negative prompt']).toMatchObject({ label: 'Negative prompt', default: 'blurry', target: { kind: 'field', nodeId: '3', field: 'text' } })
+    expect(s.duplicateKeys).toEqual([])
+    expect(s.seedTargets).toEqual([{ nodeId: '9', field: 'seed' }])
+    // The mask output of the loader does not name the file; the image output does.
+    expect(byKey.image).toMatchObject({ type: 'file', source: expect.stringContaining('pixels') })
+  })
+
+  it('recognises model, sampler and scheduler but leaves them unticked', () => {
+    const s = buildSchema(sdWorkflow(), null, null)
+    const off = s.discovery.candidates.filter((c) => !c.defaultExposed).map((c) => c.id)
+    expect(off).toEqual(expect.arrayContaining(['checkpoint', 'lora', 'lora_clip_strength', 'sampler', 'scheduler', 'controlnet_start', 'controlnet_end']))
+    // Ticking one through overrides adds it as an input.
+    const on = buildSchema(sdWorkflow(), { inputs: { sampler: { hidden: false } } }, null)
+    expect(on.inputs.find((i) => i.key === 'sampler')).toMatchObject({ default: 'euler', target: { kind: 'field', nodeId: '9', field: 'sampler_name' } })
+    expect(s.discovery.fields.map((f) => f.field)).not.toContain('sampler_name')
+  })
+
+  it('writes the values into the nodes they belong to', () => {
+    const wf = sdWorkflow()
+    const s = buildSchema(wf, null, null)
+    const out = applyValues(wf, s, { prompt: 'a dog', 'negative prompt': 'ugly', steps: 30, width: 1024, latent_batch: 2, lora_strength: 0.5 })
+    expect(out['2'].inputs.text).toBe('a dog')
+    expect(out['3'].inputs.text).toBe('ugly')
+    expect(out['9'].inputs.steps).toBe(30)
+    expect(out['10'].inputs).toMatchObject({ width: 1024, height: 768, batch_size: 2 })
+    expect(out['7'].inputs.strength_model).toBe(0.5)
+  })
+
+  it('finds the positive prompt of a guided (Flux) graph and falls back to the title when no sampler is wired', () => {
+    const flux: ApiWorkflow = {
+      '1': { class_type: 'CLIPTextEncodeFlux', inputs: { clip_l: 'tags', t5xxl: 'a long sentence', guidance: 3.5 } },
+      '2': { class_type: 'FluxGuidance', inputs: { guidance: 3.5, conditioning: ['1', 0] } },
+      '3': { class_type: 'BasicGuider', inputs: { conditioning: ['2', 0] } },
+      '4': { class_type: 'CLIPTextEncode', _meta: { title: 'Style Note' }, inputs: { text: 'film grain' } }
+    }
+    const s = buildSchema(flux, null, null)
+    expect(s.inputs.map((i) => i.key).sort()).toEqual(['guidance', 'guidance#2', 'prompt', 'prompt clip_l', 'style note'].sort())
+    expect(s.inputs.find((i) => i.key === 'prompt')?.target).toMatchObject({ nodeId: '1', field: 't5xxl' })
+  })
+
+  it('recognises the size of every video latent node the same way', () => {
+    const wf: ApiWorkflow = {
+      '1': { class_type: 'WanAnimateToVideo', inputs: { width: 832, height: 480, length: 81, batch_size: 1, continue_motion_max_frames: 5 } },
+      '2': { class_type: 'EmptyFlux2LatentImage', inputs: { width: 1024, height: 1024, batch_size: 1 } }
+    }
+    expect(buildSchema(wf, null, null).inputs.map((i) => i.key).sort()).toEqual(['height', 'height#2', 'latent_batch', 'latent_batch#2', 'length', 'width', 'width#2'].sort())
+  })
+
+  it('says which node each input belongs to', () => {
+    const own = (wf: ApiWorkflow, id: string) => buildSchema(wf, null, null).discovery.candidates.find((c) => c.id === id)?.owner
+    // A field belongs to its node; a loaded file to the node that consumes it.
+    expect(own(sdWorkflow(), 'prompt')).toEqual({ nodeId: '2', title: 'CLIPTextEncode', nodeClass: 'CLIPTextEncode' })
+    expect(own(sdWorkflow(), 'image')).toMatchObject({ nodeId: '5', nodeClass: 'VAEEncode' })
+    expect(own(sdWorkflow(), 'steps')).toMatchObject({ nodeId: '9', nodeClass: 'KSampler' })
+    expect(own(r2v(), 'ref_images')).toMatchObject({ nodeId: '136', nodeClass: 'MiniMaxH3ReferenceToVideo' })
+    // A control node is the input itself, so it has no owner.
+    expect(own(r2v(), 'duration')).toBeUndefined()
+    // The source text names the node and field without the value at import time.
+    const f = buildSchema(sdWorkflow(), null, null).discovery.fields.find((x) => x.field === 'channel' || x.field === 'filename_prefix')
+    expect(f?.source).not.toContain('=')
+  })
+
+  it('leaves the LoRA strength to the toggle when a switch picks the LoRA', () => {
+    const wf = sdWorkflow()
+    wf['20'] = { class_type: 'ComfySwitchNode', inputs: { switch: true, on_true: ['7', 0], on_false: ['1', 0] } }
+    const s = buildSchema(wf, null, null)
+    expect(s.inputs.map((i) => i.key)).not.toContain('lora_strength')
+    expect(s.discovery.candidates.find((c) => c.id === 'lora_strength')?.defaultExposed).toBe(false)
   })
 })

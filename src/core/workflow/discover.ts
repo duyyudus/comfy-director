@@ -2,6 +2,14 @@ import type { ApiWorkflow, FileMedia, InputConstraints, InputTarget, InputType, 
 import { consumersOf, isLink, titleOf, trailingNumber, type Consumer } from './graph'
 import { humanize, keyFromTitle, SEED_FIELDS, titleInner } from './keys'
 import { groupBounds, inputSpec, type InputSpec, type ObjectInfo } from './objectInfo'
+import { promptName, STANDARD_FIELDS, standardRule } from './standard'
+
+/** A node of the workflow, as shown to the user. */
+export interface NodeRef {
+  nodeId: string
+  title: string
+  nodeClass: string
+}
 
 /** An input found automatically (primitive node, file loader, group of file loaders). */
 export interface Candidate {
@@ -16,6 +24,8 @@ export interface Candidate {
   target: InputTarget
   constraints: InputConstraints
   nodeClass: string
+  /** The regular node whose field the input sets (a file's consumer, the node holding a prompt). Absent for a control node, where the node is the input. */
+  owner?: NodeRef
   /** Hover text for the input (see `SchemaInput.tooltip`). */
   tooltip?: string
 }
@@ -52,6 +62,7 @@ const PRIMITIVES: Record<string, { type: InputType; integer?: boolean; multiline
 /** Nodes that load an uploaded file, with the field holding its name. */
 const FILE_LOADERS: Record<string, { field: string; media: FileMedia }> = {
   LoadImage: { field: 'image', media: 'image' },
+  LoadImageMask: { field: 'image', media: 'image' },
   LoadVideo: { field: 'file', media: 'video' },
   LoadAudio: { field: 'audio', media: 'audio' }
 }
@@ -66,107 +77,6 @@ const SUGGESTED_FIELDS = new Set([
 
 /** Literal string fields discovered as inputs (exposed by default). */
 const PROMPT_FIELDS = new Set(['prompt'])
-
-interface StandardField {
-  /** Key and label when the field name alone would say too little (`switch`). */
-  key?: string
-  label?: string
-  /** Hover text: what to start with and why. */
-  tip?: string
-  /** Bounds to use when the server's node info gives none. */
-  constraints?: InputConstraints
-  /** Narrows the rule to nodes that play the role the key names. */
-  when?: (wf: ApiWorkflow, nodeId: string) => boolean
-}
-
-/** Literal fields on known node classes discovered as inputs (exposed by default). */
-const STANDARD_FIELDS: Record<string, Record<string, StandardField>> = {
-  ResolutionSelector: { aspect_ratio: {}, megapixels: {} },
-  // SeedVR2 upscale: the factor of the resize step in front of the model.
-  ResizeImageMaskNode: {
-    'resize_type.multiplier': {
-      key: 'scale_multiplier',
-      label: 'Scale multiplier',
-      tip: 'How much to enlarge the video before SeedVR2 runs. Start with 1.5. A larger factor makes the model invent more detail, and artifacts show up mostly at large output sizes.'
-    }
-  },
-  // SeedVR2 upscale: the only sampler settings that could change how much the model invents. Other KSamplers are left alone.
-  KSampler: {
-    cfg: {
-      tip: 'Guidance strength. Start with 1, the value of the SeedVR2 template: this one-step model is meant to run without guidance. Experimental, its effect here is not documented.',
-      when: isSeedVr2Sampler
-    },
-    denoise: {
-      tip: 'Start with 1 (full). Lower values start the sampler from less noise, and on this one-step model that may soften the result instead of keeping it closer to the source. Experimental: compare on a fixed seed.',
-      constraints: { min: 0, max: 1, step: 0.01 },
-      when: isSeedVr2Sampler
-    }
-  },
-  // SeedVR2 upscale (numz's custom nodes): what sets the scale, the look and the batch seams. Model and memory settings stay fixed.
-  SeedVR2VideoUpscaler: {
-    resolution: {
-      tip: 'Size of the shorter edge of the result; the aspect ratio is kept. Start with 1080. The more it enlarges, the more detail the model invents, and artifacts show up mostly at large output sizes.'
-    },
-    batch_size: {
-      tip: 'Frames processed together; must be 4n+1 (1, 5, 9, 13...). Start with 5, the least that gives temporal consistency, or match the clip length. Higher is more consistent but needs much more VRAM. Use 1 only for single images.',
-      constraints: { min: 1, step: 4, integer: true }
-    },
-    color_correction: {
-      tip: 'How the colours of the result are matched to the source. Start with lab, the most faithful. Try wavelet if lab looks off. none keeps the colours the model produced.',
-      constraints: { options: ['lab', 'wavelet', 'wavelet_adaptive', 'hsv', 'adain', 'none'] }
-    },
-    temporal_overlap: {
-      tip: 'Frames shared between batches and blended. Start with 0. Raise it to 2 or 3 if the joins between batches flicker or cut. It only matters when the clip takes more than one batch.',
-      constraints: { min: 0, max: 16, step: 1, integer: true }
-    },
-    input_noise_scale: {
-      tip: 'Noise added to the input, 0 to 1. Start with 0. Try 0.1 to 0.3 if large output sizes show artifacts. Guides disagree on whether more or less helps over-sharpening on clean footage, so compare on a fixed seed.',
-      constraints: { min: 0, max: 1, step: 0.01 }
-    },
-    latent_noise_scale: {
-      tip: 'Noise added while the model works, 0 to 1. Start with 0. A small value (about 0.05 to 0.15) softens excess detail: the nearest thing to a "less AI look" control.',
-      constraints: { min: 0, max: 1, step: 0.01 }
-    }
-  },
-  // SeedVR2 upscale (numz): the model, and the memory settings that decide whether and how fast a clip fits on the GPU.
-  SeedVR2LoadDiTModel: {
-    model: {
-      tip: 'The upscaling model. Start with seedvr2_ema_7b_fp16, the best quality offered. 3B is faster and lighter. fp8 and GGUF Q8 save VRAM for a small quality cost, Q4 for more. The "sharp" 7B variants add more detail.'
-    },
-    offload_device: {
-      tip: 'Where the model waits while it is not running. none keeps it on the GPU: fastest, most VRAM. cpu frees VRAM, which long or large clips may need. Start with none, and set cpu when you use blocks_to_swap or run out of memory.'
-    },
-    blocks_to_swap: {
-      tip: 'Transformer blocks moved to the CPU to save VRAM: 0 is off, up to 36 on 7B (32 on 3B). Start with 0 and raise it (try 16) only on out-of-memory errors, since more swapping is slower. It only works when offload_device is not none.',
-      constraints: { min: 0, max: 36, step: 1, integer: true }
-    }
-  },
-  SeedVR2LoadVAEModel: {
-    encode_tiled: {
-      tip: 'Encode the video in tiles. Start with it off, which is faster, and turn it on if you run out of memory while encoding. Tile seams are possible; the tile size and overlap are set in the workflow.'
-    },
-    decode_tiled: {
-      tip: 'Decode the result in tiles. Start with it off, which is faster, and turn it on if you run out of memory while decoding. Tile seams are possible; the tile size and overlap are set in the workflow.'
-    }
-  },
-  // SeedVR2 upscale: an if/else switch that picks the trimmed clip (a `Video Slice` on `on_true`) over the whole video.
-  ComfySwitchNode: {
-    switch: {
-      key: 'trim_video',
-      label: 'Trim video',
-      tip: 'Off upscales the whole video. On upscales only the clip cut by the Video Slice node of the workflow. Its start time and duration are not inputs here, so they stay as in the workflow file.',
-      when: (wf, nodeId) => {
-        const on = wf[nodeId].inputs.on_true
-        return isLink(on) && wf[on[0]]?.class_type === 'Video Slice'
-      }
-    }
-  }
-}
-
-function isSeedVr2Sampler(wf: ApiWorkflow, nodeId: string): boolean {
-  const positive = wf[nodeId].inputs.positive
-  return isLink(positive) && wf[positive[0]]?.class_type === 'SeedVR2Conditioning'
-}
 
 const SWITCH_BRANCH_INPUTS = new Set(['on_true', 'on_false'])
 
@@ -232,7 +142,8 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
       const consumerNode = wf[consumer.nodeId]
       const spec = inputSpec(oi, consumerNode.class_type, consumer.input)
       // A video feeding `image` (frames from a Get Video Components node) is still a video: same key in every workflow.
-      const key = loader.media !== 'image' && /^images?$/.test(consumer.input) ? loader.media : consumer.input
+      // The core image-in-image-out nodes call it `pixels` (VAEEncode, InpaintModelConditioning): still the image.
+      const key = loader.media !== 'image' && /^images?$/.test(consumer.input) ? loader.media : consumer.input === 'pixels' ? 'image' : consumer.input
       candidates.push({
         id: key,
         key,
@@ -248,7 +159,8 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
         },
         // Unknown (no server info): treated as optional, the server reports it if not.
         constraints: { required: spec ? !spec.optional : false, media: loader.media },
-        nodeClass: node.class_type
+        nodeClass: node.class_type,
+        owner: nodeRef(wf, consumer.nodeId)
       })
       continue
     }
@@ -273,24 +185,27 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
           defaultExposed: true,
           target: { kind: 'field', nodeId, field },
           constraints: { ...f.constraints, multiline: true },
-          nodeClass: node.class_type
+          nodeClass: node.class_type,
+          owner: nodeRef(wf, nodeId)
         })
         continue
       }
-      const std = STANDARD_FIELDS[node.class_type]?.[field]
-      if (std && (!std.when || std.when(wf, nodeId))) {
-        const key = std.key ?? field
+      const std = standardRule(STANDARD_FIELDS[node.class_type]?.[field], wf, nodeId)
+      if (std) {
+        const named = std.prompt ? promptName(wf, nodeId, field, std.part) : null
+        const key = named?.key ?? std.key ?? field
         candidates.push({
           id: key,
           key,
           type: std.constraints?.options && f.type === 'text' ? 'select' : f.type,
-          label: std.label ?? f.label,
+          label: named?.label ?? std.label ?? f.label,
           source: `${title} · ${node.class_type}.${field}`,
           default: value,
-          defaultExposed: true,
+          defaultExposed: std.exposed !== false,
           target: { kind: 'field', nodeId, field },
           constraints: { ...std.constraints, ...f.constraints },
           nodeClass: node.class_type,
+          owner: nodeRef(wf, nodeId),
           ...(std.tip && { tooltip: std.tip })
         })
         continue
@@ -332,7 +247,8 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
         maxCount: bounds.max ?? g.slots.length,
         media: loader.media
       },
-      nodeClass: firstNode.class_type
+      nodeClass: firstNode.class_type,
+      owner: nodeRef(wf, g.consumerId)
     })
   }
 
@@ -345,6 +261,10 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
   }
 
   return { candidates, fields, seedTargets }
+}
+
+function nodeRef(wf: ApiWorkflow, nodeId: string): NodeRef {
+  return { nodeId, title: titleOf(wf[nodeId]), nodeClass: wf[nodeId].class_type }
 }
 
 interface FileSink {
@@ -362,13 +282,14 @@ function fileSink(wf: ApiWorkflow, nodeId: string): FileSink | null {
   if (!direct.length) return null
   const via = UNPACKERS.has(wf[direct[0].nodeId].class_type) ? direct[0].nodeId : undefined
   const links = (via ? consumersOf(wf, via) : direct).map((c) => ({ ...c, output: (wf[c.nodeId].inputs[c.input] as Link)[1] }))
-  const main = links[0]
+  // A loader's file is its first output; a later one (LoadImage's alpha mask) feeding another input does not name the file.
+  const main = (via ? undefined : links.find((l) => l.output === 0)) ?? links[0]
   if (!main) return null
   return {
     via,
     consumer: { nodeId: main.nodeId, input: main.input },
     output: main.output,
-    also: links.slice(1).filter((c) => c.nodeId === main.nodeId).map((c) => ({ input: c.input, output: c.output }))
+    also: links.filter((c) => c !== main && c.nodeId === main.nodeId).map((c) => ({ input: c.input, output: c.output }))
   }
 }
 
@@ -405,7 +326,7 @@ export function fieldCandidate(wf: ApiWorkflow, nodeId: string, field: string, o
     label: humanize(field),
     type,
     constraints,
-    source: `${title} · ${field} = ${String(value)}`,
+    source: `${title} · ${node.class_type}.${field}`,
     suggested: !field.includes('.') && (SUGGESTED_FIELDS.has(field) || !!spec?.multiline)
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { ExposeEntry, InputConstraints, InputOverride, InputType, Overrides } from '@core/workflow/types'
 import type { Candidate, FieldCandidate } from '@core/workflow/discover'
 import type { ImportAnalysis, ImportPreview } from '@shared/types'
@@ -176,6 +176,21 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
   }
   const visibleFields = (analysis?.fields ?? []).filter((f) => (showAll || f.suggested) && !exposes.some((e) => e.class === f.nodeClass && e.field === f.field && sameTitle(e, f)))
   const exposedFields = (analysis?.fields ?? []).filter((f) => exposes.some((e) => e.class === f.nodeClass && e.field === f.field && sameTitle(e, f)))
+  // Inputs grouped by the node they set, so it is clear which node owns what. Control nodes (a primitive is the input itself) come first.
+  const groups = ((): NodeGroup[] => {
+    const out = new Map<string, NodeGroup>()
+    const group = (key: string, title: string, nodeClass?: string): NodeGroup => {
+      if (!out.has(key)) out.set(key, { key, title, nodeClass, control: key === CONTROL, cands: [], fields: [] })
+      return out.get(key)!
+    }
+    for (const c of analysis?.candidates ?? []) {
+      const g = c.owner ? group(c.owner.nodeId, c.owner.title, c.owner.nodeClass) : group(CONTROL, 'Control nodes')
+      g.cands.push(c)
+    }
+    for (const f of exposedFields) group(f.nodeId, f.title, f.nodeClass).fields.push(f)
+    return [...out.values()].sort((a, b) => Number(b.control) - Number(a.control))
+  })()
+  const fieldGroups = groupFields(visibleFields)
   const check = analysis?.check
   const canImport = !!analysis?.ok && !!name.trim() && !dupKeys.size && !busy && (mode === 'new' || !!replaceId)
 
@@ -276,7 +291,17 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                   </tr>
                 </thead>
                 <tbody>
-                  {analysis.candidates.map((c) => {
+                  {groups.map((g) => (
+                    <Fragment key={g.key}>
+                    <tr className="bg-stripe">
+                      <td colSpan={5} className="px-2 py-1.5">
+                        <NodeName title={g.title} nodeClass={g.nodeClass} />
+                        <span className="ml-3 text-xs text-muted">
+                          {g.control ? 'the node is the input' : `${g.cands.filter((c) => cands[c.id]?.exposed).length + g.fields.length} of ${plural(g.cands.length + g.fields.length, 'input')} exposed`}
+                        </span>
+                      </td>
+                    </tr>
+                  {g.cands.map((c) => {
                     const s = cands[c.id]
                     if (!s) return null
                     const dup = s.exposed && dupKeys.has(s.key)
@@ -299,7 +324,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                           )}
                         </td>
                         <td className="py-2.5 pr-3"><Chip className="font-sans whitespace-nowrap">{c.type.replace('-', ' ')}</Chip></td>
-                        <td className="py-2.5 pr-3 font-mono text-xs text-text2">{c.source}</td>
+                        <td className="py-2.5 pr-3 font-mono text-xs text-text2">{c.owner && c.target.kind === 'field' ? c.target.field : c.source}</td>
                         <td className="py-2.5">
                           <DefaultEditor type={c.type} constraints={c.constraints} graph={c.default} value={s.def} label={s.label}
                             onChange={(def) => setCands({ ...cands, [c.id]: { ...s, def } })} />
@@ -307,7 +332,7 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                       </tr>
                     )
                   })}
-                  {exposedFields.map((f) => {
+                  {g.fields.map((f) => {
                     const e = exposes.find((x) => x.class === f.nodeClass && x.field === f.field && sameTitle(x, f))!
                     const key = e.key ?? f.key
                     return (
@@ -335,6 +360,8 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
                       </tr>
                     )
                   })}
+                    </Fragment>
+                  ))}
                 </tbody>
               </table>
 
@@ -345,12 +372,20 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
               </SectionLabel>
               <div className="mb-2 text-13 text-text2">These are fields on regular nodes. Add the ones you want to change between runs.</div>
               {visibleFields.length === 0 && <div className="py-2 text-13 text-muted">No {showAll ? '' : 'suggested '}fields left.</div>}
-              {visibleFields.map((f) => (
-                <div key={`${f.nodeId}.${f.field}`} className="flex items-center gap-4 border-b border-border py-2.5 text-13">
-                  <span className="w-36 shrink-0">{f.label}</span>
-                  <span className="w-20 shrink-0"><Chip className="font-sans whitespace-nowrap">{f.type}</Chip></span>
-                  <span className="min-w-0 flex-1 truncate font-mono text-xs text-text2" title={f.source}>{f.source}</span>
-                  <Button size="sm" onClick={() => setExposes([...exposes, { class: f.nodeClass, title: f.title, field: f.field, label: f.label }])}>Expose</Button>
+              {fieldGroups.map((g) => (
+                <div key={g.key} className="mb-3">
+                  <div className="bg-stripe px-2 py-1.5">
+                    <NodeName title={g.title} nodeClass={g.nodeClass} />
+                    <span className="ml-3 text-xs text-muted">{plural(g.fields.length, 'field')}</span>
+                  </div>
+                  {g.fields.map((f) => (
+                    <div key={`${f.nodeId}.${f.field}`} className="flex items-center gap-4 border-b border-border px-2 py-2.5 text-13">
+                      <span className="w-36 shrink-0">{f.label}</span>
+                      <span className="w-20 shrink-0"><Chip className="font-sans whitespace-nowrap">{f.type}</Chip></span>
+                      <span className="min-w-0 flex-1 truncate font-mono text-xs text-text2" title={f.source}>{f.field} = {String(f.value)}</span>
+                      <Button size="sm" onClick={() => setExposes([...exposes, { class: f.nodeClass, title: f.title, field: f.field, label: f.label }])}>Expose</Button>
+                    </div>
+                  ))}
                 </div>
               ))}
               {analysis.seedFields.length > 0 && (
@@ -442,6 +477,37 @@ export function ImportView({ back, replaceId: replaceProp, editId, embedded, onD
         </div>
       )}
     </div>
+  )
+}
+
+const CONTROL = 'control'
+
+/** The inputs of one node, as the import table lists them. */
+interface NodeGroup {
+  key: string
+  title: string
+  nodeClass?: string
+  control: boolean
+  cands: Candidate[]
+  fields: FieldCandidate[]
+}
+
+function groupFields(fields: FieldCandidate[]): { key: string; title: string; nodeClass: string; fields: FieldCandidate[] }[] {
+  const out = new Map<string, { key: string; title: string; nodeClass: string; fields: FieldCandidate[] }>()
+  for (const f of fields) {
+    if (!out.has(f.nodeId)) out.set(f.nodeId, { key: f.nodeId, title: f.title, nodeClass: f.nodeClass, fields: [] })
+    out.get(f.nodeId)!.fields.push(f)
+  }
+  return [...out.values()]
+}
+
+/** A node's title, with its class beside it when the two differ. */
+function NodeName({ title, nodeClass }: { title: string; nodeClass?: string }): ReactNode {
+  return (
+    <>
+      <span className="text-13 font-semibold">{title}</span>
+      {nodeClass && nodeClass !== title && <span className="ml-2 font-mono text-xs text-muted">{nodeClass}</span>}
+    </>
   )
 }
 

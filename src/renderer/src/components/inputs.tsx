@@ -23,8 +23,9 @@ export interface InputProps {
 /** One small component per input type. A new input kind means adding one component here. */
 export function InputControl(p: InputProps): ReactNode {
   const control = controlFor(p)
-  // `contents` keeps each control's own layout; a tooltip on it still shows over its children.
-  return p.input.tooltip ? <div className="contents" title={p.input.tooltip}>{control}</div> : control
+  // The advice of a recognised input, then the node it sets. `contents` keeps each control's own layout; a tooltip on it still shows over its children.
+  const hint = [p.input.tooltip, `From: ${p.input.source}`].filter(Boolean).join('\n\n')
+  return <div className="contents" title={hint}>{control}</div>
 }
 
 function controlFor(p: InputProps): ReactNode {
