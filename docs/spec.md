@@ -185,7 +185,7 @@ In the reference workflow, a single boolean node drives two switch nodes: one se
 
 ### Seed
 
-API format has no "randomize after run". The app writes the seed into every literal `seed` / `noise_seed` field and generates a new one per job when the shot's Seed control is on Random (random seeds are below 2^48). Identical workflow, inputs and seed may be served from ComfyUI's cache instead of re-rendering.
+API format has no "randomize after run". The app writes the seed into every literal `seed` / `noise_seed` field and generates a new one per job when the shot's Seed control is on Random (random seeds are below 2^48, or below the largest seed the workflow's seed field accepts when the server's node info gives one: the numz SeedVR2 node takes 32-bit seeds). A fixed seed above that maximum is refused with a message on the Seed field. Identical workflow, inputs and seed may be served from ComfyUI's cache instead of re-rendering.
 
 ### Inputs left baked in
 
@@ -444,7 +444,7 @@ Attempt cards in the Shot view say what happened and offer the next step. Under 
 - **Cancelled:** "Stopped at 40%. No video was saved." **Retry**, **Load settings**.
 - **Cached:** "Finished instantly. The server reused an earlier result because every input, including the seed, was identical." **Render again with a new seed**.
 
-**Retry** queues a new attempt with the next `#N` and leaves the old record as it is. It uses the attempt's stored values, the current version of its workflow and the same seed. **Render again with a new seed** does the same with a random seed. Neither re-sends the stored final JSON, because that could not pick up re-uploaded inputs.
+**Retry** queues a new attempt with the next `#N` and leaves the old record as it is. It uses the attempt's stored values, the current version of its workflow and the same seed. If the workflow does not take that seed (above its maximum), a random one is used instead. **Render again with a new seed** does the same with a random seed. Neither re-sends the stored final JSON, because that could not pick up re-uploaded inputs.
 
 ### Compare view (wireframe 09)
 

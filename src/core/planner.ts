@@ -8,6 +8,8 @@ export interface PlanInput {
   runs: number
   seedMode: SeedMode
   fixedSeed: number | null
+  /** Random seeds are below this (see `seedLimit`). */
+  seedLimit?: number
   random?: () => number
 }
 
@@ -22,8 +24,13 @@ export interface PlannedJob {
 
 export const MAX_SEED = 2 ** 48
 
-export function randomSeed(random: () => number = Math.random): number {
-  return Math.floor(random() * MAX_SEED)
+export function randomSeed(random: () => number = Math.random, limit: number = MAX_SEED): number {
+  return Math.floor(random() * limit)
+}
+
+/** Random seeds stay below this: the app's own range, or less when a seed field on the workflow takes a smaller maximum. */
+export function seedLimit(targets: { max?: number }[]): number {
+  return targets.reduce((limit, t) => (t.max !== undefined && t.max >= 0 ? Math.min(limit, t.max + 1) : limit), MAX_SEED)
 }
 
 export function planRun(p: PlanInput): PlannedJob[] {
@@ -38,7 +45,7 @@ export function planRun(p: PlanInput): PlannedJob[] {
         promptIndex,
         promptCount: prompts.length,
         runIndex,
-        seed: p.seedMode === 'fixed' && p.fixedSeed !== null ? p.fixedSeed : randomSeed(p.random)
+        seed: p.seedMode === 'fixed' && p.fixedSeed !== null ? p.fixedSeed : randomSeed(p.random, p.seedLimit)
       })
     }
   })

@@ -66,6 +66,8 @@ export interface SchemaInput {
 export interface SeedTarget {
   nodeId: string
   field: string
+  /** Largest seed the node accepts, from the server's node info. Unknown without it. */
+  max?: number
 }
 
 export interface WorkflowSchema {

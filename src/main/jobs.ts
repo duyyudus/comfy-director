@@ -11,7 +11,7 @@ import { graphSteps } from '@core/workflow/graph'
 import { buildSchema } from '@core/workflow/schema'
 import { validateValues } from '@core/workflow/validate'
 import type { SchemaInput, WorkflowSchema } from '@core/workflow/types'
-import { planRun } from '@core/planner'
+import { planRun, seedLimit } from '@core/planner'
 import { attemptFileName, extOf, freeFileName, mediaKind, shotOutputDir } from '@core/output/naming'
 import type {
   AppEvent, Attempt, AttemptError, FinishedJob, OutputFile, QueueJob, QueueSnapshot, ReconcileSummary, RunRequest, RunResult
@@ -174,6 +174,8 @@ export class JobManager {
     }
     if (req.seedMode === 'fixed' && (req.seedValue === null || !Number.isFinite(req.seedValue) || req.seedValue < 0)) {
       fieldErrors.__seed = 'Enter a seed (a whole number, 0 or more).'
+    } else if (req.seedMode === 'fixed' && req.seedValue! >= seedLimit(schema.seedTargets)) {
+      fieldErrors.__seed = `This workflow takes seeds up to ${seedLimit(schema.seedTargets) - 1}.`
     }
     if (Object.keys(fieldErrors).length) {
       const n = Object.keys(fieldErrors).length
@@ -200,7 +202,7 @@ export class JobManager {
     }
     if (failures.length) return { ok: false, uploadFailures: failures, message: 'A file failed to upload. Nothing was queued.' }
 
-    const jobs = planRun({ prompts, runs: req.runs, seedMode: req.seedMode, fixedSeed: req.seedValue })
+    const jobs = planRun({ prompts, runs: req.runs, seedMode: req.seedMode, fixedSeed: req.seedValue, seedLimit: seedLimit(schema.seedTargets) })
     const runId = randomUUID()
     const created: Attempt[] = []
     const submitted = new Map<string, Attempt>()
@@ -302,15 +304,20 @@ export class JobManager {
     const pdb = this.ws().project(projectPath)
     const a = pdb.attempt(attemptId)
     if (!a) return { ok: false, message: 'Attempt not found.' }
-    return this.run(projectPath, a.shotId, {
-      workflowId: a.workflowId,
-      values: a.values,
-      promptMode: 'single',
-      prompts: [],
-      runs: 1,
-      seedMode: newSeed ? 'random' : 'fixed',
-      seedValue: newSeed ? null : a.seed
-    })
+    const rerun = (seedMode: 'random' | 'fixed'): Promise<RunResult> =>
+      this.run(projectPath, a.shotId, {
+        workflowId: a.workflowId,
+        values: a.values,
+        promptMode: 'single',
+        prompts: [],
+        runs: 1,
+        seedMode,
+        seedValue: seedMode === 'random' ? null : a.seed
+      })
+    const r = await rerun(newSeed ? 'random' : 'fixed')
+    // A seed the workflow now refuses as too large (an attempt made before the limit was known) cannot be kept.
+    if (!r.ok && !newSeed && Object.keys(r.fieldErrors ?? {}).join() === '__seed') return rerun('random')
+    return r
   }
 
   /* ------------------------------------------------------------ websocket */

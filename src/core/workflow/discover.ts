@@ -256,7 +256,8 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
     for (const [field, value] of Object.entries(node.inputs)) {
       if (isLink(value) || Array.isArray(value) || (value !== null && typeof value === 'object')) continue
       if (SEED_FIELDS.has(field) && typeof value === 'number') {
-        seedTargets.push({ nodeId, field })
+        const max = inputSpec(oi, node.class_type, field)?.max
+        seedTargets.push({ nodeId, field, ...(max !== undefined && { max }) })
         continue
       }
       const f = fieldCandidate(wf, nodeId, field, oi)

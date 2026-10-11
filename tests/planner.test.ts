@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planRun } from '../src/core/planner'
+import { planRun, seedLimit } from '../src/core/planner'
 import { renderTemplate, templateSlots } from '../src/core/prompter/template'
 import { attemptFileName, freeFileName, safeName, shotOutputDir } from '../src/core/output/naming'
 import { parseScriptOutput } from '../src/core/prompter/script'
@@ -15,6 +15,16 @@ describe('planner', () => {
     const jobs = planRun({ prompts: null, runs: 3, seedMode: 'fixed', fixedSeed: 42 })
     expect(jobs.map((j) => j.seed)).toEqual([42, 42, 42])
     expect(jobs[0].prompt).toBeNull()
+  })
+})
+
+describe('seed limit', () => {
+  it('keeps random seeds inside the smallest maximum a seed field takes', () => {
+    expect(seedLimit([])).toBe(2 ** 48)
+    expect(seedLimit([{}, { max: 2 ** 64 }])).toBe(2 ** 48)
+    expect(seedLimit([{ max: 4294967295 }, { max: 100 }])).toBe(101)
+    const jobs = planRun({ prompts: null, runs: 200, seedMode: 'random', fixedSeed: null, seedLimit: seedLimit([{ max: 4294967295 }]) })
+    expect(Math.max(...jobs.map((j) => j.seed))).toBeLessThanOrEqual(4294967295)
   })
 })
 

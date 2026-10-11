@@ -39,7 +39,7 @@ describe('schema', () => {
     if (group.target.kind === 'file-group') expect(group.target.slots.map((x) => x.nodeId)).toEqual(['137', '149', '147', '148'])
     // Steps primitives only feed switches: discovered but hidden by default
     expect(s.discovery.candidates.filter((c) => !c.defaultExposed).map((c) => c.id)).toEqual(['full', 'lightning lora'])
-    expect(s.seedTargets).toEqual([{ nodeId: '129', field: 'noise_seed' }])
+    expect(s.seedTargets).toEqual([{ nodeId: '129', field: 'noise_seed', max: 18446744073709551615 }])
     // Resolution fields are standard inputs, so they are no longer left as fields to expose by hand.
     expect(s.discovery.fields.filter((f) => f.suggested).map((f) => f.field)).toEqual([])
     // An older overrides file that exposes one of them does not add it twice.
@@ -237,6 +237,9 @@ describe('seedvr2 upscale (numz nodes)', () => {
     expect(byKey.video).toMatchObject({ type: 'file', constraints: { media: 'video' }, target: { kind: 'file', nodeId: '21', via: '22' } })
     for (const k of ['model', 'resolution', 'batch_size', 'color_correction', 'temporal_overlap', 'input_noise_scale', 'latent_noise_scale', 'offload_device', 'blocks_to_swap', 'encode_tiled', 'decode_tiled']) expect(byKey[k].tooltip, k).toMatch(/Start with/)
     expect(s.seedTargets).toEqual([{ nodeId: '10', field: 'seed' }])
+    // The server's own limit (this node takes 32-bit seeds) is kept with the target.
+    const limited = buildSchema(numzUpscale(), null, { SeedVR2VideoUpscaler: { input: { required: { seed: ['INT', { min: 0, max: 4294967295 }] } } } })
+    expect(limited.seedTargets).toEqual([{ nodeId: '10', field: 'seed', max: 4294967295 }])
     expect(byKey.model.default).toBe('seedvr2_ema_7b_fp16.safetensors')
     expect(byKey.blocks_to_swap).toMatchObject({ type: 'number', default: 32, constraints: { min: 0, max: 36, integer: true } })
     expect(byKey.offload_device).toMatchObject({ default: 'none', target: { kind: 'field', nodeId: '14', field: 'offload_device' } })
