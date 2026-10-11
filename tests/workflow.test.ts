@@ -31,7 +31,7 @@ describe('schema', () => {
   it('discovers r2v inputs', () => {
     const s = buildSchema(r2v(), null, objectInfo)
     const keys = s.inputs.map((i) => i.key)
-    expect(keys).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'enable lightning lora', 'ref_images', 'ref_videos', 'ref_audios'])
+    expect(keys).toEqual(['prompt', 'lora', 'aspect_ratio', 'megapixels', 'duration', 'lora_strength', 'enable lightning lora', 'ref_images', 'ref_videos', 'ref_audios'])
     expect(s.inputs.find((i) => i.key === 'aspect_ratio')?.type).toBe('select')
     const group = s.inputs.find((i) => i.key === 'ref_images')!
     expect(group.type).toBe('file-group')
@@ -40,9 +40,9 @@ describe('schema', () => {
     if (group.target.kind === 'file-group') expect(group.target.slots.map((x) => x.nodeId)).toEqual(['137', '149', '147', '148'])
     // Steps primitives only feed switches: discovered but hidden by default
     expect(s.discovery.candidates.filter((c) => !c.defaultExposed && c.nodeClass.startsWith('Primitive')).map((c) => c.id)).toEqual(['full', 'lightning lora'])
-    // Model, sampler and scheduler are recognised but start unticked; the LoRA strength is the toggle's business, and so is fps.
+    // Model, sampler and scheduler are recognised but start unticked; the Lightning LoRA is a LoRA like the others, fps is derived in the graph.
     expect(s.discovery.candidates.filter((c) => !c.defaultExposed && !c.nodeClass.startsWith('Primitive')).map((c) => c.id).sort()).toEqual(
-      ['denoise', 'fps', 'lora', 'lora_strength', 'sampler', 'scheduler', 'unet', 'vae', 'vae#2', 'clip'].sort()
+      ['denoise', 'fps', 'sampler', 'scheduler', 'unet', 'vae', 'vae#2', 'clip'].sort()
     )
     expect(s.seedTargets).toEqual([{ nodeId: '129', field: 'noise_seed', max: 18446744073709551615 }])
     // Resolution fields are standard inputs, so they are no longer left as fields to expose by hand.
@@ -56,7 +56,7 @@ describe('schema', () => {
   it('discovers fl2v optional frames and the prompt typed on the node', () => {
     const s = buildSchema(fl2v(), null, objectInfo)
     const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
-    expect(Object.keys(byKey).sort()).toEqual(['aspect_ratio', 'duration', 'enable lightning lora', 'first_frame', 'last_frame', 'megapixels', 'prompt'])
+    expect(Object.keys(byKey).sort()).toEqual(['aspect_ratio', 'duration', 'enable lightning lora', 'first_frame', 'last_frame', 'lora', 'lora_strength', 'megapixels', 'prompt'])
     expect(byKey.first_frame.constraints.required).toBe(false)
     expect(byKey.prompt.type).toBe('text')
     expect(s.duplicateKeys).toEqual([])
@@ -187,7 +187,7 @@ describe('schema', () => {
     const b = buildSchema(wf, null, objectInfo).inputs
     const d = diffSchemas(a, b)
     expect(d.removed.map((i) => i.key)).toEqual(['enable lightning lora'])
-    expect(d.same.map((i) => i.key)).toEqual(['prompt', 'aspect_ratio', 'megapixels', 'duration', 'ref_images', 'ref_videos', 'ref_audios'])
+    expect(d.same.map((i) => i.key)).toEqual(['prompt', 'lora', 'aspect_ratio', 'megapixels', 'duration', 'lora_strength', 'ref_images', 'ref_videos', 'ref_audios'])
   })
 
   it('checks against the server', () => {
@@ -318,7 +318,7 @@ describe('core nodes', () => {
     const s = buildSchema(sdWorkflow(), null, null)
     const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
     expect(Object.keys(byKey).sort()).toEqual(
-      ['cfg', 'controlnet_strength', 'denoise', 'height', 'image', 'latent_batch', 'lora_strength', 'negative prompt', 'prompt', 'steps', 'width'].sort()
+      ['cfg', 'controlnet_strength', 'denoise', 'height', 'image', 'latent_batch', 'lora', 'lora_strength', 'negative prompt', 'prompt', 'steps', 'width'].sort()
     )
     expect(byKey.prompt).toMatchObject({ type: 'text', label: 'Prompt', default: 'a cat', constraints: { multiline: true }, target: { kind: 'field', nodeId: '2', field: 'text' } })
     expect(byKey['negative prompt']).toMatchObject({ label: 'Negative prompt', default: 'blurry', target: { kind: 'field', nodeId: '3', field: 'text' } })
@@ -331,7 +331,7 @@ describe('core nodes', () => {
   it('recognises model, sampler and scheduler but leaves them unticked', () => {
     const s = buildSchema(sdWorkflow(), null, null)
     const off = s.discovery.candidates.filter((c) => !c.defaultExposed).map((c) => c.id)
-    expect(off).toEqual(expect.arrayContaining(['checkpoint', 'lora', 'lora_clip_strength', 'sampler', 'scheduler', 'controlnet_start', 'controlnet_end']))
+    expect(off).toEqual(expect.arrayContaining(['checkpoint', 'lora_clip_strength', 'sampler', 'scheduler', 'controlnet_start', 'controlnet_end']))
     // Ticking one through overrides adds it as an input.
     const on = buildSchema(sdWorkflow(), { inputs: { sampler: { hidden: false } } }, null)
     expect(on.inputs.find((i) => i.key === 'sampler')).toMatchObject({ default: 'euler', target: { kind: 'field', nodeId: '9', field: 'sampler_name' } })
@@ -383,11 +383,28 @@ describe('core nodes', () => {
     expect(f?.source).not.toContain('=')
   })
 
-  it('leaves the LoRA strength to the toggle when a switch picks the LoRA', () => {
+  it('exposes a LoRA behind a toggle like any other', () => {
     const wf = sdWorkflow()
-    wf['20'] = { class_type: 'ComfySwitchNode', inputs: { switch: true, on_true: ['7', 0], on_false: ['1', 0] } }
+    wf['19'] = { class_type: 'PrimitiveBoolean', _meta: { title: 'Boolean (Enable LoRA)' }, inputs: { value: true } }
+    wf['20'] = { class_type: 'ComfySwitchNode', inputs: { switch: ['19', 0], on_true: ['7', 0], on_false: ['1', 0] } }
+    expect(buildSchema(wf, null, null).inputs.map((i) => i.key)).toEqual(expect.arrayContaining(['enable lora', 'lora', 'lora_strength']))
+  })
+
+  it('exposes the name and strength of every LoRA in a chain, in chain order, also behind a toggle', () => {
+    const wf: ApiWorkflow = {
+      '1': { class_type: 'UNETLoader', inputs: { unet_name: 'm.safetensors' } },
+      // The chain runs 9, 3, 6: node order says otherwise.
+      '9': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['1', 0], lora_name: 'first', strength_model: 1 } },
+      '3': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['9', 0], lora_name: 'second', strength_model: 0 } },
+      '6': { class_type: 'LoraLoaderModelOnly', inputs: { model: ['3', 0], lora_name: 'third', strength_model: 0 } },
+      '5': { class_type: 'PrimitiveBoolean', _meta: { title: 'Boolean (Enable LoRA)' }, inputs: { value: true } },
+      '7': { class_type: 'ComfySwitchNode', inputs: { switch: ['5', 0], on_true: ['6', 0], on_false: ['1', 0] } }
+    }
     const s = buildSchema(wf, null, null)
-    expect(s.inputs.map((i) => i.key)).not.toContain('lora_strength')
-    expect(s.discovery.candidates.find((c) => c.id === 'lora_strength')?.defaultExposed).toBe(false)
+    const byKey = Object.fromEntries(s.inputs.map((i) => [i.key, i]))
+    expect(Object.keys(byKey).sort()).toEqual(['enable lora', 'lora', 'lora_2', 'lora_3', 'lora_strength', 'lora_strength_2', 'lora_strength_3'].sort())
+    expect([byKey.lora.default, byKey.lora_2.default, byKey.lora_3.default]).toEqual(['first', 'second', 'third'])
+    expect(byKey.lora_strength_2).toMatchObject({ label: 'LoRA strength 2', target: { nodeId: '3', field: 'strength_model' } })
+    expect(s.duplicateKeys).toEqual([])
   })
 })

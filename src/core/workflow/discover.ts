@@ -192,7 +192,7 @@ export function discover(wf: ApiWorkflow, oi?: ObjectInfo | null): Discovery {
       }
       const std = standardRule(STANDARD_FIELDS[node.class_type]?.[field], wf, nodeId)
       if (std) {
-        const named = std.prompt ? promptName(wf, nodeId, field, std.part) : null
+        const named = std.prompt ? promptName(wf, nodeId, field, std.part) : std.name?.(wf, nodeId) ?? null
         const key = named?.key ?? std.key ?? field
         candidates.push({
           id: key,

@@ -18,6 +18,8 @@ export interface StandardField {
   prompt?: boolean
   /** Second prompt field of one node (`clip_l`): added to the prompt's key and label. */
   part?: string
+  /** Key and label that depend on where the node sits in the graph (a LoRA's place in its chain). Replaces `key` and `label`. */
+  name?: (wf: ApiWorkflow, nodeId: string) => { key: string; label: string }
 }
 
 /** One rule, or several tried in order (the first whose `when` holds wins). */
@@ -27,14 +29,23 @@ export function standardRule(rules: StandardRule | undefined, wf: ApiWorkflow, n
   return (Array.isArray(rules) ? rules : rules ? [rules] : []).find((r) => !r.when || r.when(wf, nodeId))
 }
 
-const SWITCH_BRANCH_INPUTS = new Set(['on_true', 'on_false'])
+const LORA_LOADERS = new Set(['LoraLoader', 'LoraLoaderModelOnly'])
 
-/** The node's output is picked by an if/else switch: the graph decides, so the field is not a shot setting (a LoRA toggled on or off). */
-function feedsSwitch(wf: ApiWorkflow, nodeId: string): boolean {
-  return consumersOf(wf, nodeId).some((c) => SWITCH_BRANCH_INPUTS.has(c.input) && /Switch/.test(wf[c.nodeId].class_type))
+const isLora = (wf: ApiWorkflow, nodeId: string): boolean => LORA_LOADERS.has(wf[nodeId]?.class_type)
+
+/** Where a LoRA loader sits in its chain (each loader takes the previous one's `model`), counting from 1 at the loader nearest the model. */
+export function loraPosition(wf: ApiWorkflow, nodeId: string): number {
+  let position = 1
+  const seen = new Set([nodeId])
+  for (let id = nodeId; ; ) {
+    const model = wf[id].inputs.model
+    if (!isLink(model) || !isLora(wf, model[0]) || seen.has(model[0])) break
+    id = model[0]
+    seen.add(id)
+    position++
+  }
+  return position
 }
-
-const notSwitched = (wf: ApiWorkflow, nodeId: string): boolean => !feedsSwitch(wf, nodeId)
 
 export type PromptRole = 'positive' | 'negative'
 
@@ -178,8 +189,14 @@ const notSeedVr2 = (wf: ApiWorkflow, nodeId: string): boolean => !isSeedVr2Sampl
 const prompt = (more: StandardField = {}): StandardField => ({ prompt: true, constraints: { multiline: true }, ...more })
 const unticked = (key?: string, label?: string): StandardField => ({ ...(key && { key }), ...(label && { label }), exposed: false })
 const DENOISE: InputConstraints = { min: 0, max: 1, step: 0.01 }
-/** A LoRA strength is a shot setting, unless the graph picks the LoRA with a switch (the turbo toggle): then the toggle is the input. */
-const loraStrength = (key: string, label: string): StandardField[] => [{ key, label, when: notSwitched }, { key, label, exposed: false }]
+/** A LoRA field: `lora`, `lora_2`... by place in the chain, so a stack keeps its keys when node ids change. */
+const loraField = (key: string, label: string, exposed = true): StandardField => ({
+  exposed,
+  name: (wf, nodeId) => {
+    const n = loraPosition(wf, nodeId)
+    return n > 1 ? { key: `${key}_${n}`, label: `${label} ${n}` } : { key, label }
+  }
+})
 
 // Batch size of a latent: its own key, since `batch_size` on the SeedVR2 upscaler means something else (4n+1 frames).
 const LATENT_BATCH: StandardField = { key: 'latent_batch', label: 'Batch size' }
@@ -254,7 +271,7 @@ const CORE_FIELDS: Record<string, Record<string, StandardRule>> = {
   CFGGuider: { cfg: {} },
   ModelSamplingSD3: { shift: unticked() },
   ModelSamplingAuraFlow: { shift: unticked() },
-  // Models: names must match files on the server, so they start unticked
+  // Models: names must match files on the server, so they start unticked (LoRAs excepted: they are what a shot picks, a Lightning one too)
   CheckpointLoaderSimple: { ckpt_name: unticked('checkpoint', 'Checkpoint') },
   UNETLoader: { unet_name: unticked('unet', 'Diffusion model') },
   VAELoader: { vae_name: unticked('vae', 'VAE') },
@@ -264,11 +281,11 @@ const CORE_FIELDS: Record<string, Record<string, StandardRule>> = {
   ControlNetLoader: { control_net_name: unticked('controlnet', 'ControlNet') },
   UpscaleModelLoader: { model_name: unticked('upscale_model', 'Upscale model') },
   LoraLoader: {
-    lora_name: unticked('lora', 'LoRA'),
-    strength_model: loraStrength('lora_strength', 'LoRA strength'),
-    strength_clip: unticked('lora_clip_strength', 'LoRA strength (CLIP)')
+    lora_name: loraField('lora', 'LoRA'),
+    strength_model: loraField('lora_strength', 'LoRA strength'),
+    strength_clip: loraField('lora_clip_strength', 'LoRA strength (CLIP)', false)
   },
-  LoraLoaderModelOnly: { lora_name: unticked('lora', 'LoRA'), strength_model: loraStrength('lora_strength', 'LoRA strength') },
+  LoraLoaderModelOnly: { lora_name: loraField('lora', 'LoRA'), strength_model: loraField('lora_strength', 'LoRA strength') },
   ControlNetApply: { strength: { key: 'controlnet_strength', label: 'ControlNet strength' } },
   ControlNetApplyAdvanced: {
     strength: { key: 'controlnet_strength', label: 'ControlNet strength' },
