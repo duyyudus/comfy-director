@@ -260,6 +260,34 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
     plural(detail.totalAttempts, 'attempt')
   ].filter(Boolean)
 
+  // Sits under the prompt chat while it is open (so Run stays next to the prompt being written), else ends the form.
+  const runBar = (
+    <div className={chatShown ? undefined : 'border-t border-border pt-5'}>
+      {listMode && (
+        <div className="mb-3 text-13 text-text2">
+          {plural(promptCount, 'prompt')} × {plural(Math.max(1, form.runs || 1), 'run')} = {plural(jobs, 'job')}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <span>{listMode ? 'Runs per prompt' : 'Runs'}</span>
+        <Input
+          type="number"
+          min={1}
+          className="w-[72px]"
+          value={form.runs}
+          onChange={(e) => update({ runs: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
+        />
+        <Button variant="primary" size="lg" disabled={offline || submitting || jobs < 1} onClick={() => void run()}>
+          {submitting ? 'Sending…' : `Run ${plural(jobs, 'job')}`}
+        </Button>
+        <span className="text-13 text-text2">
+          {offline ? 'Run is off while the server is offline.' : form.seedMode === 'random' ? 'Random seed gives each run a new take' : 'Fixed seed: identical inputs come back from the cache'}
+        </span>
+      </div>
+      {runMessage && <div className="mt-3 rounded-md bg-dtint px-3 py-2 text-13 text-danger">{runMessage}</div>}
+    </div>
+  )
+
   return (
     <div className="flex min-h-full flex-col">
       {/* Header */}
@@ -434,37 +462,13 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                 </>
               )}
 
-              {/* Run bar */}
-              <div className="border-t border-border pt-5">
-                {listMode && (
-                  <div className="mb-3 text-13 text-text2">
-                    {plural(promptCount, 'prompt')} × {plural(Math.max(1, form.runs || 1), 'run')} = {plural(jobs, 'job')}
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center gap-3">
-                  <span>{listMode ? 'Runs per prompt' : 'Runs'}</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    className="w-[72px]"
-                    value={form.runs}
-                    onChange={(e) => update({ runs: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
-                  />
-                  <Button variant="primary" size="lg" disabled={offline || submitting || jobs < 1} onClick={() => void run()}>
-                    {submitting ? 'Sending…' : `Run ${plural(jobs, 'job')}`}
-                  </Button>
-                  <span className="text-13 text-text2">
-                    {offline ? 'Run is off while the server is offline.' : form.seedMode === 'random' ? 'Random seed gives each run a new take' : 'Fixed seed: identical inputs come back from the cache'}
-                  </span>
-                </div>
-                {runMessage && <div className="mt-3 rounded-md bg-dtint px-3 py-2 text-13 text-danger">{runMessage}</div>}
-              </div>
+              {!chatShown && runBar}
             </div>
           </Card>
 
           {/* Prompt chat */}
           {chatShown && (
-            <div className="sticky top-6 max-w-[560px] min-w-[360px] flex-1">
+            <div className="sticky top-6 flex max-w-[560px] min-w-[360px] flex-1 flex-col gap-4">
               <PromptChat
                 projectPath={projectPath}
                 shotId={shotId}
@@ -479,6 +483,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                 }}
                 onClose={() => showChat(false)}
               />
+              <Card className="p-4">{runBar}</Card>
             </div>
           )}
 

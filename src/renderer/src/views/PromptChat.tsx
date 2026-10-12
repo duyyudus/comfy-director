@@ -128,7 +128,7 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
   }
 
   return (
-    <Card className="flex h-[calc(100vh-15rem)] min-h-[440px] flex-col">
+    <Card className="flex h-[calc(100vh-24rem)] min-h-[380px] flex-col">
       <div className="flex items-center gap-2 border-b border-border p-3">
         <span className="shrink-0 font-semibold">Prompt chat</span>
         <Select className="h-9 min-w-0 flex-1" aria-label="Prompter" value={prompterId ?? ''} onChange={(e) => {
