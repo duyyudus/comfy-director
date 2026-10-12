@@ -21,7 +21,14 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
   const [soundFrom, setSoundFrom] = useState<number | null>(null)
   const [loop, setLoop] = useState(true)
   const [swapOpen, setSwapOpen] = useState<number | null>(null)
+  const [fs, setFs] = useState(false)
+  const [idle, setIdle] = useState(false)
+  const [aspect, setAspect] = useState(16 / 9)
+  const [stage, setStage] = useState({ w: 0, h: 0 })
   const vids = useRef<(HTMLVideoElement | null)[]>([])
+  const rootRef = useRef<HTMLDivElement>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const keyRef = useRef<(e: KeyboardEvent) => void>(() => {})
 
   const load = useCallback(async () => {
     if (projectPath) setDetail(await api.getShot(projectPath, shotId, 10_000))
@@ -82,6 +89,65 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
     return () => clearInterval(h)
   }, [together, playing])
 
+  const enterFs = (): void => {
+    setFs(true)
+    void rootRef.current?.requestFullscreen?.().catch(() => {})
+  }
+  const exitFs = (): void => {
+    setFs(false)
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+  }
+  keyRef.current = (e) => {
+    const t = e.target as HTMLElement
+    if (e.key === 'Escape' && fs) exitFs()
+    else if (e.key.toLowerCase() === 'f' && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) fs ? exitFs() : enterFs()
+    else if (e.key === ' ' && fs && !/^(INPUT|SELECT|BUTTON)$/.test(t.tagName)) {
+      e.preventDefault()
+      toggle()
+    }
+  }
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => keyRef.current(e)
+    // Leaving native full screen (Esc, the OS) also leaves the full screen layout.
+    const onChange = (): void => {
+      if (!document.fullscreenElement) setFs(false)
+    }
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('fullscreenchange', onChange)
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+    }
+  }, [])
+  // Hide the controls after the pointer rests, while playing.
+  useEffect(() => {
+    if (!fs) return
+    let t: ReturnType<typeof setTimeout>
+    const wake = (): void => {
+      setIdle(false)
+      clearTimeout(t)
+      t = setTimeout(() => setIdle(true), 2500)
+    }
+    wake()
+    window.addEventListener('mousemove', wake)
+    window.addEventListener('mousedown', wake)
+    window.addEventListener('keydown', wake)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('mousemove', wake)
+      window.removeEventListener('mousedown', wake)
+      window.removeEventListener('keydown', wake)
+    }
+  }, [fs])
+  useEffect(() => {
+    const el = gridRef.current
+    if (!fs || !el) return
+    const ro = new ResizeObserver(() => setStage({ w: el.clientWidth, h: el.clientHeight }))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [fs, !!detail])
+
   if (!detail) return <div className="p-8 text-text2">Loading…</div>
   const shot = detail.shot
   const labels: Record<string, string> = { __workflow: 'Workflow', __seed: 'Seed' }
@@ -106,53 +172,80 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
     await load()
   }
 
-  return (
-    <div className="flex min-h-full flex-col">
-      <div className="flex items-center gap-3 border-b border-border bg-panel px-6 py-3.5">
-        <div className="min-w-0 flex-1">
-          <div className="text-xs text-muted">
-            {detail.sequence ? `${detail.sequence.name} / Shot ${pad2(shot.position)}` : 'Loose shots'} · {shot.name}
-          </div>
-          <div className="text-20 font-semibold">Compare {shown.length} attempts</div>
-        </div>
-        <Segmented
-          value={String(layout)}
-          onChange={(v) => setLayout(Number(v))}
-          options={[2, 3, 4].map((n) => ({ value: String(n), label: `${n}-up`, disabled: finished.length < n }))}
-        />
-        <Checkbox className="mx-2" checked={together} onChange={setTogether} label={<span className="font-normal">Play together</span>} />
-        <Button onClick={() => go({ name: 'shot', shotId })}>Close</Button>
-      </div>
+  // Full screen: the fewest rows and columns that give the videos the most area.
+  let cols = shown.length
+  let best = 0
+  for (let c = 1; c <= shown.length; c++) {
+    const scale = Math.min(stage.w / c / aspect, stage.h / Math.ceil(shown.length / c))
+    if (scale >= best) {
+      best = scale
+      cols = c
+    }
+  }
+  const rows = Math.ceil(shown.length / cols)
 
-      <div className="flex-1 p-6">
-        <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}>
+  return (
+    <div ref={rootRef} className={cn(fs ? 'fixed inset-0 z-50 bg-black' : 'flex min-h-full flex-col', fs && idle && playing && 'cursor-none')}>
+      {!fs && (
+        <div className="flex items-center gap-3 border-b border-border bg-panel px-6 py-3.5">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-muted">
+              {detail.sequence ? `${detail.sequence.name} / Shot ${pad2(shot.position)}` : 'Loose shots'} · {shot.name}
+            </div>
+            <div className="text-20 font-semibold">Compare {shown.length} attempts</div>
+          </div>
+          <Segmented
+            value={String(layout)}
+            onChange={(v) => setLayout(Number(v))}
+            options={[2, 3, 4].map((n) => ({ value: String(n), label: `${n}-up`, disabled: finished.length < n }))}
+          />
+          <Checkbox className="mx-2" checked={together} onChange={setTogether} label={<span className="font-normal">Play together</span>} />
+          <Button onClick={enterFs}>Full screen</Button>
+          <Button onClick={() => go({ name: 'shot', shotId })}>Close</Button>
+        </div>
+      )}
+
+      <div className={fs ? 'absolute inset-0' : 'flex-1 p-6'}>
+        <div
+          ref={gridRef}
+          className={cn('grid', fs ? 'h-full gap-0.5' : 'gap-5')}
+          style={{
+            gridTemplateColumns: `repeat(${fs ? cols : shown.length}, minmax(0, 1fr))`,
+            gridTemplateRows: fs ? `repeat(${rows}, minmax(0, 1fr))` : undefined
+          }}
+        >
           {shown.map((a, i) => {
             const isKeeper = shot.keeperAttemptId === a.id
             const out = a.outputs.find((o) => o.kind === 'video') ?? a.outputs[0]
             return (
-              <Card key={`${i}-${a.id}`} className={cn('p-3.5', isKeeper && 'border-2 border-accent')}>
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="font-semibold">#{a.num}</span>
-                  <Chip>{a.workflowName}</Chip>
-                  {isKeeper && <Tag kind="keeper">Keeper</Tag>}
-                  <span className="flex-1" />
-                  <div className="relative">
-                    <Button size="sm" onClick={() => setSwapOpen(swapOpen === i ? null : i)}>Swap</Button>
-                    <Menu open={swapOpen === i} onClose={() => setSwapOpen(null)} className="top-9 right-0 max-h-80 overflow-auto">
-                      {finished.filter((x) => !shown.some((s) => s.id === x.id)).map((x) => (
-                        <MenuItem key={x.id} hint={timeAgo(x.finishedAt)} onClick={() => {
-                          setIds(ids.map((id, j) => (j === i ? x.id : id)))
-                          setSwapOpen(null)
-                          setPlaying(false)
-                        }}>
-                          #{x.num} {x.workflowName}
-                        </MenuItem>
-                      ))}
-                      {finished.length <= shown.length && <div className="px-3.5 py-2 text-13 text-muted">No other finished attempts.</div>}
-                    </Menu>
+              <Card
+                key={`${i}-${a.id}`}
+                className={cn(fs ? 'relative min-h-0 min-w-0 rounded-none border-0 bg-black' : 'p-3.5', !fs && isKeeper && 'border-2 border-accent')}
+              >
+                {!fs && (
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="font-semibold">#{a.num}</span>
+                    <Chip>{a.workflowName}</Chip>
+                    {isKeeper && <Tag kind="keeper">Keeper</Tag>}
+                    <span className="flex-1" />
+                    <div className="relative">
+                      <Button size="sm" onClick={() => setSwapOpen(swapOpen === i ? null : i)}>Swap</Button>
+                      <Menu open={swapOpen === i} onClose={() => setSwapOpen(null)} className="top-9 right-0 max-h-80 overflow-auto">
+                        {finished.filter((x) => !shown.some((s) => s.id === x.id)).map((x) => (
+                          <MenuItem key={x.id} hint={timeAgo(x.finishedAt)} onClick={() => {
+                            setIds(ids.map((id, j) => (j === i ? x.id : id)))
+                            setSwapOpen(null)
+                            setPlaying(false)
+                          }}>
+                            #{x.num} {x.workflowName}
+                          </MenuItem>
+                        ))}
+                        {finished.length <= shown.length && <div className="px-3.5 py-2 text-13 text-muted">No other finished attempts.</div>}
+                      </Menu>
+                    </div>
                   </div>
-                </div>
-                <div className="media flex aspect-[4/5] items-center justify-center overflow-hidden rounded">
+                )}
+                <div className={cn('media flex items-center justify-center overflow-hidden', fs ? 'h-full w-full' : 'aspect-[4/5] rounded')}>
                   {out?.kind === 'video' ? (
                     <video
                       ref={(el) => {
@@ -160,12 +253,13 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
                       }}
                       src={media(projectPath, out.path)}
                       poster={a.thumb ? media(projectPath, a.thumb) : undefined}
-                      className="max-h-full max-w-full"
-                      controls={!together}
+                      className={fs ? 'h-full w-full object-contain' : 'max-h-full max-w-full'}
+                      controls={!together && !fs}
                       playsInline
                       onLoadedMetadata={(e) => {
                         const len = e.currentTarget.duration || 0
                         setDuration((d) => Math.max(d, len))
+                        if (i === 0 && e.currentTarget.videoWidth) setAspect(e.currentTarget.videoWidth / e.currentTarget.videoHeight)
                       }}
                       onTimeUpdate={(e) => i === 0 && setTime(e.currentTarget.currentTime)}
                       onEnded={() => !loop && i === 0 && setPlaying(false)}
@@ -176,30 +270,45 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
                     <span className="text-text2">No file</span>
                   )}
                 </div>
-                <div className="mt-2.5 text-13 text-text2">
-                  {attemptSummary(a)} · {timeAgo(a.finishedAt)}
-                </div>
-                <div className="mt-2.5 flex gap-2">
-                  {isKeeper ? (
-                    <Button size="sm" variant="subtle" disabled>Current keeper</Button>
-                  ) : (
-                    <Button size="sm" variant="primary" onClick={() => void setKeeper(a)}>Set as keeper</Button>
-                  )}
-                  <Button size="sm" onClick={() => {
-                    setPendingLoad({ shotId, workflowId: a.workflowId, values: a.values, seed: a.seed })
-                    go({ name: 'shot', shotId })
-                  }}>Load settings</Button>
-                </div>
+                {fs && (
+                  <span className="pointer-events-none absolute top-2 left-2 rounded bg-black/60 px-1.5 py-0.5 font-mono text-xs text-white">
+                    #{a.num}{isKeeper && ' ★'}
+                  </span>
+                )}
+                {!fs && (
+                  <div className="mt-2.5 text-13 text-text2">
+                    {attemptSummary(a)} · {timeAgo(a.finishedAt)}
+                  </div>
+                )}
+                {!fs && (
+                  <div className="mt-2.5 flex gap-2">
+                    {isKeeper ? (
+                      <Button size="sm" variant="subtle" disabled>Current keeper</Button>
+                    ) : (
+                      <Button size="sm" variant="primary" onClick={() => void setKeeper(a)}>Set as keeper</Button>
+                    )}
+                    <Button size="sm" onClick={() => {
+                      setPendingLoad({ shotId, workflowId: a.workflowId, values: a.values, seed: a.seed })
+                      go({ name: 'shot', shotId })
+                    }}>Load settings</Button>
+                  </div>
+                )}
               </Card>
             )
           })}
         </div>
 
-        <Card className="mt-5 flex items-center gap-4 px-4 py-3">
+        <Card
+          className={cn(
+            'flex items-center gap-4 px-4 py-3',
+            fs ? 'absolute inset-x-0 bottom-0 rounded-none border-0 bg-black/70 text-white transition-opacity' : 'mt-5',
+            fs && idle && playing && 'pointer-events-none opacity-0'
+          )}
+        >
           <button
             aria-label={playing ? 'Pause' : 'Play'}
             onClick={toggle}
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-text text-bg"
+            className={cn('flex shrink-0 items-center justify-center rounded-full bg-text text-bg', fs ? 'size-9' : 'size-11')}
           >
             {playing ? (
               <svg viewBox="0 0 24 24" className="size-5"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor" /></svg>
@@ -218,21 +327,35 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
             value={time}
             onChange={(e) => seek(Number(e.target.value))}
           />
-          <span className="text-13">Speed</span>
-          <Select className="h-9 w-20" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
-            <option value={1}>1×</option>
-            <option value={0.5}>0.5×</option>
-            <option value={0.25}>0.25×</option>
-          </Select>
-          <span className="text-13">Sound from</span>
-          <Select className="h-9 w-24" value={soundFrom ?? ''} onChange={(e) => setSoundFrom(e.target.value ? Number(e.target.value) : null)}>
-            <option value="">None</option>
-            {shown.map((a) => <option key={a.id} value={a.id}>#{a.num}</option>)}
-          </Select>
-          <Checkbox checked={loop} onChange={setLoop} label={<span className="font-normal">Loop</span>} />
+          {!fs && <span className="text-13">Speed</span>}
+          {!fs && (
+            <Select className="h-9 w-20" value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+              <option value={1}>1×</option>
+              <option value={0.5}>0.5×</option>
+              <option value={0.25}>0.25×</option>
+            </Select>
+          )}
+          {!fs && <span className="text-13">Sound from</span>}
+          {!fs && (
+            <Select className="h-9 w-24" value={soundFrom ?? ''} onChange={(e) => setSoundFrom(e.target.value ? Number(e.target.value) : null)}>
+              <option value="">None</option>
+              {shown.map((a) => <option key={a.id} value={a.id}>#{a.num}</option>)}
+            </Select>
+          )}
+          {!fs && <Checkbox checked={loop} onChange={setLoop} label={<span className="font-normal">Loop</span>} />}
+          {fs && (
+            <button
+              aria-label="Exit full screen"
+              title="Exit full screen (Esc)"
+              onClick={exitFs}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-white/40 text-white"
+            >
+              <svg viewBox="0 0 24 24" className="size-5"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" /></svg>
+            </button>
+          )}
         </Card>
 
-        <Card className="mt-5 p-5">
+        {!fs && <Card className="mt-5 p-5">
           <div className="mb-3">
             <span className="text-17 font-semibold">What differs</span>
             <span className="ml-3 text-13 text-text2">
@@ -262,7 +385,7 @@ export function CompareView({ shotId, attemptIds }: { shotId: number; attemptIds
             </table>
           )}
           {diff.same.length > 0 && <div className="mt-3 text-13 text-text2">Same in all: {diff.same.join(', ')}.</div>}
-        </Card>
+        </Card>}
       </div>
     </div>
   )
