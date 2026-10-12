@@ -17,7 +17,7 @@ import { buildSchema } from '@core/workflow/schema'
 import { checkWorkflow } from '@core/workflow/check'
 import { diffSchemas } from '@core/workflow/reconcile'
 import { keeperExportPath, extOf, looksSynced, safeName } from '@core/output/naming'
-import { createPrompter, LlmPrompter } from '@core/prompter'
+import { createPrompter, LlmPrompter, listLlmModels } from '@core/prompter'
 import type { ChatPart, ChatTurn, LlmConfig } from '@core/prompter'
 import { randomSeed } from '@core/planner'
 import { titleOf } from '@core/workflow/graph'
@@ -652,6 +652,9 @@ export function createApi(ctx: Context): ToolkitApi {
       const seed = opts.seed ?? (config.type === 'template' ? config.template.seed : randomSeed())
       const skill = config.type === 'llm' ? skillText(config.llm) : null
       return createPrompter(config, skill).generate({ count: opts.count, seed, currentPrompt: opts.currentPrompt, ideas: opts.ideas })
+    },
+    async listLlmModels(endpoint, apiKey) {
+      return listLlmModels(endpoint, apiKey)
     },
     async pickScriptFile() {
       const r = await dialog.showOpenDialog(win()!, {

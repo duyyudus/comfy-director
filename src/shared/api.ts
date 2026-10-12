@@ -105,6 +105,8 @@ export interface ToolkitApi {
   savePrompter(p: { id?: number; name: string; config: PrompterConfig }): Promise<PrompterRecord>
   deletePrompter(id: number): Promise<void>
   generatePrompts(config: PrompterConfig, opts: GenerateOptions): Promise<string[]>
+  /** The model ids the LLM endpoint offers (`GET {endpoint}/models`). Throws with the endpoint's error. */
+  listLlmModels(endpoint: string, apiKey?: string): Promise<string[]>
   pickScriptFile(): Promise<string | null>
   listSkills(): Promise<PromptSkill[]>
   /** Asks for a Markdown file and copies it in as the skill of this workflow type, replacing the one there. Null if cancelled. */
@@ -154,7 +156,7 @@ export const API_METHODS: ApiMethod[] = [
   'getQueue', 'cancelJobs', 'cancelOtherClientJob', 'interrupt', 'cancelAllWaiting', 'takeReconcileSummary',
   'gallery',
   'listPrompts', 'savePrompt', 'deletePrompt', 'usePrompt', 'markPromptsUsed', 'listPrompters', 'savePrompter',
-  'deletePrompter', 'generatePrompts', 'pickScriptFile', 'listSkills', 'addSkill', 'revealSkill', 'deleteSkill',
+  'deletePrompter', 'generatePrompts', 'listLlmModels', 'pickScriptFile', 'listSkills', 'addSkill', 'revealSkill', 'deleteSkill',
   'getChat', 'sendChat', 'stopChat', 'clearChat',
   'listServerFiles', 'deleteServerFiles', 'revealServerNode',
   'mediaUrl', 'copyText'

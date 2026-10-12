@@ -5,7 +5,7 @@ import { ScriptPrompter } from './script'
 
 export * from './types'
 export { templateSlots, renderTemplate, TemplatePrompter } from './template'
-export { LlmPrompter, promptFromReply, splitReply, systemPrompt } from './llm'
+export { LlmPrompter, listLlmModels, promptFromReply, splitReply, systemPrompt } from './llm'
 export type { ChatPart, ChatTurn, ReplyPart } from './llm'
 export { ScriptPrompter, parseScriptOutput } from './script'
 export { mulberry32 } from './rng'

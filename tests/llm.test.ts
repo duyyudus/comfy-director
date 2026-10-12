@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LlmPrompter, promptFromReply, splitReply, systemPrompt } from '../src/core/prompter/llm'
+import { LlmPrompter, listLlmModels, promptFromReply, splitReply, systemPrompt } from '../src/core/prompter/llm'
 import { DEFAULT_LLM } from '../src/core/prompter/types'
 
 const cfg = { ...DEFAULT_LLM, instruction: 'Keep it under 80 words.' }
@@ -113,5 +113,23 @@ describe('llm prompter requests', () => {
     const reply = await new LlmPrompter(cfg, null, fetch).chat(turns)
     expect(reply).toBe('Try this:\n```\np\n```')
     expect(bodies[0].messages.slice(1)).toEqual(turns)
+  })
+})
+
+describe('model list', () => {
+  it('reads the ids from GET /models, sorted, with the key', async () => {
+    const seen: { url: string; auth?: string }[] = []
+    const fetch = (async (url: string, init?: { headers?: Record<string, string> }) => {
+      seen.push({ url, auth: init?.headers?.Authorization })
+      return new Response(JSON.stringify({ data: [{ id: 'b-model' }, { id: 'a-model' }, { id: 'b-model' }] }), { status: 200 })
+    }) as unknown as typeof globalThis.fetch
+    expect(await listLlmModels('http://x/v1/', 'k', fetch)).toEqual(['a-model', 'b-model'])
+    expect(seen).toEqual([{ url: 'http://x/v1/models', auth: 'Bearer k' }])
+  })
+  it('throws the endpoint error and on an empty list', async () => {
+    const err = (async () => new Response('nope', { status: 401 })) as unknown as typeof globalThis.fetch
+    await expect(listLlmModels('http://x/v1', undefined, err)).rejects.toThrow(/401/)
+    const empty = (async () => new Response('{"data":[]}', { status: 200 })) as unknown as typeof globalThis.fetch
+    await expect(listLlmModels('http://x/v1', undefined, empty)).rejects.toThrow(/no models/)
   })
 })

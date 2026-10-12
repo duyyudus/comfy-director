@@ -164,3 +164,15 @@ export class LlmPrompter implements Prompter {
     return text
   }
 }
+
+/** The model ids an OpenAI-compatible endpoint offers (`GET {endpoint}/models`), sorted. */
+export async function listLlmModels(endpoint: string, apiKey?: string, fetchImpl: typeof fetch = fetch): Promise<string[]> {
+  const headers: Record<string, string> = {}
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`
+  const res = await fetchImpl(`${endpoint.replace(/\/+$/, '')}/models`, { headers, signal: AbortSignal.timeout(15000) })
+  if (!res.ok) throw new Error(`The endpoint answered ${res.status}: ${(await res.text()).slice(0, 300)}`)
+  const body = (await res.json()) as { data?: { id?: unknown }[] }
+  const ids = (body.data ?? []).map((m) => m.id).filter((id): id is string => typeof id === 'string' && !!id)
+  if (!ids.length) throw new Error('The endpoint listed no models.')
+  return [...new Set(ids)].sort((a, b) => a.localeCompare(b))
+}

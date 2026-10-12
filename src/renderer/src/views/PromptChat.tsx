@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { InputFile, PrompterRecord, ShotChat } from '@shared/types'
+import type { LlmConfig } from '@core/prompter'
 import { splitReply } from '@core/prompter/llm'
 import { chatListeners, useStore } from '../lib/store'
 import { api, errorMessage, media } from '../lib/api'
 import { cn } from '../lib/cn'
-import { Button, Card, Empty, Select, Spinner, Textarea } from '../components/ui'
+import { Button, Card, Empty, Input, Label, Menu, Select, Spinner, Textarea } from '../components/ui'
 import { Markdown } from '../components/Markdown'
 
 const LAST_PROMPTER = 'chat-prompter'
@@ -45,6 +46,7 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
   const [live, setLive] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [over, setOver] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const end = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -136,6 +138,15 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
             <option key={p.id} value={p.id}>{p.name}{p.config.type === 'llm' && p.config.llm.skill ? ` · ${p.config.llm.skill}` : ''}</option>
           ))}
         </Select>
+        {prompter?.config.type === 'llm' && (
+          <div className="relative">
+            <Button size="sm" variant="ghost" aria-label="Prompter settings" title={`Model and temperature · ${prompter.config.llm.model}`} onClick={() => setSettingsOpen(!settingsOpen)}>⚙</Button>
+            <Menu open={settingsOpen} onClose={() => setSettingsOpen(false)} className="top-9 right-0 w-80 px-3.5 py-3">
+              <PrompterSettings key={prompter.id} prompter={prompter}
+                onSaved={(p) => setPrompters((l) => (l ?? []).map((x) => (x.id === p.id ? p : x)))} />
+            </Menu>
+          </div>
+        )}
         <Button size="sm" variant="ghost" disabled={!messages.length || busy} onClick={async () => {
           if (!(await api.confirm('Clear this shot\'s chat? The messages are deleted; attached images stay in the project.', 'Clear chat'))) return
           await api.clearChat(projectPath, shotId)
@@ -245,6 +256,74 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
         <div className="mt-1.5 text-xs text-muted">Enter sends, Shift+Enter starts a new line. Messages and images go to the prompter's endpoint, not to the ComfyUI server.</div>
       </div>
     </Card>
+  )
+}
+
+/** The model and temperature of an LLM prompter, saved to the prompter as they change. The model list comes from the endpoint. */
+function PrompterSettings({ prompter, onSaved }: { prompter: PrompterRecord; onSaved: (p: PrompterRecord) => void }): ReactNode {
+  const toast = useStore((s) => s.toast)
+  const cfg = prompter.config.type === 'llm' ? prompter.config.llm : null
+  const [models, setModels] = useState<string[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [model, setModel] = useState(cfg?.model ?? '')
+  const [temperature, setTemperature] = useState(String(cfg?.temperature ?? ''))
+
+  const fetchModels = (): void => {
+    if (!cfg) return
+    setLoading(true)
+    setError(null)
+    api.listLlmModels(cfg.endpoint, cfg.apiKey)
+      .then(setModels)
+      .catch((e) => setError(errorMessage(e)))
+      .finally(() => setLoading(false))
+  }
+  useEffect(fetchModels, [])
+
+  const save = async (patch: Partial<LlmConfig>): Promise<void> => {
+    if (!cfg) return
+    try {
+      onSaved(await api.savePrompter({ id: prompter.id, name: prompter.name, config: { type: 'llm', llm: { ...cfg, ...patch } } }))
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    }
+  }
+  const saveTemperature = (): void => {
+    const t = Number(temperature)
+    if (!temperature.trim() || !Number.isFinite(t) || t < 0 || t > 2) return setTemperature(String(cfg?.temperature ?? ''))
+    if (t !== cfg?.temperature) void save({ temperature: t })
+  }
+  const saveModel = (m: string): void => {
+    setModel(m)
+    if (m.trim() && m.trim() !== cfg?.model) void save({ model: m.trim() })
+  }
+  if (!cfg) return null
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <Label className="flex items-center justify-between">
+          Model
+          <Button variant="link" className="text-13" disabled={loading} onClick={fetchModels}>{loading ? 'Loading…' : 'Refresh list'}</Button>
+        </Label>
+        {models ? (
+          <Select className="w-full font-mono text-13" value={model} onChange={(e) => saveModel(e.target.value)}>
+            {!models.includes(model) && <option value={model}>{model} (not listed)</option>}
+            {models.map((m) => <option key={m} value={m}>{m}</option>)}
+          </Select>
+        ) : (
+          <Input className="font-mono text-13" value={model} onChange={(e) => setModel(e.target.value)} onBlur={() => saveModel(model)}
+            onKeyDown={(e) => e.key === 'Enter' && saveModel(model)} />
+        )}
+        {error && <div className="mt-1.5 text-xs text-danger">Could not list the models: {error}. Type the model name instead.</div>}
+      </div>
+      <div>
+        <Label>Temperature <span className="text-muted">0 to 2</span></Label>
+        <Input type="number" step={0.1} min={0} max={2} value={temperature} onChange={(e) => setTemperature(e.target.value)} onBlur={saveTemperature}
+          onKeyDown={(e) => e.key === 'Enter' && saveTemperature()} />
+      </div>
+      <div className="text-xs text-muted">Saved to the prompter "{prompter.name}", so the Library shows the same values. The next message uses them.</div>
+    </div>
   )
 }
 
