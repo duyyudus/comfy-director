@@ -7,7 +7,7 @@ import type { ProjectDb } from './db'
 import { now } from './db'
 import { ComfyError, describeExecutionError, historyFiles, historyRenderMs, type HistoryEntry, type PromptRejection, type QueueEntry, type QueueState, type WsMessage } from '@core/comfy/client'
 import { applyValues, fileValues } from '@core/workflow/apply'
-import { graphSteps } from '@core/workflow/graph'
+import { graphModel, graphSteps } from '@core/workflow/graph'
 import { buildSchema } from '@core/workflow/schema'
 import { validateValues } from '@core/workflow/validate'
 import type { SchemaInput, WorkflowSchema } from '@core/workflow/types'
@@ -235,6 +235,7 @@ export class JobManager {
           runCount: Math.max(1, Math.floor(req.runs || 1)),
           finalJson: JSON.stringify(final),
           steps: graphSteps(final),
+          model: graphModel(final),
           serverUrl: server
         })
         created.push(attempt)

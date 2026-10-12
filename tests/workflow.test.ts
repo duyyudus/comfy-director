@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyValues, buildSchema, checkWorkflow, detectFormat, diffSchemas, graphSteps, keyFromTitle, validateValues } from '../src/core/workflow'
+import { applyValues, buildSchema, checkWorkflow, detectFormat, diffSchemas, graphModel, graphSteps, keyFromTitle, validateValues } from '../src/core/workflow'
 import type { ApiWorkflow } from '../src/core/workflow/types'
 import { fl2v, numzUpscale, objectInfo, r2v, seedvr2Upscale, t2v } from './fixtures'
 
@@ -269,6 +269,19 @@ describe('seedvr2 upscale (numz nodes)', () => {
     const out = applyValues(wf, s, { resolution: 1440, batch_size: 5, color_correction: 'wavelet', video: 'clip.mp4' }, { seed: 9 })
     expect(out['10'].inputs).toMatchObject({ resolution: 1440, batch_size: 5, color_correction: 'wavelet', seed: 9, temporal_overlap: 3 })
     expect(out['21'].inputs.file).toBe('clip.mp4')
+  })
+})
+
+describe('graphModel', () => {
+  it('reads the file name of the diffusion model loader', () => {
+    expect(graphModel({ a: { class_type: 'UNETLoader', inputs: { unet_name: 'm.safetensors', weight_dtype: 'default' } } })).toBe('m.safetensors')
+    expect(graphModel({ a: { class_type: 'CheckpointLoaderSimple', inputs: { ckpt_name: 'c.ckpt' } } })).toBe('c.ckpt')
+    expect(graphModel(fl2v())).toMatch(/\.safetensors$/)
+  })
+
+  it('gives up when there is no loader or the name is a link', () => {
+    expect(graphModel({})).toBeNull()
+    expect(graphModel({ a: { class_type: 'UNETLoader', inputs: { unet_name: ['b', 0] } }, b: { class_type: 'Other', inputs: {} } })).toBeNull()
   })
 })
 

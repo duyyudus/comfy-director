@@ -68,3 +68,24 @@ export function graphSteps(wf: ApiWorkflow): number | null {
   }
   return null
 }
+
+/** Loader nodes for the main model, with the input holding its file name. */
+const MODEL_LOADERS: Record<string, string> = {
+  UNETLoader: 'unet_name',
+  UnetLoaderGGUF: 'unet_name',
+  CheckpointLoaderSimple: 'ckpt_name',
+  CheckpointLoader: 'ckpt_name',
+  ImageOnlyCheckpointLoader: 'ckpt_name',
+  SeedVR2LoadDiTModel: 'model'
+}
+
+/** The file name of the main model (diffusion model or checkpoint) a graph loads: the first such loader with a literal name, else null. */
+export function graphModel(wf: ApiWorkflow): string | null {
+  for (const node of Object.values(wf)) {
+    const field = MODEL_LOADERS[node.class_type]
+    if (!field || !node.inputs) continue
+    const name = resolveLiteral(wf, node.inputs[field])
+    if (typeof name === 'string' && name) return name
+  }
+  return null
+}

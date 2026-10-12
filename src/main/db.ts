@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import type {
   Attempt, AttemptError, AttemptStatus, ChatMessage, InputFile, LibraryPrompt, OutputFile, PrompterRecord, Sequence, Shot, ShotSummary
 } from '@shared/types'
-import { graphSteps } from '@core/workflow/graph'
+import { graphModel, graphSteps } from '@core/workflow/graph'
 import type { PrompterConfig, PrompterType } from '@core/prompter/types'
 
 export const now = (): string => new Date().toISOString()
@@ -198,6 +198,7 @@ interface AttemptRow {
   run_count: number; final_json: string | null; outputs_json: string; thumb: string | null
   media_duration: number | null; error_json: string | null; progress: number; created_at: string
   started_at: string | null; finished_at: string | null; render_ms: number | null; steps: number | null
+  model: string | null
 }
 
 const shotFromRow = (r: ShotRow): Shot => ({
@@ -215,7 +216,7 @@ const attemptFromRow = (r: AttemptRow): Attempt => ({
   promptCount: r.prompt_count, runIndex: r.run_index, runCount: r.run_count, outputs: parse<OutputFile[]>(r.outputs_json, []),
   thumb: r.thumb, mediaDuration: r.media_duration, error: parse<AttemptError | null>(r.error_json, null),
   progress: r.progress, createdAt: r.created_at, startedAt: r.started_at, finishedAt: r.finished_at,
-  renderMs: r.render_ms, steps: r.steps
+  renderMs: r.render_ms, steps: r.steps, model: r.model
 })
 
 export interface NewAttempt {
@@ -233,6 +234,7 @@ export interface NewAttempt {
   runCount: number
   finalJson: string
   steps: number | null
+  model: string | null
   serverUrl: string
 }
 
@@ -288,6 +290,20 @@ export class ProjectDb {
             if (n !== null) set.run(n, r.id)
           } catch {
             /* an unreadable graph has no step count */
+          }
+        }
+      })()
+    }
+    if (!cols.includes('model')) {
+      this.db.exec('ALTER TABLE attempts ADD COLUMN model TEXT')
+      const set = this.db.prepare('UPDATE attempts SET model=? WHERE id=?')
+      this.db.transaction(() => {
+        for (const r of this.db.prepare('SELECT id, final_json FROM attempts WHERE final_json IS NOT NULL').all() as { id: number; final_json: string }[]) {
+          try {
+            const m = graphModel(JSON.parse(r.final_json))
+            if (m !== null) set.run(m, r.id)
+          } catch {
+            /* an unreadable graph has no model */
           }
         }
       })()
@@ -448,10 +464,10 @@ export class ProjectDb {
       this.db.prepare('UPDATE shots SET next_attempt_num=?, last_seed=? WHERE id=?').run(num + 1, a.seed, a.shotId)
       const r = this.db
         .prepare(`INSERT INTO attempts(shot_id,num,workflow_id,workflow_name,workflow_version,workflow_hash,values_json,seed,status,
-          server_url,run_id,prompt_index,prompt_count,run_index,run_count,final_json,steps,created_at)
-          VALUES(?,?,?,?,?,?,?,?,'submitting',?,?,?,?,?,?,?,?,?)`)
+          server_url,run_id,prompt_index,prompt_count,run_index,run_count,final_json,steps,model,created_at)
+          VALUES(?,?,?,?,?,?,?,?,'submitting',?,?,?,?,?,?,?,?,?,?)`)
         .run(a.shotId, num, a.workflowId, a.workflowName, a.workflowVersion, a.workflowHash, JSON.stringify(a.values), a.seed,
-          a.serverUrl, a.runId, a.promptIndex, a.promptCount, a.runIndex, a.runCount, a.finalJson, a.steps, now())
+          a.serverUrl, a.runId, a.promptIndex, a.promptCount, a.runIndex, a.runCount, a.finalJson, a.steps, a.model, now())
       return this.attempt(Number(r.lastInsertRowid))!
     })()
   }

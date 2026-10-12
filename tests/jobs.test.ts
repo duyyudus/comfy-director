@@ -15,7 +15,7 @@ const IMAGE = 'aaaaaaaaaaaaaaaaaaaa.png'
 const attempt = (id: number, shotId: number, status: Attempt['status']): Attempt => ({
   id, shotId, num: id, workflowId: 'wf', workflowName: 'wf', workflowVersion: 1, workflowHash: 'h', values: {}, seed: 1,
   status, promptId: `p${id}`, runId: 'r', promptIndex: 0, promptCount: 1, runIndex: 0, runCount: 1, outputs: [], thumb: null,
-  mediaDuration: null, error: null, progress: 0, createdAt: new Date().toISOString(), startedAt: null, finishedAt: null, renderMs: null, steps: null
+  mediaDuration: null, error: null, progress: 0, createdAt: new Date().toISOString(), startedAt: null, finishedAt: null, renderMs: null, steps: null, model: null
 })
 
 const history = (file: string): HistoryEntry => ({

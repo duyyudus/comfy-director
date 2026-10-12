@@ -661,6 +661,7 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
         </div>
         <div className="mt-1.5 flex"><Chip className="min-w-0"><span className="truncate">{a.workflowName}</span></Chip></div>
         <div className="mt-1.5 truncate font-mono text-xs text-text2">{attemptSeed(a)}</div>
+        {a.model && <div className="truncate font-mono text-xs text-text2" title={a.model}>model {a.model}</div>}
         <div className="truncate text-13 text-text2">
           {attemptSummary(a, false)}
           {a.promptCount > 1 && ` · prompt ${a.promptIndex + 1}/${a.promptCount}`}

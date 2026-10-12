@@ -148,6 +148,8 @@ export interface Attempt {
   renderMs: number | null
   /** Sampling steps the submitted graph runs (after its switches), null if it could not be worked out. */
   steps: number | null
+  /** File name of the main model the submitted graph loads, null if it could not be worked out. */
+  model: string | null
 }
 
 export interface InputFile {
