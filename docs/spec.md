@@ -340,7 +340,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
 - **Runs box** (next to Run): how many attempts to make from the current inputs, default 1. With Random seed each run gets a new seed. In prompt list mode it is "Runs per prompt".
 - **Run button:** reads "Run N jobs", where N = prompts x runs. It validates inputs (required files present, counts within bounds), uploads any input files not yet on the server, creates the attempts, and queues them all at once. If anything fails before queueing, nothing is queued (see States). Disabled while the server is offline.
 - **Prompt chat panel** (optional, between the form and the Attempts panel): see Prompt chat below.
-- **Attempts panel** (right side), newest first. Each card shows:
+- **Attempts panel** (right side), newest first. It stays in place while the page scrolls (like the prompt chat) and its card list has its own scroll bar. Each card shows:
   - Preview thumbnail with play (while running: percent instead). Double-clicking a finished card anywhere outside its buttons and checkbox also opens the player.
   - Attempt id, workflow chip, and a KEEPER tag on the keeper.
   - A one-line summary (turbo or full, duration, seed, age) and a compare checkbox. Clicking a finished card anywhere outside its buttons ticks or unticks it too, and ticked cards are tinted.

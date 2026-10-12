@@ -488,8 +488,8 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
           )}
 
           {/* Attempts */}
-          <div className={cn('shrink-0', chatShown ? 'w-[380px]' : 'w-[460px]')}>
-            <div className="mb-3 flex items-center justify-between">
+          <div className={cn('sticky top-6 flex max-h-[calc(100vh-11rem)] min-h-[320px] shrink-0 flex-col', chatShown ? 'w-[380px]' : 'w-[460px]')}>
+            <div className="mb-3 flex shrink-0 items-center justify-between">
               <div className="text-17 font-semibold">
                 Attempts <span className="font-normal text-text2">{detail.totalAttempts}</span>
               </div>
@@ -506,7 +506,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
             {detail.attempts.length === 0 ? (
               <Empty title="No attempts yet">Fill in the inputs and press Run.</Empty>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1 scroll-thin [&>*]:shrink-0">
                 {detail.attempts.map((a) => (
                   <AttemptCard
                     key={a.id}
