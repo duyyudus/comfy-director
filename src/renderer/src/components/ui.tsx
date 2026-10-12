@@ -321,6 +321,20 @@ export function PlayIcon({ className }: { className?: string }): ReactNode {
   )
 }
 
+export function StarIcon({ filled, className }: { filled: boolean; className?: string }): ReactNode {
+  return (
+    <svg viewBox="0 0 24 24" className={cn('size-4', className)} aria-hidden>
+      <path
+        d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"
+        fill={filled ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function Grip(): ReactNode {
   return (
     <svg viewBox="0 0 12 18" className="h-[18px] w-3 text-text2" aria-hidden>

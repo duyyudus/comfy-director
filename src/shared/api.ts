@@ -77,6 +77,7 @@ export interface ToolkitApi {
   run(projectPath: string, shotId: number, req: RunRequest): Promise<RunResult>
   retryAttempt(projectPath: string, attemptId: number, newSeed: boolean): Promise<RunResult>
   setKeeper(projectPath: string, shotId: number, attemptId: number | null): Promise<void>
+  setAttemptStarred(projectPath: string, attemptId: number, starred: boolean): Promise<void>
   deleteAttempt(projectPath: string, attemptId: number): Promise<void>
   getAttempts(projectPath: string, ids: number[]): Promise<Attempt[]>
   cancelAttempt(projectPath: string, attemptId: number): Promise<void>
@@ -151,7 +152,7 @@ export const API_METHODS: ApiMethod[] = [
   'createSequence', 'renameSequence', 'deleteSequence', 'reorderShots', 'createShot', 'getShot', 'updateShot',
   'duplicateShot', 'moveShot', 'deleteShot', 'getSequenceShots', 'exportKeepers',
   'pickInputs', 'addInputFromPath', 'addInputFromOutput',
-  'run', 'retryAttempt', 'setKeeper', 'deleteAttempt', 'getAttempts', 'cancelAttempt', 'revealFile', 'saveThumbnail',
+  'run', 'retryAttempt', 'setKeeper', 'setAttemptStarred','deleteAttempt', 'getAttempts', 'cancelAttempt', 'revealFile', 'saveThumbnail',
   'pendingThumbnails',
   'getQueue', 'cancelJobs', 'cancelOtherClientJob', 'interrupt', 'cancelAllWaiting', 'takeReconcileSummary',
   'gallery',

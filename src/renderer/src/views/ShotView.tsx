@@ -5,7 +5,7 @@ import { useStore } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { cn } from '../lib/cn'
 import { attemptSeed, attemptSummary, estimatedResolution, pad2, plural, renderTime, timeAgo } from '../lib/format'
-import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progress, SectionLabel, Segmented, Select, Tag } from '../components/ui'
+import { Button, Card, Chip, Dialog, Empty, Input, Label, Menu, MenuItem, Progress, SectionLabel, Segmented, Select, StarIcon, Tag } from '../components/ui'
 import { InputControl, PromptTextarea, dragOutput, fileHint } from '../components/inputs'
 import { PlayerDialog, Thumb } from '../components/Media'
 import { PromptListEditor } from './PromptList'
@@ -523,6 +523,14 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                       await api.setKeeper(projectPath, shotId, a.id)
                       await load()
                     }}
+                    onStar={async () => {
+                      try {
+                        await api.setAttemptStarred(projectPath, a.id, !a.starred)
+                        await load()
+                      } catch (e) {
+                        toast(errorMessage(e), 'error')
+                      }
+                    }}
                     onRetry={async (newSeed) => {
                       const r = await api.retryAttempt(projectPath, a.id, newSeed)
                       if (!r.ok) toast(r.message ?? 'Nothing was queued.', 'error')
@@ -589,7 +597,7 @@ function ShotName({ name, onSave }: { name: string; onSave: (n: string) => Promi
   )
 }
 
-function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, live, onPlay, onLoad, onKeeper, onRetry, onCancel, onDelete, offline }: {
+function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, live, onPlay, onLoad, onKeeper, onStar, onRetry, onCancel, onDelete, offline }: {
   a: Attempt
   projectPath: string
   keeper: boolean
@@ -600,6 +608,7 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
   onPlay: () => void
   onLoad: () => void
   onKeeper: () => void
+  onStar: () => void
   onRetry: (newSeed: boolean) => void
   onCancel: () => void
   onDelete: () => void
@@ -644,12 +653,25 @@ function AttemptCard({ a, projectPath, keeper, selected, onSelect, queuePos, liv
         onPlay()
       }}
     >
-      <Thumb projectPath={projectPath} attempt={finished ? a : null} onPlay={onPlay} className="h-[126px] w-[84px] shrink-0">
-        {a.status === 'running' && <span className="text-13 text-text2">{pct}%</span>}
-        {a.status === 'queued' && <span className="text-xs text-text2">waiting</span>}
-        {a.status === 'failed' && <span className="text-xs font-semibold text-danger">failed</span>}
-        {a.status === 'cancelled' && <span className="text-xs text-text2">stopped</span>}
-      </Thumb>
+      <div className="flex shrink-0 flex-col items-start justify-between gap-2">
+        <Thumb projectPath={projectPath} attempt={finished ? a : null} onPlay={onPlay} className="h-[126px] w-[84px] shrink-0">
+          {a.status === 'running' && <span className="text-13 text-text2">{pct}%</span>}
+          {a.status === 'queued' && <span className="text-xs text-text2">waiting</span>}
+          {a.status === 'failed' && <span className="text-xs font-semibold text-danger">failed</span>}
+          {a.status === 'cancelled' && <span className="text-xs text-text2">stopped</span>}
+        </Thumb>
+        {finished && (
+          <button
+            className={cn('-ml-0.5 rounded p-0.5', a.starred ? 'text-accent' : 'text-muted hover:text-text')}
+            onClick={onStar}
+            aria-label={a.starred ? `Remove the good-enough star from #${a.num}` : `Mark #${a.num} as good enough`}
+            aria-pressed={a.starred}
+            title={a.starred ? 'Good enough. Click to unmark.' : 'Mark as good enough'}
+          >
+            <StarIcon filled={a.starred} />
+          </button>
+        )}
+      </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <input type="checkbox" aria-label={`Select #${a.num} to compare`} className="size-4 accent-[var(--accent)]" checked={selected} disabled={!finished}

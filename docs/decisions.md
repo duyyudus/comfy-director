@@ -202,3 +202,8 @@ Log of choices made while building and the reasons for them. Newest last. `docs/
 - **The chat's ⚙ popup edits the saved prompter, not a per-shot copy.** Changing the model or temperature while working a shot is the same decision as editing the prompter in the Library; a separate override would leave two places that disagree about what "Minimax-H3-prompter" uses. Changes save at once, with no Save button, since the point is to switch and send.
 - **The model list is fetched by the main process** (`listLlmModels`, `GET {endpoint}/models`), like the chat itself, so the renderer needs no CORS-friendly endpoint and the API key stays out of the renderer's requests. It is fetched each time the popup opens; nothing is cached. A failure falls back to a text field, because some endpoints do not offer `/models`.
 - **Not looked at in the running app yet:** typechecked and the fetch is unit-tested, but the popup was not viewed.
+
+## 2026-10-12 (starred attempts)
+
+- **"Good enough" is a star on the attempt, not a second keeper.** A shot has one keeper that feeds the Sequence view and the Keepers export; the star is a free-form bookmark (any number per shot, finished attempts only) stored as `attempts.starred`, so it never changes what a sequence shows.
+- **Not looked at in the running app yet:** typechecked and tested, but the card layout was not viewed.

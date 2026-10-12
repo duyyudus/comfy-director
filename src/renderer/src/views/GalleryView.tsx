@@ -4,7 +4,7 @@ import { useStore } from '../lib/store'
 import { api, errorMessage, media } from '../lib/api'
 import { cn } from '../lib/cn'
 import { formatValue, pad2, plural, renderTime, timeAgo } from '../lib/format'
-import { Button, Card, Checkbox, Empty, Input, Label, Segmented, Select, Tag } from '../components/ui'
+import { Button, Card, Checkbox, Empty, Input, Label, Segmented, Select, StarIcon, Tag } from '../components/ui'
 import { PlayerDialog, Thumb } from '../components/Media'
 
 const PAGE = 60
@@ -12,7 +12,7 @@ const PAGE = 60
 export function GalleryView(): ReactNode {
   const { tree, workflows, projectVersion, go, setPendingLoad, openProject, toast } = useStore()
   const [filter, setFilter] = useState<Omit<GalleryFilter, 'offset' | 'limit'>>({
-    project: 'current', search: '', workflowId: null, sequence: null, keepersOnly: false, groupBy: 'shot'
+    project: 'current', search: '', workflowId: null, sequence: null, keepersOnly: false, starredOnly: false, groupBy: 'shot'
   })
   const [items, setItems] = useState<GalleryItem[]>([])
   const [hasMore, setHasMore] = useState(false)
@@ -57,7 +57,7 @@ export function GalleryView(): ReactNode {
   }, [items, sel])
 
   const set = (patch: Partial<typeof filter>): void => setFilter((f) => ({ ...f, ...patch }))
-  const filtersActive = !!(filter.search || filter.workflowId || filter.sequence !== null || filter.keepersOnly)
+  const filtersActive = !!(filter.search || filter.workflowId || filter.sequence !== null || filter.keepersOnly || filter.starredOnly)
 
   // Group consecutive items by shot or by day.
   const groups: { key: string; title: ReactNode; items: GalleryItem[] }[] = []
@@ -118,6 +118,7 @@ export function GalleryView(): ReactNode {
           </Select>
         </div>
         <Checkbox className="mb-2.5" checked={filter.keepersOnly} onChange={(v) => set({ keepersOnly: v })} label={<span className="font-normal">Keepers only</span>} />
+        <Checkbox className="mb-2.5" checked={filter.starredOnly} onChange={(v) => set({ starredOnly: v })} label={<span className="font-normal">Starred only</span>} />
         <div>
           <Label>Group by</Label>
           <Segmented value={filter.groupBy} onChange={(v) => set({ groupBy: v })} options={[{ value: 'shot', label: 'Shot' }, { value: 'time', label: 'Time' }]} />
@@ -129,7 +130,7 @@ export function GalleryView(): ReactNode {
           {!items.length && !loading && (
             filtersActive ? (
               <Empty title={`No renders match${filter.search ? ` "${filter.search}"` : ' these filters'}.`}
-                actions={<Button onClick={() => setFilter((f) => ({ ...f, search: '', workflowId: null, sequence: null, keepersOnly: false }))}>Clear filters</Button>} />
+                actions={<Button onClick={() => setFilter((f) => ({ ...f, search: '', workflowId: null, sequence: null, keepersOnly: false, starredOnly: false }))}>Clear filters</Button>} />
             ) : (
               <Empty title="Nothing rendered yet">Finished attempts from every shot appear here.</Empty>
             )
@@ -149,6 +150,7 @@ export function GalleryView(): ReactNode {
                         <span className="font-semibold">#{it.attempt.num}</span>
                         <span className="truncate text-text2">{it.attempt.workflowName}</span>
                         {it.isKeeper && <Tag kind="keeper" className="h-4 text-10">Keeper</Tag>}
+                        {it.attempt.starred && <StarIcon filled className="ml-auto size-3.5 shrink-0 text-accent" />}
                       </div>
                       {filter.groupBy === 'time' && <div className="truncate text-xs text-muted">{it.shotName}</div>}
                     </button>
@@ -165,6 +167,7 @@ export function GalleryView(): ReactNode {
             <div className="mb-3 flex items-center gap-2">
               <span className="text-17 font-semibold">#{sel.attempt.num} · {sel.shotName}</span>
               {sel.isKeeper && <Tag kind="keeper">Keeper</Tag>}
+              {sel.attempt.starred && <StarIcon filled className="text-accent" />}
             </div>
             {(() => {
               const out = sel.attempt.outputs.find((o) => o.kind === 'video') ?? sel.attempt.outputs.find((o) => o.kind === 'image')

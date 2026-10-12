@@ -150,6 +150,8 @@ export interface Attempt {
   steps: number | null
   /** File name of the main model the submitted graph loads, null if it could not be worked out. */
   model: string | null
+  /** Marked "good enough" by hand, to find the attempt again. Independent of the shot's single keeper. */
+  starred: boolean
 }
 
 export interface InputFile {
@@ -242,6 +244,7 @@ export interface GalleryFilter {
   workflowId: string | null
   sequence: number | 'loose' | null
   keepersOnly: boolean
+  starredOnly: boolean
   groupBy: 'shot' | 'time'
   offset: number
   limit: number

@@ -349,6 +349,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   - **Load settings** copies this attempt's workflow and values into the form and puts its seed in the seed field without changing Random/Fixed. If the attempt came from a list run, the Prompt row switches to single with that prompt.
   - One compare button opens the Compare view (wireframe 09). With nothing ticked it reads "Compare latest" and compares the newest 2 to 4 finished attempts (disabled with fewer than 2). With attempts ticked it reads "Compare selected" and compares the 2 to 4 ticked ones. "Show older attempts" loads the rest of the list.
   - Failed, cancelled and cached attempts have their own card states (see Attempt states).
+  - **Star:** a small star button at the bottom-left of a finished card (under the thumbnail) marks the attempt "good enough"; click again to unmark. It is a personal bookmark for finding old attempts again, separate from the shot's single keeper: any number of attempts can be starred, and it does not affect the Sequence view or Keepers export.
 
 ### Sequence view (wireframe 03)
 
@@ -369,7 +370,7 @@ Purpose: see the shots of a sequence in order, each represented by its keeper, a
 
 Purpose: find any render across all sequences and loose shots.
 
-- **Filters:** project (default the current project, or All projects), search in prompt text, workflow, sequence (including "Loose shots"), and "Keepers only". **Group by:** Shot (default) or Time.
+- **Filters:** project (default the current project, or All projects), search in prompt text, workflow, sequence (including "Loose shots"), "Keepers only", and "Starred only" (attempts marked good enough with the star on the Shot view's cards; starred tiles show a star). **Group by:** Shot (default) or Time.
 - **Groups:** a header per shot ("Sequence / NN Name, n attempts") followed by a grid of thumbnails, each with id, workflow, and KEEPER tag where it applies. The grid loads 60 renders at a time as the user scrolls, with lazy thumbnails. Clicking a thumbnail selects it; double-clicking it opens the player.
 - **Detail panel** for the selected render: large preview, summary of its values (workflow, duration, turbo, aspect, seed, number of refs, prompt start) and, for a finished render, its **render time** (execution start to finish), and actions:
   - **Load into shot:** opens the Shot view for that attempt's shot with the attempt's workflow and values loaded.

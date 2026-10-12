@@ -198,7 +198,7 @@ interface AttemptRow {
   run_count: number; final_json: string | null; outputs_json: string; thumb: string | null
   media_duration: number | null; error_json: string | null; progress: number; created_at: string
   started_at: string | null; finished_at: string | null; render_ms: number | null; steps: number | null
-  model: string | null
+  model: string | null; starred: number
 }
 
 const shotFromRow = (r: ShotRow): Shot => ({
@@ -216,7 +216,7 @@ const attemptFromRow = (r: AttemptRow): Attempt => ({
   promptCount: r.prompt_count, runIndex: r.run_index, runCount: r.run_count, outputs: parse<OutputFile[]>(r.outputs_json, []),
   thumb: r.thumb, mediaDuration: r.media_duration, error: parse<AttemptError | null>(r.error_json, null),
   progress: r.progress, createdAt: r.created_at, startedAt: r.started_at, finishedAt: r.finished_at,
-  renderMs: r.render_ms, steps: r.steps, model: r.model
+  renderMs: r.render_ms, steps: r.steps, model: r.model, starred: r.starred === 1
 })
 
 export interface NewAttempt {
@@ -294,6 +294,7 @@ export class ProjectDb {
         }
       })()
     }
+    if (!cols.includes('starred')) this.db.exec('ALTER TABLE attempts ADD COLUMN starred INTEGER NOT NULL DEFAULT 0')
     if (!cols.includes('model')) {
       this.db.exec('ALTER TABLE attempts ADD COLUMN model TEXT')
       const set = this.db.prepare('UPDATE attempts SET model=? WHERE id=?')
@@ -474,7 +475,7 @@ export class ProjectDb {
   updateAttempt(id: number, patch: {
     status?: AttemptStatus; promptId?: string | null; outputs?: OutputFile[]; thumb?: string | null; mediaDuration?: number | null
     error?: AttemptError | null; progress?: number; startedAt?: string | null; finishedAt?: string | null
-    renderMs?: number | null
+    renderMs?: number | null; starred?: boolean
   }): Attempt | null {
     const cols: string[] = []
     const vals: unknown[] = []
@@ -492,6 +493,7 @@ export class ProjectDb {
     if (patch.startedAt !== undefined) set('started_at', patch.startedAt)
     if (patch.finishedAt !== undefined) set('finished_at', patch.finishedAt)
     if (patch.renderMs !== undefined) set('render_ms', patch.renderMs)
+    if (patch.starred !== undefined) set('starred', patch.starred ? 1 : 0)
     if (cols.length) this.db.prepare(`UPDATE attempts SET ${cols.join(', ')} WHERE id=?`).run(...vals, id)
     return this.attempt(id)
   }

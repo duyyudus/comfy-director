@@ -512,6 +512,10 @@ export function createApi(ctx: Context): ToolkitApi {
       ws().project(projectPath).updateShot(shotId, { keeperAttemptId: attemptId })
       ctx.emit({ type: 'project-changed', projectPath })
     },
+    async setAttemptStarred(projectPath, attemptId, starred) {
+      ws().project(projectPath).updateAttempt(attemptId, { starred })
+      ctx.emit({ type: 'project-changed', projectPath })
+    },
     async deleteAttempt(projectPath, attemptId) {
       const pdb = ws().project(projectPath)
       const a = pdb.attempt(attemptId)
@@ -591,6 +595,7 @@ export function createApi(ctx: Context): ToolkitApi {
       const q = f.search.trim().toLowerCase()
       items = items.filter((i) => {
         if (f.keepersOnly && !i.isKeeper) return false
+        if (f.starredOnly && !i.attempt.starred) return false
         if (f.workflowId && i.attempt.workflowId !== f.workflowId) return false
         if (f.sequence === 'loose' && i.sequenceId !== null) return false
         if (typeof f.sequence === 'number' && i.sequenceId !== f.sequence) return false
