@@ -165,6 +165,15 @@ export function PromptTextarea({ className, onText, ...props }: Omit<TextareaHTM
     <Textarea
       className={cn(className, over && 'border-accent bg-tint')}
       onChange={(e) => onText(e.target.value)}
+      onMouseDown={(e) => {
+        // Dragging the resize grip sets an inline height; from then on the user's size wins, so lift the auto-grow cap.
+        const el = e.currentTarget
+        const lift = (): void => {
+          window.removeEventListener('mouseup', lift)
+          if (el.style.height) el.style.maxHeight = 'none'
+        }
+        window.addEventListener('mouseup', lift)
+      }}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault()

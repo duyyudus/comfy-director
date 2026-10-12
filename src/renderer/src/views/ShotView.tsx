@@ -413,7 +413,7 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
                     <>
                       <PromptTextarea
                         rows={4}
-                        className="min-h-[7.5rem] resize-none [field-sizing:content]"
+                        className="min-h-[7.5rem] max-h-[calc(30lh+1.25rem+2px)] resize-y [field-sizing:content]"
                         value={String(form.values.prompt ?? (prompt.default as string) ?? '')}
                         invalid={!!errors.prompt}
                         onText={(t) => setValue('prompt', t)}
