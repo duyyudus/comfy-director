@@ -112,6 +112,7 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
     }
   }
 
+  const copy = (t: string): void => void api.copyText(t).then(() => toast('Copied.'))
   const attach = (files: InputFile[]): void => setAttached((a) => [...a, ...files.filter((f) => !a.some((x) => x.name === f.name))])
   const canSend = !!prompter && !busy && (!!text.trim() || attached.length > 0)
   const submit = (): void => {
@@ -169,19 +170,22 @@ export function PromptChat({ projectPath, shotId, workflowId, currentPrompt, sho
         <div className="flex flex-col gap-3">
           {messages.map((m, i) =>
             m.role === 'user' ? (
-              <div key={m.id} className="ml-8 self-end rounded-lg bg-tint px-3 py-2">
-                {m.images.length > 0 && (
-                  <div className="mb-1.5 flex flex-wrap gap-1.5">
-                    {m.images.map((name, j) => (
-                      <ImageChip key={name + j} projectPath={projectPath} name={name} label={`Image ${firstImage.at[i] + j}`} title={chat?.files[name]?.originalName} />
-                    ))}
-                  </div>
-                )}
-                {m.text && <Markdown>{m.text}</Markdown>}
+              <div key={m.id} className="group ml-8 flex flex-col items-end self-end">
+                <div className="rounded-lg bg-tint px-3 py-2">
+                  {m.images.length > 0 && (
+                    <div className="mb-1.5 flex flex-wrap gap-1.5">
+                      {m.images.map((name, j) => (
+                        <ImageChip key={name + j} projectPath={projectPath} name={name} label={`Image ${firstImage.at[i] + j}`} title={chat?.files[name]?.originalName} />
+                      ))}
+                    </div>
+                  )}
+                  {m.text && <Markdown>{m.text}</Markdown>}
+                </div>
+                {m.text && <CopyMessage onCopy={() => copy(m.text)} />}
               </div>
             ) : (
               <Reply key={m.id} text={m.text} useLabel={listMode ? 'Add to prompt list' : 'Use as prompt'} onUse={onUsePrompt}
-                onCopy={(t) => void api.copyText(t).then(() => toast('Copied.'))} />
+                onCopy={copy} />
             )
           )}
           {busy && live && <Reply text={live} />}
@@ -327,10 +331,23 @@ function PrompterSettings({ prompter, onSaved }: { prompter: PrompterRecord; onS
   )
 }
 
+/** A small copy icon for a whole message, placed below it; shown when the pointer is over it (the wrapper must be a `group`) or the button has focus. */
+function CopyMessage({ onCopy }: { onCopy: () => void }): ReactNode {
+  return (
+    <button type="button" aria-label="Copy message" title="Copy the whole message" onClick={onCopy}
+      className="mt-1 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded text-muted opacity-0 transition-opacity hover:bg-tint hover:text-text focus-visible:opacity-100 group-hover:opacity-100">
+      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <rect x="9" y="9" width="12" height="12" rx="2" />
+        <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+      </svg>
+    </button>
+  )
+}
+
 /** An assistant message: prose, and a card per prompt block. Without `onUse` (still being written) the cards have no actions. */
 function Reply({ text, useLabel, onUse, onCopy }: { text: string; useLabel?: string; onUse?: (t: string) => void; onCopy?: (t: string) => void }): ReactNode {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="group flex flex-col gap-2">
       {splitReply(text).map((p, j) =>
         p.type === 'text' ? (
           <Markdown key={j} className="text-text2">{p.text}</Markdown>
@@ -346,6 +363,7 @@ function Reply({ text, useLabel, onUse, onCopy }: { text: string; useLabel?: str
           </div>
         )
       )}
+      {onUse && onCopy && <CopyMessage onCopy={() => onCopy(text)} />}
     </div>
   )
 }
