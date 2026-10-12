@@ -176,9 +176,9 @@ export function GalleryView(): ReactNode {
                 <img src={media(sel.projectPath, out.path)} className="media max-h-[360px] w-full rounded object-contain" alt="" />
               )
             })()}
-            <dl className="mt-4 grid grid-cols-[96px_1fr] gap-x-3 gap-y-1.5 text-13">
+            <dl className="mt-4 grid grid-cols-[96px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-13">
               <dt className="text-text2">Workflow</dt>
-              <dd>{sel.attempt.workflowName} <span className="text-muted">v{sel.attempt.workflowVersion}</span></dd>
+              <dd className="[overflow-wrap:anywhere]">{sel.attempt.workflowName} <span className="text-muted">v{sel.attempt.workflowVersion}</span></dd>
               {Object.entries(sel.attempt.values).filter(([k]) => k !== 'prompt').map(([k, v]) => {
                 const input = wfOf(sel.attempt.workflowId)?.inputs.find((i) => i.key === k)
                 return (
@@ -198,7 +198,7 @@ export function GalleryView(): ReactNode {
               {'prompt' in sel.attempt.values && (
                 <>
                   <dt className="text-text2">Prompt</dt>
-                  <dd className="line-clamp-4">{String(sel.attempt.values.prompt || '(empty)')}</dd>
+                  <dd className="line-clamp-4 [overflow-wrap:anywhere]">{String(sel.attempt.values.prompt || '(empty)')}</dd>
                 </>
               )}
             </dl>
@@ -222,8 +222,8 @@ export function GalleryView(): ReactNode {
 function FragmentRow({ label, value }: { label: string; value: string }): ReactNode {
   return (
     <>
-      <dt className="truncate text-text2">{label}</dt>
-      <dd className="break-words">{value}</dd>
+      <dt className="truncate text-text2" title={label}>{label}</dt>
+      <dd className="[overflow-wrap:anywhere]">{value}</dd>
     </>
   )
 }
