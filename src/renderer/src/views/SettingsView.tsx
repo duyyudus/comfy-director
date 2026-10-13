@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { DEFAULT_FONT_SIZE, FONT_SIZES, type ResetScope, type TestResult, type WorkflowInfo } from '@shared/types'
+import { checkOutputTemplate, DEFAULT_OUTPUT_TEMPLATE, OUTPUT_TOKENS, outputFileName, renderOutputName, type OutputNameContext } from '@core/output/naming'
 import { useStore, type Route } from '../lib/store'
 import { api, errorMessage } from '../lib/api'
 import { plural } from '../lib/format'
@@ -120,6 +121,51 @@ function ResetWorkspaceDialog({ onClose }: { onClose: () => void }): ReactNode {
   )
 }
 
+const SAMPLE_NAME: OutputNameContext = {
+  attempt: 128, num: 4, shot: 'Roof edge', sequence: 'Rooftop chase', position: '03', workflow: 'Ref to video', seed: 482913775, date: '2026-10-13', time: '142530'
+}
+
+/** Template for output file names: the same name goes to the server (filename_prefix) and to the downloaded file. */
+function OutputNameCard(): ReactNode {
+  const { settings, setSettings, toast } = useStore()
+  const saved = settings?.outputNameTemplate ?? DEFAULT_OUTPUT_TEMPLATE
+  const [text, setText] = useState(saved)
+  useEffect(() => setText(saved), [saved])
+  const problem = checkOutputTemplate(text)
+  const save = async (template: string): Promise<void> => {
+    try {
+      await api.setOutputNameTemplate(template)
+      if (settings) setSettings({ ...settings, outputNameTemplate: template.trim() })
+      toast('Output name saved. It applies to jobs queued from now on.')
+    } catch (e) {
+      toast(errorMessage(e), 'error')
+    }
+  }
+  return (
+    <Card className="p-5">
+      <div className="mb-1 text-17 font-semibold">Output names</div>
+      <div className="mb-4 text-13 text-text2">
+        How the files of an attempt are named. The name is set as <span className="font-mono">filename_prefix</span> on every save node of the workflow,
+        so the file on the server has it too (ComfyUI adds its own counter), and it names the file downloaded into the project.
+      </div>
+      <Label htmlFor="output-template">Template</Label>
+      <Input id="output-template" className="font-mono text-13" invalid={!!problem} value={text} onChange={(e) => setText(e.target.value)} />
+      <div className="mt-2 min-h-5 text-13">
+        {problem ? <span className="text-danger">{problem}</span> : <span className="text-text2">Example: <span className="font-mono">{outputFileName(renderOutputName(text, SAMPLE_NAME), 'mp4')}</span></span>}
+      </div>
+      <div className="mt-3 flex flex-col gap-0.5 text-13 text-text2">
+        {OUTPUT_TOKENS.map((t) => (
+          <div key={t.token}><span className="font-mono text-text">{`{${t.token}}`}</span> {t.help}</div>
+        ))}
+      </div>
+      <div className="mt-4 flex gap-2">
+        <Button variant="primary" disabled={!!problem || text.trim() === saved} onClick={() => void save(text)}>Save</Button>
+        <Button disabled={text === DEFAULT_OUTPUT_TEMPLATE && saved === DEFAULT_OUTPUT_TEMPLATE} onClick={() => (setText(DEFAULT_OUTPUT_TEMPLATE), void save(DEFAULT_OUTPUT_TEMPLATE))}>Reset to default</Button>
+      </div>
+    </Card>
+  )
+}
+
 export function SettingsView(): ReactNode {
   const { settings, setSettings, server, workflows, go, loadWorkflows, loadProjects, openProject, toast } = useStore()
   const [warning, setWarning] = useState<string | null>(null)
@@ -196,6 +242,7 @@ export function SettingsView(): ReactNode {
             onChange={(v) => void setFontSize(Number(v))}
           />
         </Card>
+        <OutputNameCard />
         <Card className="p-5">
           <div className="mb-1 text-17 font-semibold">Workspace folder</div>
           <div className="mb-4 text-13 text-text2">

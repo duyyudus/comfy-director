@@ -16,7 +16,7 @@ import { discover } from '@core/workflow/discover'
 import { buildSchema } from '@core/workflow/schema'
 import { checkWorkflow } from '@core/workflow/check'
 import { diffSchemas } from '@core/workflow/reconcile'
-import { keeperExportPath, extOf, looksSynced, safeName } from '@core/output/naming'
+import { checkOutputTemplate, keeperExportPath, extOf, looksSynced, safeName } from '@core/output/naming'
 import { createPrompter, LlmPrompter, listLlmModels } from '@core/prompter'
 import type { ChatPart, ChatTurn, LlmConfig } from '@core/prompter'
 import { randomSeed } from '@core/planner'
@@ -117,6 +117,11 @@ export function createApi(ctx: Context): ToolkitApi {
     async setFontSize(size) {
       if (!(FONT_SIZES as readonly number[]).includes(size)) throw new Error(`Unsupported text size: ${size}`)
       updateSettings({ fontSize: size })
+    },
+    async setOutputNameTemplate(template) {
+      const problem = checkOutputTemplate(template)
+      if (problem) throw new Error(problem)
+      updateSettings({ outputNameTemplate: template.trim() })
     },
     async saveServer(url, token) {
       updateSettings({ serverUrl: url.trim() })

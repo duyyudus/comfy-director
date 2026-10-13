@@ -295,6 +295,8 @@ export class ProjectDb {
       })()
     }
     if (!cols.includes('starred')) this.db.exec('ALTER TABLE attempts ADD COLUMN starred INTEGER NOT NULL DEFAULT 0')
+    // Base name of the attempt's output files, fixed when it is queued. Older attempts have none.
+    if (!cols.includes('output_name')) this.db.exec('ALTER TABLE attempts ADD COLUMN output_name TEXT')
     if (!cols.includes('model')) {
       this.db.exec('ALTER TABLE attempts ADD COLUMN model TEXT')
       const set = this.db.prepare('UPDATE attempts SET model=? WHERE id=?')
@@ -449,6 +451,13 @@ export class ProjectDb {
   }
   finalJson(id: number): string | null {
     return (this.db.prepare('SELECT final_json FROM attempts WHERE id=?').get(id) as { final_json: string | null } | undefined)?.final_json ?? null
+  }
+  outputName(id: number): string | null {
+    return (this.db.prepare('SELECT output_name FROM attempts WHERE id=?').get(id) as { output_name: string | null } | undefined)?.output_name ?? null
+  }
+  /** Records the output name and the graph that carries it as `filename_prefix`. */
+  setOutputName(id: number, name: string, finalJson: string): void {
+    this.db.prepare('UPDATE attempts SET output_name=?, final_json=? WHERE id=?').run(name, finalJson, id)
   }
   attemptByPrompt(promptId: string): Attempt | null {
     const r = this.db.prepare('SELECT * FROM attempts WHERE prompt_id=?').get(promptId) as AttemptRow | undefined

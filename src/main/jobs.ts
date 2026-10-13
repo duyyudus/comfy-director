@@ -6,13 +6,13 @@ import type { ServerManager } from './server'
 import type { ProjectDb } from './db'
 import { now } from './db'
 import { ComfyError, describeExecutionError, historyFiles, historyRenderMs, type HistoryEntry, type PromptRejection, type QueueEntry, type QueueState, type WsMessage } from '@core/comfy/client'
-import { applyValues, fileValues } from '@core/workflow/apply'
+import { applyValues, fileValues, setOutputPrefix } from '@core/workflow/apply'
 import { graphModel, graphSteps } from '@core/workflow/graph'
 import { buildSchema } from '@core/workflow/schema'
 import { validateValues } from '@core/workflow/validate'
 import type { SchemaInput, WorkflowSchema } from '@core/workflow/types'
 import { planRun, seedLimit } from '@core/planner'
-import { attemptFileName, extOf, freeFileName, mediaKind, shotOutputDir } from '@core/output/naming'
+import { dateParts, DEFAULT_OUTPUT_TEMPLATE, extOf, freeFileName, LEGACY_OUTPUT_TEMPLATE, mediaKind, outputFileName, pad2, renderOutputName, shotOutputDir } from '@core/output/naming'
 import type {
   AppEvent, Attempt, AttemptError, FinishedJob, OutputFile, QueueJob, QueueSnapshot, ReconcileSummary, RunRequest, RunResult
 } from '@shared/types'
@@ -75,7 +75,9 @@ export class JobManager {
   constructor(
     private ws: () => Workspace,
     private server: ServerManager,
-    private emit: (e: AppEvent) => void
+    private emit: (e: AppEvent) => void,
+    /** The output name template from Settings, read for every run. */
+    private outputTemplate: () => string = () => DEFAULT_OUTPUT_TEMPLATE
   ) {
     server.on('message', (m: WsMessage) => this.onMessage(m))
     server.on('connected', () => {
@@ -202,6 +204,7 @@ export class JobManager {
     }
     if (failures.length) return { ok: false, uploadFailures: failures, message: 'A file failed to upload. Nothing was queued.' }
 
+    const sequenceName = shot.sequenceId !== null ? (pdb.sequence(shot.sequenceId)?.name ?? null) : null
     const jobs = planRun({ prompts, runs: req.runs, seedMode: req.seedMode, fixedSeed: req.seedValue, seedLimit: seedLimit(schema.seedTargets) })
     const runId = randomUUID()
     const created: Attempt[] = []
@@ -239,6 +242,13 @@ export class JobManager {
           serverUrl: server
         })
         created.push(attempt)
+        // The attempt id is only known now. The name goes into the graph that is sent and into the stored copy.
+        const outputName = renderOutputName(this.outputTemplate(), {
+          attempt: attempt.id, num: attempt.num, shot: shot.name, sequence: sequenceName,
+          position: shot.position === null ? null : pad2(shot.position), workflow: attempt.workflowName, seed: attempt.seed, ...dateParts(new Date())
+        })
+        setOutputPrefix(final, outputName)
+        pdb.setOutputName(attempt.id, outputName, JSON.stringify(final))
         const res = await client.queuePrompt(final)
         submitted.set(res.prompt_id, attempt)
         this.register(res.prompt_id, this.jobInfo(projectPath, pdb, attempt, req.seedMode))
@@ -502,9 +512,14 @@ export class JobManager {
       const blobs: Buffer[] = []
       for (const f of files) blobs.push(Buffer.from(await client.view(f)))
       const outputs: OutputFile[] = []
+      // Fixed when the job was queued, so it matches the server copy. Attempts queued before output names existed keep their old name.
+      const base = pdb.outputName(attempt.id) ?? renderOutputName(LEGACY_OUTPUT_TEMPLATE, {
+        attempt: attempt.id, num: attempt.num, shot: shot.name, sequence: seq?.name ?? null, position: null,
+        workflow: attempt.workflowName, seed: attempt.seed, date: null, time: null
+      })
       for (const [i, f] of files.entries()) {
         const data = blobs[i]
-        const name = freeFileName(attemptFileName(attempt.id, attempt.workflowName, extOf(f.filename) || 'bin', i), (n) => existsSync(join(job.projectPath, dir, n)))
+        const name = freeFileName(outputFileName(base, extOf(f.filename) || 'bin', i), (n) => existsSync(join(job.projectPath, dir, n)))
         const rel = `${dir}/${name}`
         writeFileSync(join(job.projectPath, rel), data)
         outputs.push({ path: rel, kind: mediaKind(f.filename), filename: f.filename })

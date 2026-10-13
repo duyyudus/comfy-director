@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { homedir } from 'node:os'
 import { DEFAULT_FONT_SIZE, FONT_SIZES, type AppSettings, type ThemeMode } from '@shared/types'
+import { checkOutputTemplate, DEFAULT_OUTPUT_TEMPLATE } from '@core/output/naming'
 
 /**
  * App settings live in the app's data folder (`Comfy Director`), never in the workspace.
@@ -14,6 +15,7 @@ interface StoredSettings {
   workspacePath: string
   theme: ThemeMode
   fontSize: number
+  outputNameTemplate: string
   clientId: string
   currentProject: string | null
   setupDone: boolean
@@ -42,6 +44,7 @@ function load(): StoredSettings {
     workspacePath: process.env.COMFY_DIRECTOR_WORKSPACE || stored.workspacePath || defaultWorkspace(),
     theme: stored.theme ?? 'auto',
     fontSize: (FONT_SIZES as readonly number[]).includes(stored.fontSize as number) ? (stored.fontSize as number) : DEFAULT_FONT_SIZE,
+    outputNameTemplate: typeof stored.outputNameTemplate === 'string' && !checkOutputTemplate(stored.outputNameTemplate) ? stored.outputNameTemplate : DEFAULT_OUTPUT_TEMPLATE,
     clientId: stored.clientId ?? randomUUID(),
     currentProject: stored.currentProject ?? null,
     setupDone: stored.setupDone ?? false

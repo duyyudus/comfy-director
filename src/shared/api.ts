@@ -13,6 +13,8 @@ export interface ToolkitApi {
   getSettings(): Promise<AppSettings>
   setTheme(mode: ThemeMode): Promise<void>
   setFontSize(size: number): Promise<void>
+  /** Throws with the reason if the template is not usable. Applies to jobs queued from now on. */
+  setOutputNameTemplate(template: string): Promise<void>
   saveServer(url: string, token: string | null): Promise<ServerStatus>
   testConnection(url: string, token: string | null): Promise<TestResult>
   getServerStatus(): Promise<ServerStatus>
@@ -143,7 +145,7 @@ export interface ToolkitApi {
 export type ApiMethod = keyof ToolkitApi
 
 export const API_METHODS: ApiMethod[] = [
-  'getSettings', 'setTheme', 'setFontSize','saveServer', 'testConnection', 'getServerStatus', 'retryConnection', 'chooseWorkspace',
+  'getSettings', 'setTheme', 'setFontSize', 'setOutputNameTemplate', 'saveServer', 'testConnection', 'getServerStatus', 'retryConnection', 'chooseWorkspace',
   'openWorkspaceFolder', 'resetWorkspace', 'finishSetup', 'syncedWarning', 'confirm', 'choose',
   'listWorkflows', 'pickWorkflowFile', 'analyzeWorkflow', 'previewImport', 'commitImport', 'getWorkflowOverrides',
   'getWorkflowFile', 'updateWorkflow', 'workflowShotCount', 'deleteWorkflow',

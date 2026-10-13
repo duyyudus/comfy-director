@@ -99,6 +99,24 @@ function coerce(input: SchemaInput, v: unknown): unknown {
   }
 }
 
+/**
+ * Sets the file name part of `filename_prefix` on every node that has one as a plain string (SaveVideo, SaveImage,
+ * VHS_VideoCombine...), so the files on the server carry the app's output name. The workflow keeps its own server
+ * subfolder (`video/ComfyUI` becomes `video/<name>`). A prefix wired from another node is left alone.
+ * Changes `wf` in place and returns how many nodes it set.
+ */
+export function setOutputPrefix(wf: ApiWorkflow, name: string): number {
+  let n = 0
+  for (const node of Object.values(wf)) {
+    const old = node.inputs?.filename_prefix
+    if (typeof old === 'string') {
+      node.inputs.filename_prefix = old.slice(0, Math.max(old.lastIndexOf('/'), old.lastIndexOf('\\')) + 1) + name
+      n++
+    }
+  }
+  return n
+}
+
 /** Every file value referenced by a value map (for upload). */
 export function fileValues(schema: WorkflowSchema, values: Values): string[] {
   const out = new Set<string>()

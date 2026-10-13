@@ -233,7 +233,7 @@ Comfy Director/                     workspace
       outputs/
         Rooftop chase/
           03 Roof edge/
-            attempt-6-ref2vid.mp4
+            Rooftop chase_Roof edge_attempt-2-ref2vid.mp4
         _loose/
         _keepers/
     Client teaser/
@@ -284,7 +284,7 @@ Wireframes: `docs/wireframes/png/01` to `15` (see `docs/wireframes/README.md`). 
 | **Shot** | One moment of a video that the user is working on. Holds a name, an optional sequence and position, the active workflow, a values map, a list of attempts, and at most one keeper. |
 | **Sequence** | A named, ordered list of shots inside a project. |
 | **Loose shot** | A shot that belongs to a project but to no sequence. Listed under "Loose shots" in the sidebar. |
-| **Attempt** | One render. Stores the shot, the workflow and its version hash, the full values map, the seed, status, `prompt_id`, output files, and timestamps. Also keeps the exact final JSON that was sent (see Local Storage > Reproducibility). The `#N` shown in the UI is numbered per shot; the database id is unique in the project and is the one used in file names. |
+| **Attempt** | One render. Stores the shot, the workflow and its version hash, the full values map, the seed, status, `prompt_id`, output files, and timestamps. Also keeps the exact final JSON that was sent (see Local Storage > Reproducibility). The `#N` shown in the UI is numbered per shot; the database id is unique in the project and is the one the default file name uses. |
 | **Keeper** | The attempt the user chose as the result for a shot. At most one per shot. |
 | **Run** | One click of the Run button. It creates one attempt per prompt per run (prompts x runs) and queues them all at once. |
 
@@ -499,10 +499,11 @@ Purpose: keep prompts for reuse, and define the prompters that generate new ones
 
 ### Settings and first launch (wireframes 08, 13)
 
-- **Settings screen (wireframe 13)**, opened from the sidebar, has five cards:
+- **Settings screen (wireframe 13)**, opened from the sidebar, has six cards:
   - **Server:** server address, access token (optional, for a reverse proxy; sent as `Authorization: Bearer`), **Test connection** ("Connected. 142 node types found", from `GET /object_info`). This is the same form as the first-launch connect step. The token is stored encrypted in the app data folder, not in the settings file (see Local Storage). A **Server files** button opens the Server files screen.
   - **Workflows:** the imported workflows, each with **Edit** and **Delete** (see Import workflow).
   - **Text size:** the size of body text in pixels: 13, 14, 15 (default), 16 or 18. Every other text size scales with it; spacing, control heights and thumbnails do not change. It applies at once and is stored in the app settings. (The wireframes are drawn at 14.)
+  - **Output names:** one template for the names of output files, `{sequence}_{shot}_attempt-{num}-{workflow}` by default. A field with a live example and the list of tokens; **Save** (disabled while the template is invalid) and **Reset to default**. It is stored in the app settings and applies to jobs queued from then on. See Output rules.
   - **Workspace folder:** its location with **Change folder** and **Open folder**, a one-line description of what it holds, and the warning not to use a synced folder (see Local Storage). Changing it moves nothing: the user picks an existing workspace or creates a new one.
   - **Reset workspace:** a **Reset workspace…** button opens a dialog with two choices, then a native confirmation that lists what will go (Cancel is the default button). Nothing is deleted without that confirmation; it is asked by the main process, not the screen.
     - **Projects only:** moves everything in `projects/` to the system trash and clears the project list in `app.db`. Workflows are kept.
@@ -600,7 +601,11 @@ Empty states (wireframe 08), each pointing to the next step:
 - **Where:** inside the project folder, `<workspace>/projects/<Project>/outputs/`. Files are downloaded automatically when a job finishes (`GET /view`), never on demand later. Nothing is deleted from the server unless the user does it on the Server files screen.
 - **Which files:** every `{filename, subfolder, type: output}` entry of the job in `GET /history`, under any key.
 - **Layout:** `outputs/<Sequence name>/<NN Shot name>/attempt-<id>-<workflow>.<ext>`. Loose shots go under `outputs/_loose/<Shot name>/`. Names are made safe for the file system (illegal characters replaced, length limited).
-- **File names** use the project-wide attempt id, not the per-shot `#N` shown in the UI, because shot names are not unique and two shots can share a folder. If the name is still taken, ` (2)`, ` (3)`... is added: a rendered file is never overwritten.
+- **File names** come from the output name template in Settings (default `{sequence}_{shot}_attempt-{num}-{workflow}`, e.g. `Rooftop chase_Roof edge_attempt-2-ref2vid.mp4`; `Roof edge_attempt-2-ref2vid.mp4` for a loose shot), rendered once when the job is queued and stored with the attempt (`attempts.output_name`), so the file on the server and the downloaded file carry the same name. The same name is used for every output of the job; a second and later file get `-2`, `-3`... before the extension. If the name is still taken, ` (2)`, ` (3)`... is added: a rendered file is never overwritten. Attempts queued before the name was recorded keep the old name, `attempt-<id>-<workflow>`.
+  - **Tokens:** `{num}` (the shot's `#N`, counted from 1 in each shot), `{attempt}` (attempt id counted over the whole project), `{shot}`, `{sequence}`, `{position}` (2 digits), `{workflow}`, `{seed}`, `{date}` (`YYYY-MM-DD`), `{time}` (`HHMMSS`), both local time of queuing. The values are made safe for the file system and each is cut at 60 characters; the whole name at 120. `{sequence}` and `{position}` are empty for a loose shot, and the separators left next to an empty token are trimmed (`_`, `-`, `.`, spaces at the ends; runs of `_` or spaces collapsed).
+  - **`{num}` or `{attempt}` is required**, otherwise two attempts of a shot would get one name. The app refuses a template without either, with an unknown token, or with a stray `{` or `}`. `{num}` restarts in every shot, so two shots with the same name (which share a folder) can produce the same file name; the second then gets ` (2)` locally, and ComfyUI's own counter keeps the server files apart. Use `{attempt}` as well if that matters.
+  - **On the server:** before the job is queued, the file name part of `filename_prefix` is replaced on every node that has it as a plain string (SaveVideo, SaveImage, VHS_VideoCombine...). The subfolder the workflow sets (`video/ComfyUI` becomes `video/<name>`) is kept, and ComfyUI still appends its own `_00001_` counter. A prefix wired from another node is not touched. The stored final JSON is the graph with the new prefix.
+  - **Cached attempts become rare** with `{num}` or `{attempt}` in the name: the prefix differs for every attempt, so ComfyUI runs the save node again even when everything before it is cached (cheap, but the attempt is shown as done, not CACHED).
 - **Renaming:** each attempt's file path is stored in `project.db`, relative to the project folder. Renaming or moving a shot does not move existing files. New attempts use the current names.
 - **Export keepers:** an action on the Sequence view that copies each shot's keeper to `outputs/_keepers/<Sequence name>/<NN Shot name>.<ext>`, numbered in sequence order, replacing earlier exports. It never moves or deletes the originals.
 - **Thumbnails:** one still frame per attempt, made in the renderer when the file is downloaded (`<video>` to canvas to JPEG, 480 px at most, no ffmpeg) and stored at `thumbs/attempt-<id>.jpg` in the project. The video duration is recorded at the same time for the keeper timeline. Gallery sort order is newest first by default.

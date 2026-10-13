@@ -18,6 +18,8 @@ export interface AppSettings {
   workspacePath: string
   theme: ThemeMode
   fontSize: number
+  /** How output files are named, on the server and in the project (see core/output/naming.ts). */
+  outputNameTemplate: string
   clientId: string
   currentProject: string | null
   setupDone: boolean

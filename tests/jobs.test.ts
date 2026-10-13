@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { JobManager } from '../src/main/jobs'
 import { ComfyError, type HistoryEntry, type QueueState } from '../src/core/comfy/client'
 import { buildSchema } from '../src/core/workflow'
+import { DEFAULT_OUTPUT_TEMPLATE } from '../src/core/output/naming'
 import type { Attempt, RunRequest } from '../src/shared/types'
 import { fl2v } from './fixtures'
 
@@ -31,6 +32,8 @@ interface Fakes {
   /** Server each attempt was sent to (default: the connected one). */
   sentTo?: string
   uploaded?: string[]
+  /** Output name template (default: the app's default). */
+  template?: string
   client?: Record<string, unknown>
 }
 
@@ -39,6 +42,7 @@ function setup(dir: string, f: Fakes) {
   const rows = new Map((f.attempts ?? []).map((a) => [a.id, a]))
   const uploads = new Set(f.uploaded ?? [])
   let nextNum = rows.size + 1
+  const names = new Map<number, string>()
   const pdb = {
     db: { prepare: () => ({ get: () => ({ n: nextNum }), run: (n: number) => (nextNum = n) }) },
     serverOf: () => f.sentTo ?? SERVER,
@@ -48,6 +52,8 @@ function setup(dir: string, f: Fakes) {
     shot: (id: number) => ({ id, name: 'Untitled shot', sequenceId: null, position: null }),
     sequence: () => null,
     finalJson: () => '{}',
+    outputName: (id: number) => names.get(id) ?? null,
+    setOutputName: (id: number, name: string) => names.set(id, name),
     updateShot: () => {},
     updateAttempt: (id: number, patch: Partial<Attempt>) => {
       const next = { ...rows.get(id)!, ...patch }
@@ -81,7 +87,7 @@ function setup(dir: string, f: Fakes) {
     ...f.client
   }
   const server = Object.assign(new EventEmitter(), { client, connected: true, url_: SERVER, objectInfo: null })
-  const jobs = new JobManager(() => ws as never, server as never, () => {})
+  const jobs = new JobManager(() => ws as never, server as never, () => {}, () => f.template ?? DEFAULT_OUTPUT_TEMPLATE)
   jobs.loadActive()
   return { jobs, rows, uploads }
 }
@@ -205,6 +211,25 @@ describe('JobManager.reconcile', () => {
 })
 
 describe('JobManager.run', () => {
+  it('names the outputs from the template, on the server and in the project', async () => {
+    const { req } = request()
+    const sent: Record<string, { inputs: Record<string, unknown> }>[] = []
+    const { jobs, rows } = setup(dir, {
+      uploaded: [IMAGE],
+      template: '{shot}_a{attempt}',
+      client: {
+        queuePrompt: async (g: Record<string, { inputs: Record<string, unknown> }>) => (sent.push(g), { prompt_id: 'p-new', number: 1 }),
+        getHistory: async () => history('anything_00001_.mp4')
+      }
+    })
+    expect((await jobs.run(dir, 1, req)).ok).toBe(true)
+    const prefixes = sent[0] && Object.values(sent[0]).map((n) => n.inputs.filename_prefix).filter((p) => p !== undefined)
+    expect(prefixes?.length).toBeGreaterThan(0)
+    for (const p of prefixes!) expect(String(p).endsWith('Untitled shot_a1')).toBe(true)
+    await jobs.reconcile()
+    expect(rows.get(1)!.outputs[0].path).toBe('outputs/_loose/Untitled shot/Untitled shot_a1.mp4')
+  })
+
   it('uploads a remembered image again when the server rejects it', async () => {
     const { req, fileNodeId } = request()
     const uploadedNow: string[] = []

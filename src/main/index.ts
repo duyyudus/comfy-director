@@ -63,7 +63,7 @@ app.whenReady().then(() => {
 
   workspace = new Workspace(s.workspacePath)
   const server = new ServerManager()
-  const jobs = new JobManager(() => workspace, server, emit)
+  const jobs = new JobManager(() => workspace, server, emit, () => settings().outputNameTemplate)
   server.on('status', (status) => emit({ type: 'server', status }))
   server.on('object-info', () => emit({ type: 'workflows-changed' }))
 

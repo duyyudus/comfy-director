@@ -168,7 +168,11 @@ async function execute(job) {
   const outputNode = ids.find((n) => prompt[n].class_type === 'SaveVideo') ?? ids[ids.length - 1]
   const sampler = ids.find((n) => /Sampler/.test(prompt[n].class_type))
   const seed = Number(Object.values(prompt).find((n) => n.inputs?.noise_seed !== undefined)?.inputs.noise_seed ?? 0)
-  const file = `MiniMax_H3_${String(++counter).padStart(5, '0')}_.mp4`
+  // Like ComfyUI: filename_prefix may carry a subfolder, and the server appends its own counter.
+  const prefix = String(prompt[outputNode].inputs?.filename_prefix ?? 'video/MiniMax_H3')
+  const slash = prefix.lastIndexOf('/')
+  const subfolder = slash >= 0 ? prefix.slice(0, slash) : ''
+  const file = `${prefix.slice(slash + 1)}_${String(++counter).padStart(5, '0')}_.mp4`
   if (seenHashes.has(hash)) {
     emit('execution_cached', { nodes: ids })
     const prev = Object.values(history).find((h) => h.hash === hash)
@@ -205,8 +209,9 @@ async function execute(job) {
     history[id] = { prompt: [job.number, id, prompt, {}, [outputNode]], outputs: {}, status: { status_str: 'error', completed: false, messages: msgs } }
     return
   }
-  writeFileSync(join(outputDir, 'video', file), readFileSync(variants[seed % variants.length]))
-  const outputs = { [outputNode]: { images: [{ filename: file, subfolder: 'video', type: 'output' }], animated: [true] } }
+  mkdirSync(join(outputDir, subfolder), { recursive: true })
+  writeFileSync(join(outputDir, subfolder, file), readFileSync(variants[seed % variants.length]))
+  const outputs = { [outputNode]: { images: [{ filename: file, subfolder, type: 'output' }], animated: [true] } }
   send(clientId, 'executed', { node: outputNode, output: outputs[outputNode], prompt_id: id })
   seenHashes.add(hash)
   history[id] = { hash, prompt: [job.number, id, prompt, {}, [outputNode]], outputs, status: { status_str: 'success', completed: true, messages: msgs } }
