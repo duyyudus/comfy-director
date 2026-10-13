@@ -21,6 +21,16 @@ let workspace: Workspace
 
 function emit(e: AppEvent): void {
   mainWindow?.webContents.send('event', e)
+  if (e.type === 'queue') {
+    const job = e.snapshot.running
+    // Above 1 is Electron's indeterminate bar, below 0 removes it.
+    setTaskbarProgress(job?.ours ? (job.progress ? job.progress / 100 : 2) : -1)
+  } else if (e.type === 'server' && e.status.state !== 'connected') setTaskbarProgress(-1)
+}
+
+/** Progress of the running job on the taskbar button (Windows) or the dock icon. */
+function setTaskbarProgress(value: number): void {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setProgressBar(value)
 }
 
 function createWindow(): void {

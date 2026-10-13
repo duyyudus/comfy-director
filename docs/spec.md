@@ -307,6 +307,7 @@ Rules:
   - Links to **Gallery**, **Library** and **Settings**.
   - **Theme switch** at the bottom: Auto / Light / Dark (see Theme and colours).
 - **Queue strip** (bottom of every screen): currently running job (shot name, percent), a progress bar, count of waiting jobs, and an arrow showing whether the Queue drawer (wireframe 06) is open. Clicking anywhere on the strip opens or closes the drawer; there is no separate button. When nothing is queued it reads "Idle".
+- **Taskbar progress:** while one of this app's jobs is running, the app's taskbar button (Windows) or dock icon (macOS) shows its percent as a progress bar, the same value as the queue strip. Before the first percent arrives the bar is indeterminate. It clears when the job ends, when the running job belongs to another client, and when the server cannot be reached.
 - **Connection banner** at the top of every screen when the server cannot be reached (see States).
 - The sidebar's Sequences, Loose shots, the Gallery and Compare show the current project. The queue strip and Queue drawer show jobs from every project, each labelled with its project when it is not the current one.
 - Clicking a sequence name opens the Sequence view. Clicking a shot opens the Shot view.
