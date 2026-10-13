@@ -319,7 +319,7 @@ Purpose: set up inputs for one shot, run attempts, and review them. This is the 
   - **Duplicate shot:** new shot with the same workflow and values, no attempts, placed after the original (or loose, if the original is loose).
   - **Move to sequence:** moves the shot to a sequence at a chosen position, or to Loose shots.
   - **Delete shot:** asks first, then removes the shot and its attempt records and opens the neighbouring shot.
-- **Workflow tabs:** one tab per imported workflow plus "+ Import workflow" (opens the Import view). Switching tabs follows the values rules above. **Edit workflow** opens the Import screen on the active workflow (see Import workflow).
+- **Workflow tabs:** one tab per imported workflow plus "+ Import workflow" (opens the Import view). When the tabs don't fit, they scroll sideways as one strip (mouse wheel, or a trackpad swipe) with no visible scrollbar; an arrow appears at each end that has tabs out of sight, and clicking it scrolls that way. The active tab is kept in view, and "+ Import workflow" and **Edit workflow** stay in place beside it. Switching tabs follows the values rules above. **Edit workflow** opens the Import screen on the active workflow (see Import workflow).
 - **Input form:** generated from the active workflow's schema (see Workflow Handling), one component per input type:
 
   | Input type | Control |

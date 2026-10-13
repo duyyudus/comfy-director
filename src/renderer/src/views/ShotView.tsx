@@ -345,25 +345,14 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
 
       {/* Workflow tabs */}
       <div className="flex items-end gap-1 border-b border-border px-6 pt-3">
-        {workflows.map((w) => (
-          <button
-            key={w.id}
-            onClick={() => update({ workflowId: w.id })}
-            className={cn(
-              '-mb-px rounded-t-md border px-4 py-2.5',
-              activeWf?.id === w.id ? 'border-border border-b-bg bg-bg font-semibold' : 'border-transparent text-text2 hover:text-text'
-            )}
-          >
-            {w.name}
-          </button>
-        ))}
-        <button className="px-4 py-2.5 text-text2 hover:text-text" onClick={() => go({ name: 'import', back: { name: 'shot', shotId } })}>
+        <WorkflowTabs workflows={workflows} activeId={activeWf?.id ?? null} onPick={(id) => update({ workflowId: id })} />
+        <button className="shrink-0 whitespace-nowrap px-4 py-2.5 text-text2 hover:text-text" onClick={() => go({ name: 'import', back: { name: 'shot', shotId } })}>
           + Import workflow
         </button>
         <span className="flex-1" />
-        {workflows.length > 1 && <span className="pb-2.5 text-13 text-text2">Shared values carry over when you switch</span>}
+        {workflows.length > 1 && <span className="shrink-0 whitespace-nowrap pb-2.5 text-13 text-text2">Shared values carry over when you switch</span>}
         {activeWf && (
-          <button className="pb-2.5 pl-3 text-13 text-accent-text hover:underline" onClick={() => go({ name: 'import', back: { name: 'shot', shotId }, editId: activeWf.id })}>
+          <button className="shrink-0 whitespace-nowrap pb-2.5 pl-3 text-13 text-accent-text hover:underline" onClick={() => go({ name: 'import', back: { name: 'shot', shotId }, editId: activeWf.id })}>
             Edit workflow
           </button>
         )}
@@ -570,6 +559,92 @@ export function ShotView({ shotId }: { shotId: number }): ReactNode {
       {moveOpen && <MoveDialog shot={shot} onClose={() => setMoveOpen(false)} onDone={load} />}
       <PlayerDialog open={!!playing} onClose={() => setPlaying(null)} title={playing ? `${shot.name} · #${playing.num}` : ''} projectPath={projectPath} attempt={playing} />
       {saveLibOpen && <SaveToLibraryDialog text={String(form.values.prompt ?? '')} defaultName={shot.name} onClose={() => setSaveLibOpen(false)} />}
+    </div>
+  )
+}
+
+/** The workflow tabs as one strip that scrolls sideways when they don't fit; the buttons beside it stay put. */
+function WorkflowTabs({ workflows, activeId, onPick }: { workflows: WorkflowInfo[]; activeId: string | null; onPick: (id: string) => void }): ReactNode {
+  const strip = useRef<HTMLDivElement>(null)
+  const active = useRef<HTMLButtonElement>(null)
+
+  // The scrollbar is hidden, so the wheel scrolls the strip. React's onWheel is passive and can't stop the page scrolling too.
+  useEffect(() => {
+    const el = strip.current
+    if (!el) return
+    const onWheel = (e: WheelEvent): void => {
+      if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+      e.preventDefault()
+      el.scrollLeft += e.deltaY
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Keep the active tab in view, also when it was picked elsewhere or the list changed.
+  useEffect(() => {
+    const el = strip.current
+    const tab = active.current
+    if (!el || !tab) return
+    // Clear of the arrow that covers each end.
+    const pad = 32
+    if (tab.offsetLeft - pad < el.scrollLeft) el.scrollLeft = tab.offsetLeft - pad
+    else if (tab.offsetLeft + tab.offsetWidth + pad > el.scrollLeft + el.clientWidth) el.scrollLeft = tab.offsetLeft + tab.offsetWidth + pad - el.clientWidth
+  }, [activeId, workflows.length])
+
+  // Which ends have tabs scrolled out of sight; each shows an arrow.
+  const [more, setMore] = useState({ left: false, right: false })
+  const measure = useCallback((): void => {
+    const el = strip.current
+    if (!el) return
+    const left = el.scrollLeft > 1
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+    setMore((m) => (m.left === left && m.right === right ? m : { left, right }))
+  }, [])
+  useEffect(() => {
+    const el = strip.current
+    if (!el) return
+    const watch = new ResizeObserver(measure)
+    watch.observe(el)
+    return () => watch.disconnect()
+  }, [measure])
+  useEffect(measure, [measure, workflows])
+
+  const page = (dir: 1 | -1): void => strip.current?.scrollBy({ left: dir * strip.current.clientWidth * 0.6, behavior: 'smooth' })
+  const arrow = (dir: 1 | -1): ReactNode => (
+    <button
+      aria-label={dir < 0 ? 'Earlier workflows' : 'More workflows'}
+      onClick={() => page(dir)}
+      className={cn(
+        'absolute top-0 bottom-px flex w-8 items-center from-bg from-60% to-transparent text-text2 hover:text-text',
+        dir < 0 ? 'left-0 justify-start bg-linear-to-r' : 'right-0 justify-end bg-linear-to-l'
+      )}
+    >
+      <svg viewBox="0 0 16 16" className="size-4" aria-hidden>
+        <path d={dir < 0 ? 'M10 3.5L5.5 8l4.5 4.5' : 'M6 3.5L10.5 8 6 12.5'} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  )
+
+  return (
+    <div className="relative -mb-px flex min-w-0">
+      <div ref={strip} onScroll={measure} className="relative flex min-w-0 items-end gap-1 overflow-x-auto [scrollbar-width:none]">
+        {workflows.map((w) => (
+          <button
+            key={w.id}
+            ref={activeId === w.id ? active : undefined}
+            onClick={() => onPick(w.id)}
+            className={cn(
+              'shrink-0 whitespace-nowrap rounded-t-md border px-4 py-2.5',
+              activeId === w.id ? 'border-border border-b-bg bg-bg font-semibold' : 'border-transparent text-text2 hover:text-text'
+            )}
+          >
+            {w.name}
+          </button>
+        ))}
+      </div>
+      {more.left && arrow(-1)}
+      {more.right && arrow(1)}
     </div>
   )
 }
